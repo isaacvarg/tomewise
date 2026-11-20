@@ -1,0 +1,3 @@
+# The app is Vite + React with a Hono server, not Next.js
+
+The app serves lesson HTML from the learning home, accepts events, and renders an interactive dashboard and review pages. It has to start fast under `npx` and fit in a small container. Next.js's server conventions are more than this needs. SvelteKit was the strongest alternative (lean and app-shaped), and Astro was rejected because its strength is rendering content, while our content is agent-written HTML passed straight through. We chose React because the maintainer and most likely contributors know it, and because the choice is lower-stakes than it looks: lessons depend on the web-component widgets, not the app's framework (ADR 0005).

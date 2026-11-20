@@ -1,0 +1,3 @@
+# The curriculum is a compass, not a track
+
+A subject may have a curriculum (units and milestones) so the learner can always see the path. The agent still chooses each lesson by the learner's zone of proximal development within the current milestone, as `teach` does, and may propose changes to the path; the learner confirms them, and each change gets a learning record saying why. Lessons are never locked, and failing a milestone exam locks nothing: it feeds what to teach next and brings missed items forward in the review schedule. A strict track was rejected because it would throw away `teach`'s adaptivity.
