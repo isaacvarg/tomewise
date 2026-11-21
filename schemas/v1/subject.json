@@ -24,6 +24,36 @@
       },
       "additionalProperties": false
     },
+    "goals": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "per": {
+            "type": "string",
+            "enum": [
+              "day",
+              "week"
+            ]
+          },
+          "minutes": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "per",
+          "minutes"
+        ],
+        "additionalProperties": false
+      }
+    },
     "payloadSchemas": {
       "default": [],
       "type": "array",

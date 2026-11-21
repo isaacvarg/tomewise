@@ -28,6 +28,21 @@
       "default": 60,
       "type": "number",
       "minimum": 0
+    },
+    "streak": {
+      "default": {
+        "restDaysPerWeek": 0
+      },
+      "type": "object",
+      "properties": {
+        "restDaysPerWeek": {
+          "default": 0,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 6
+        }
+      },
+      "additionalProperties": false
     }
   },
   "required": [
