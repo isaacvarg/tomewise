@@ -11,12 +11,20 @@ export async function startTestApp(prepare?: (root: string) => Promise<void>) {
   const root = await copyExample("morse");
   await prepare?.(root);
   const reloadErrors: unknown[] = [];
-  const server = await startServer(await loadLearningHome(root), {
-    host: "127.0.0.1",
-    port: 0,
-    watch: { onError: (error) => reloadErrors.push(error) },
-  });
+  const start = async () =>
+    startServer(await loadLearningHome(root), {
+      host: "127.0.0.1",
+      port: 0,
+      watch: { onError: (error) => reloadErrors.push(error) },
+    });
+  let server = await start();
   onTestFinished(() => server.close());
+
+  async function restart(whileDown?: () => Promise<void>) {
+    await server.close();
+    await whileDown?.();
+    server = await start();
+  }
 
   async function post(body: unknown) {
     const response = await fetch(`${server.url}/api/events`, {
@@ -50,5 +58,16 @@ export async function startTestApp(prepare?: (root: string) => Promise<void>) {
     return (await readdir(join(root, EVENTS))).sort();
   }
 
-  return { root, url: server.url, get, post, lines, eventFiles, reloadErrors };
+  return {
+    root,
+    get url() {
+      return server.url;
+    },
+    get,
+    post,
+    lines,
+    eventFiles,
+    reloadErrors,
+    restart,
+  };
 }
