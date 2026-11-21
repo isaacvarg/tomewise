@@ -2,6 +2,7 @@ import type { LearningEvent, Ref } from "./events.ts";
 import { parseRef } from "./events.ts";
 import { issuesFrom, type ValidationIssue } from "./issues.ts";
 import { dataSchema } from "./payload.ts";
+import { ruleChanges } from "./schemas.ts";
 import { subjectPath, type Subject } from "./subject.ts";
 
 type SubjectRefs = Omit<Subject, "settings">;
@@ -57,7 +58,8 @@ export function checkAgainstSubject(event: LearningEvent, subject: SubjectRefs, 
       message: `Subject ${subject.id} has payload schema versions ${subject.payloadSchemas.map((v) => v.version).join(", ")}`,
     });
   } else {
-    const data = dataSchema(version, event.kind).safeParse(event.data);
+    const schema = event.kind in ruleChanges ? ruleChanges[event.kind as keyof typeof ruleChanges] : dataSchema(version, event.kind);
+    const data = schema.safeParse(event.data);
     if (!data.success) issues.push(...issuesFrom("", data.error, ["data"]).map(({ file: _, ...issue }) => issue));
   }
   if (event.sessionId !== undefined && event.kind !== "session.start") {

@@ -22,3 +22,6 @@ export { appendEvent, machineName, readEvents } from "./event-files.ts";
 export type { AppendOptions, EventRange } from "./event-files.ts";
 export type { LearningEvent, EventKind } from "./events.ts";
 export type { PayloadSchemaVersion } from "./payload.ts";
+export { readActivity } from "./activity.ts";
+export type { Activity, ActivityDay, ActivityOptions, GoalResult, Streak } from "./activity.ts";
+export type { Goal, StreakRules } from "./schemas.ts";
