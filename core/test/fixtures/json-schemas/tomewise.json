@@ -1,0 +1,21 @@
+{
+  "valid": {
+    "only formatVersion": { "formatVersion": 1 },
+    "every setting": { "formatVersion": 1, "timezone": "Europe/London", "weekStart": "sunday", "minimumSessionSeconds": 0 }
+  },
+  "invalid": {
+    "not an object": [],
+    "no formatVersion": { "timezone": "Europe/London" },
+    "formatVersion as a string": { "formatVersion": "1" },
+    "fractional formatVersion": { "formatVersion": 1.5 },
+    "formatVersion 0": { "formatVersion": 0 },
+    "newer formatVersion": { "formatVersion": 2 },
+    "timezone not a string": { "formatVersion": 1, "timezone": 0 },
+    "short weekday": { "formatVersion": 1, "weekStart": "mon" },
+    "negative minimumSessionSeconds": { "formatVersion": 1, "minimumSessionSeconds": -1 },
+    "unknown field": { "formatVersion": 1, "theme": "paper" }
+  },
+  "zodOnly": {
+    "unknown timezone": { "formatVersion": 1, "timezone": "Mars/Phobos" }
+  }
+}

@@ -22,3 +22,5 @@ export { appendEvent, machineName, readEvents } from "./event-files.ts";
 export type { AppendOptions, EventRange } from "./event-files.ts";
 export type { LearningEvent, EventKind } from "./events.ts";
 export type { PayloadSchemaVersion } from "./payload.ts";
+export { JSON_SCHEMA_DIR, jsonSchemas } from "./json-schemas.ts";
+export type { JsonSchema, SchemaFile } from "./json-schemas.ts";

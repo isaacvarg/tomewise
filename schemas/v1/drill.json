@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Tomewise format v1: Drill (drills/*.json)",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "select": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "string",
+          "enum": [
+            "due",
+            "unlocked"
+          ]
+        },
+        "tags": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "from"
+      ],
+      "additionalProperties": false
+    },
+    "count": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+    },
+    "format": {
+      "default": "item",
+      "type": "string",
+      "enum": [
+        "item",
+        "flashcard",
+        "multiple-choice",
+        "typed-answer",
+        "timed-audio"
+      ]
+    },
+    "timeLimits": {
+      "type": "object",
+      "properties": {
+        "perItemSeconds": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "totalSeconds": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "name",
+    "select"
+  ],
+  "additionalProperties": false
+}

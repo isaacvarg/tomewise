@@ -1,0 +1,82 @@
+{
+  "valid": {
+    "only a name": { "name": "Spanish" },
+    "minimum session override": { "name": "Spanish", "settings": { "minimumSessionSeconds": 30 } },
+    "payload with every field shape": {
+      "name": "Yoga",
+      "payloadSchemas": [
+        {
+          "version": 1,
+          "kinds": {
+            "attempt": {
+              "type": "object",
+              "properties": {
+                "hold": { "type": "number", "unit": "s" },
+                "reps": { "type": "integer" },
+                "note": { "type": "string" },
+                "assisted": { "type": "boolean" },
+                "side": { "enum": ["left", "right", 0] },
+                "splits": { "type": "array", "items": { "type": "number", "unit": "ms" } },
+                "sides": { "type": "array", "items": { "enum": ["left", "right"] } }
+              },
+              "required": ["hold"]
+            },
+            "session.end": { "properties": {} }
+          }
+        }
+      ]
+    }
+  },
+  "invalid": {
+    "not an object": "Spanish",
+    "no name": {},
+    "empty name": { "name": "" },
+    "timezone per subject": { "name": "Spanish", "settings": { "timezone": "Europe/Madrid" } },
+    "weekStart per subject": { "name": "Spanish", "settings": { "weekStart": "sunday" } },
+    "unknown setting": { "name": "Spanish", "settings": { "theme": "paper" } },
+    "unknown field": { "name": "Spanish", "goal": 10 },
+    "payloadSchemas not an array": { "name": "Spanish", "payloadSchemas": {} },
+    "version 0": { "name": "Spanish", "payloadSchemas": [{ "version": 0, "kinds": {} }] },
+    "no kinds": { "name": "Spanish", "payloadSchemas": [{ "version": 1 }] },
+    "unknown kind": { "name": "Spanish", "payloadSchemas": [{ "version": 1, "kinds": { "attempts": { "properties": {} } } }] },
+    "kind without properties": { "name": "Spanish", "payloadSchemas": [{ "version": 1, "kinds": { "attempt": {} } }] },
+    "kind type not object": {
+      "name": "Spanish",
+      "payloadSchemas": [{ "version": 1, "kinds": { "attempt": { "type": "array", "properties": {} } } }]
+    },
+    "unsupported field type": {
+      "name": "Spanish",
+      "payloadSchemas": [{ "version": 1, "kinds": { "attempt": { "properties": { "at": { "type": "date" } } } } }]
+    },
+    "array of arrays": {
+      "name": "Spanish",
+      "payloadSchemas": [
+        {
+          "version": 1,
+          "kinds": { "attempt": { "properties": { "grid": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } } } } }
+        }
+      ]
+    },
+    "empty enum": {
+      "name": "Spanish",
+      "payloadSchemas": [{ "version": 1, "kinds": { "attempt": { "properties": { "side": { "enum": [] } } } } }]
+    },
+    "enum of booleans": {
+      "name": "Spanish",
+      "payloadSchemas": [{ "version": 1, "kinds": { "attempt": { "properties": { "side": { "enum": [true] } } } } }]
+    },
+    "empty unit": {
+      "name": "Spanish",
+      "payloadSchemas": [{ "version": 1, "kinds": { "attempt": { "properties": { "hold": { "type": "number", "unit": "" } } } } }]
+    },
+    "extra keyword on a field": {
+      "name": "Spanish",
+      "payloadSchemas": [{ "version": 1, "kinds": { "attempt": { "properties": { "hold": { "type": "number", "minimum": 0 } } } } }]
+    },
+    "required not an array": {
+      "name": "Spanish",
+      "payloadSchemas": [{ "version": 1, "kinds": { "attempt": { "properties": {}, "required": "hold" } } }]
+    }
+  },
+  "zodOnly": {}
+}
