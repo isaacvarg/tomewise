@@ -94,7 +94,14 @@ The subject-specific part of an event, such as dit/dah timings for Morse or hold
 _Avoid_: metadata, extra
 
 **Attempt**:
-One answer to one item, or one try at one step.
+One answer to one item, or one try at one step. It has an outcome and a grade.
+
+**Outcome**:
+Whether an attempt was correct, wrong or skipped. Used for scores and stats.
+
+**Grade**:
+How well an attempt went on a 1–4 scale (again, hard, good, easy), which the review schedule uses. Self-rated items give it directly; otherwise a wrong answer is 1 and a correct one is 3.
+_Avoid_: rating, score (a score belongs to a quiz or exam)
 
 **Session**:
 One continuous sitting of a lesson, drill, quiz or exam. Attempts belong to a session. A session belongs to the day it started.
