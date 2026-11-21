@@ -8,6 +8,10 @@ export class GlobalConfigError extends Error {
   override name = "GlobalConfigError";
 }
 
+export class SubjectNotFoundError extends Error {
+  override name = "SubjectNotFoundError";
+}
+
 export class UnsupportedFormatVersionError extends Error {
   override name = "UnsupportedFormatVersionError";
 }

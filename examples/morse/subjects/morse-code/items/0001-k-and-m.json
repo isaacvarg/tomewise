@@ -1,0 +1,20 @@
+[
+  {
+    "id": "letter-k",
+    "type": "timed-audio",
+    "audio": "assets/audio/k.wav",
+    "answer": "K",
+    "timeLimitSeconds": 5,
+    "unlockedBy": "0001-k-and-m",
+    "tags": ["letter"]
+  },
+  {
+    "id": "letter-m",
+    "type": "timed-audio",
+    "audio": "assets/audio/m.wav",
+    "answer": "M",
+    "timeLimitSeconds": 5,
+    "unlockedBy": "0001-k-and-m",
+    "tags": ["letter"]
+  }
+]

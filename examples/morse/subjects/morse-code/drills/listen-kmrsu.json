@@ -1,0 +1,7 @@
+{
+  "name": "Listen · K M R S U",
+  "select": { "from": "unlocked", "tags": ["letter"] },
+  "count": 12,
+  "format": "multiple-choice",
+  "timeLimits": { "perItemSeconds": 5 }
+}

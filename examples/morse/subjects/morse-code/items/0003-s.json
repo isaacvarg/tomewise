@@ -1,0 +1,11 @@
+[
+  {
+    "id": "letter-s",
+    "type": "timed-audio",
+    "audio": "assets/audio/s.wav",
+    "answer": "S",
+    "timeLimitSeconds": 5,
+    "unlockedBy": "0003-s",
+    "tags": ["letter"]
+  }
+]

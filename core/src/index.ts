@@ -1,7 +1,11 @@
 export { findLearningHome } from "./find.ts";
 export type { FindOptions } from "./find.ts";
-export { loadLearningHome } from "./load.ts";
+export { loadLearningHome, loadSubject } from "./load.ts";
 export type { LearningHome } from "./load.ts";
+export type { ItemSet, Subject, SubjectSettingsResolved } from "./subject.ts";
+export type { Item } from "./items.ts";
+export type { Drill } from "./drills.ts";
+export type { Curriculum } from "./curriculum.ts";
 export { validateLearningHome } from "./validate.ts";
 export { formatIssue } from "./issues.ts";
 export type { ValidationIssue } from "./issues.ts";
@@ -10,5 +14,6 @@ export {
   GlobalConfigError,
   InvalidLearningHomeError,
   LearningHomeNotFoundError,
+  SubjectNotFoundError,
   UnsupportedFormatVersionError,
 } from "./errors.ts";

@@ -43,3 +43,19 @@ export const TomewiseConfig = z.strictObject({
 });
 
 export type TomewiseConfig = z.output<typeof TomewiseConfig>;
+
+const homeWide = (name: string) =>
+  z.never({ error: `${name} is set for the whole learning home in tomewise.json, not per subject` }).optional();
+
+export const SubjectSettings = z.strictObject({
+  minimumSessionSeconds: z.number().min(0).optional(),
+  timezone: homeWide("timezone"),
+  weekStart: homeWide("weekStart"),
+});
+
+export const SubjectFile = z.strictObject({
+  name: z.string().min(1),
+  settings: SubjectSettings.default({}),
+});
+
+export type SubjectFile = z.output<typeof SubjectFile>;

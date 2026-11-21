@@ -1,0 +1,11 @@
+[
+  {
+    "id": "letter-r",
+    "type": "timed-audio",
+    "audio": "assets/audio/r.wav",
+    "answer": "R",
+    "timeLimitSeconds": 5,
+    "unlockedBy": "0002-r",
+    "tags": ["letter"]
+  }
+]

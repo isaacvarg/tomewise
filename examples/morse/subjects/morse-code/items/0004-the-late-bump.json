@@ -1,0 +1,11 @@
+[
+  {
+    "id": "letter-u",
+    "type": "timed-audio",
+    "audio": "assets/audio/u.wav",
+    "answer": "U",
+    "timeLimitSeconds": 5,
+    "unlockedBy": "0004-the-late-bump",
+    "tags": ["letter"]
+  }
+]

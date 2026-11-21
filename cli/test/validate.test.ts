@@ -49,6 +49,7 @@ describe("tome validate", () => {
     const root = await home({ formatVersion: 1 });
     const nested = join(root, "subjects", "morse-code");
     await mkdir(nested, { recursive: true });
+    await writeFile(join(nested, "subject.json"), JSON.stringify({ name: "Morse code" }));
 
     expect((await tome(["validate"], nested)).code).toBe(0);
   });
