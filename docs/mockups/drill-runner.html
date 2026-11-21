@@ -1,0 +1,519 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>body{margin:0}[hidden]{display:none!important}</style>
+<title>Tomewise Drill Runner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;1,6..72,400&family=Nunito:wght@500;700;800&display=swap">
+<style>
+/* Layout: a neutral gallery page holding two phone frames, each running the same Morse listening drill in a different theme. */
+:root {
+  --bg: #f1f1ee;
+  --fg: #22221f;
+  --muted: #6c6c66;
+  --line: #dcdcd6;
+  --frame: #2a2a27;
+  --chrome-ink: #d6d6cf;
+  --chrome-field: #3a3a36;
+  --page-font: "IBM Plex Sans", system-ui, sans-serif;
+  --page-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121211; --fg: #e9e9e4; --muted: #9b9b94; --line: #2e2e2b; --frame: #3a3a36; --chrome-ink: #c9c9c2; --chrome-field: #2a2a27;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121211; --fg: #e9e9e4; --muted: #9b9b94; --line: #2e2e2b; --frame: #3a3a36; --chrome-ink: #c9c9c2; --chrome-field: #2a2a27;
+  color-scheme: dark;
+}
+
+/* ---------- Theme: Paper (tokens) ---------- */
+[data-tome-theme="paper"] {
+  --t-bg: #fffff8; --t-surface: #f6f4ea; --t-ink: #1d1d1b; --t-muted: #6b6b66; --t-rule: #e2e0d6;
+  --t-accent: #9a3b1e; --t-accent-ink: #fffff8;
+  --t-good: #2f6b3a; --t-good-bg: #e3efe1; --t-bad: #a1301f; --t-bad-bg: #f6e1dc;
+  --t-display: "Newsreader", "Iowan Old Style", Palatino, Georgia, serif;
+  --t-ui: "IBM Plex Sans", system-ui, sans-serif;
+  --t-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --t-radius: 4px; --t-leaf: var(--t-accent);
+}
+/* ---------- Theme: Meadow (tokens) ---------- */
+[data-tome-theme="meadow"] {
+  --t-bg: #f3f7ee; --t-surface: #ffffff; --t-ink: #2f3a2a; --t-muted: #66755d; --t-rule: #dbe5d0;
+  --t-accent: #4f8a2f; --t-accent-ink: #ffffff; --t-petal: #f3a6b5;
+  --t-good: #3d7a22; --t-good-bg: #e2f0d4; --t-bad: #b4475a; --t-bad-bg: #fbe3e7;
+  --t-display: "Fredoka", "Nunito", system-ui, sans-serif;
+  --t-ui: "Nunito", system-ui, sans-serif;
+  --t-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --t-radius: 20px; --t-leaf: #74ae4f;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) [data-tome-theme="paper"] {
+    --t-bg: #161614; --t-surface: #1f1e1b; --t-ink: #e8e6dc; --t-muted: #9a988e; --t-rule: #33322d;
+    --t-accent: #e0835f; --t-accent-ink: #161614;
+    --t-good: #8fcf98; --t-good-bg: #1f3323; --t-bad: #f0907c; --t-bad-bg: #3a2019;
+  }
+  :root:not([data-theme="light"]) [data-tome-theme="meadow"] {
+    --t-bg: #1a2219; --t-surface: #222d20; --t-ink: #e6eedd; --t-muted: #a3b296; --t-rule: #34432f;
+    --t-accent: #9fd27a; --t-accent-ink: #172015; --t-petal: #e89aab;
+    --t-good: #a8dc84; --t-good-bg: #2a3d22; --t-bad: #f0a0b0; --t-bad-bg: #42262c; --t-leaf: #9fd27a;
+  }
+}
+:root[data-theme="dark"] [data-tome-theme="paper"] {
+  --t-bg: #161614; --t-surface: #1f1e1b; --t-ink: #e8e6dc; --t-muted: #9a988e; --t-rule: #33322d;
+  --t-accent: #e0835f; --t-accent-ink: #161614;
+  --t-good: #8fcf98; --t-good-bg: #1f3323; --t-bad: #f0907c; --t-bad-bg: #3a2019;
+}
+:root[data-theme="dark"] [data-tome-theme="meadow"] {
+  --t-bg: #1a2219; --t-surface: #222d20; --t-ink: #e6eedd; --t-muted: #a3b296; --t-rule: #34432f;
+  --t-accent: #9fd27a; --t-accent-ink: #172015; --t-petal: #e89aab;
+  --t-good: #a8dc84; --t-good-bg: #2a3d22; --t-bad: #f0a0b0; --t-bad-bg: #42262c; --t-leaf: #9fd27a;
+}
+
+/* ---------- Gallery page ---------- */
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--page-font); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.page { max-width: 64rem; margin: 0 auto; padding-block: 2.5rem 4rem; display: flex; flex-direction: column; gap: 2rem; }
+.intro h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 .4rem; text-wrap: balance; }
+.intro p { margin: 0; color: var(--muted); max-width: 42rem; }
+.frames { display: flex; flex-wrap: wrap; gap: 2rem; justify-content: center; }
+.frame { display: flex; flex-direction: column; gap: .6rem; width: 360px; max-width: 100%; }
+.frame-label { display: flex; justify-content: space-between; align-items: baseline; font-size: .85rem; }
+.frame-label strong { font-weight: 600; }
+.frame-label span { color: var(--muted); }
+.phone { border: 8px solid var(--frame); border-radius: 34px; overflow: hidden; height: 740px; max-height: 92vh; container-type: inline-size; }
+.desktop { display: flex; flex-direction: column; gap: .6rem; }
+.desktop-head { display: flex; justify-content: space-between; align-items: center; gap: .6rem 1rem; flex-wrap: wrap; font-size: .85rem; }
+.desktop-head strong { font-weight: 600; }
+.desktop-head span { color: var(--muted); }
+.theme-switch { display: inline-flex; border: 1px solid var(--line); border-radius: 99px; padding: 2px; }
+.theme-switch button { border: 0; background: transparent; color: var(--muted); font: inherit; padding: .25rem .8rem; border-radius: 99px; cursor: pointer; }
+.theme-switch button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+.theme-switch button:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+.window { border-radius: 12px; overflow: hidden; background: var(--frame); }
+.window-bar { display: flex; align-items: center; gap: .45rem; padding: .55rem .8rem; }
+.window-bar i { width: 10px; height: 10px; border-radius: 50%; background: var(--chrome-field); flex: none; }
+.window-url { margin-left: .5rem; font: .75rem var(--page-mono); color: var(--chrome-ink); background: var(--chrome-field); padding: .15rem .6rem; border-radius: 6px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.screen { height: 640px; max-height: 85vh; container-type: inline-size; }
+.contract { border-top: 1px solid var(--line); padding-top: 1.5rem; display: grid; gap: 1.5rem; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
+.contract h2 { font-size: 1rem; font-weight: 600; margin: 0 0 .5rem; }
+.contract p, .contract li { color: var(--muted); margin: 0; }
+.contract ul { margin: 0; padding-left: 1.1rem; display: grid; gap: .2rem; }
+.contract code { font-family: var(--page-mono); font-size: .82em; color: var(--fg); }
+
+/* ---------- Runner base styles (shared by every theme) ---------- */
+.tome-runner {
+  height: 100%; overflow-y: auto; background: var(--t-bg); color: var(--t-ink); font-family: var(--t-ui);
+  padding: 1rem 1.1rem 1.2rem; display: flex; flex-direction: column; gap: 1rem; position: relative;
+}
+.tome-runner-bar { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: .8rem; }
+.tome-close {
+  width: 2.2rem; height: 2.2rem; display: grid; place-items: center; border-radius: 50%;
+  color: var(--t-muted); text-decoration: none; font-size: 1.4rem; line-height: 1;
+}
+.tome-close:hover { background: var(--t-surface); }
+.tome-runner-title { display: flex; flex-direction: column; min-width: 0; }
+.tome-kicker { font-size: .72rem; color: var(--t-muted); letter-spacing: .05em; text-transform: uppercase; }
+.tome-runner-name { font-size: .92rem; font-weight: 600; }
+.tome-count { font-size: .85rem; color: var(--t-muted); font-variant-numeric: tabular-nums; }
+.tome-progress { height: 4px; background: var(--t-rule); border-radius: 99px; overflow: hidden; }
+.tome-progress span { display: block; height: 100%; width: 0; background: var(--t-accent); transition: width 300ms ease; }
+
+.tome-stage { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem; text-align: center; min-height: 15rem; }
+.tome-play {
+  width: 7.5rem; height: 7.5rem; border-radius: 50%; border: 2px solid var(--t-ink); background: transparent; color: var(--t-ink);
+  display: grid; place-items: center; cursor: pointer; position: relative;
+}
+.tome-play svg { width: 2.4rem; height: 2.4rem; margin-left: .3rem; }
+.tome-play[data-playing]::after {
+  content: ""; position: absolute; inset: -8px; border-radius: 50%; border: 2px solid var(--t-accent);
+  animation: pulse 700ms ease-out infinite;
+}
+@keyframes pulse { from { transform: scale(.92); opacity: 1; } to { transform: scale(1.12); opacity: 0; } }
+.tome-hint { margin: 0; font-size: .85rem; color: var(--t-muted); min-height: 1.3em; }
+.tome-hint kbd { font-family: var(--t-mono); font-size: .75rem; border: 1px solid var(--t-rule); border-radius: 4px; padding: 0 .3rem; }
+.tome-feedback { display: flex; flex-direction: column; align-items: center; gap: .45rem; min-height: 5.5rem; }
+.tome-pattern { display: flex; gap: 6px; align-items: center; height: 12px; color: var(--t-ink); }
+.tome-pattern i { display: block; height: 10px; background: currentColor; border-radius: 5px; }
+.tome-pattern i.dit { width: 10px; } .tome-pattern i.dah { width: 32px; }
+.tome-say { margin: 0; font-family: var(--t-display); font-size: 1.4rem; font-style: italic; }
+.tome-verdict { margin: 0; font-size: .85rem; font-weight: 600; padding: .2rem .7rem; border-radius: 99px; font-variant-numeric: tabular-nums; }
+.tome-verdict[data-state="correct"] { color: var(--t-good); background: var(--t-good-bg); }
+.tome-verdict[data-state="wrong"] { color: var(--t-bad); background: var(--t-bad-bg); }
+
+.tome-answers { display: grid; grid-template-columns: repeat(5, 1fr); gap: .5rem; }
+.tome-answer {
+  aspect-ratio: 3 / 4; max-width: 100%; border: 1px solid var(--t-rule); background: var(--t-surface); color: var(--t-ink);
+  border-radius: var(--t-radius); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .2rem;
+  cursor: pointer; font: inherit; position: relative;
+}
+.tome-answer b { font-family: var(--t-display); font-weight: 400; font-size: 1.9rem; line-height: 1; }
+.tome-answer kbd { font-family: var(--t-mono); font-size: .65rem; color: var(--t-muted); }
+.tome-answer:disabled { cursor: default; }
+.tome-answer[data-state="correct"] { background: var(--t-good-bg); border-color: var(--t-good); color: var(--t-good); }
+.tome-answer[data-state="wrong"] { background: var(--t-bad-bg); border-color: var(--t-bad); color: var(--t-bad); }
+.tome-answer[data-state="faded"] { opacity: .45; }
+.tome-play:focus-visible, .tome-answer:focus-visible, .tome-close:focus-visible, .tome-again:focus-visible, .tome-done:focus-visible { outline: 2px solid var(--t-accent); outline-offset: 2px; }
+
+.tome-summary { flex: 1; display: flex; flex-direction: column; gap: 1.1rem; }
+.tome-summary-head { display: flex; flex-direction: column; gap: .1rem; padding-top: 1rem; }
+.tome-score { font-family: var(--t-display); font-size: 4rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.tome-score-sub { color: var(--t-muted); font-size: .9rem; }
+.tome-stats { list-style: none; margin: 0; padding: .1rem .9rem; background: var(--t-surface); border-radius: var(--t-radius); }
+.tome-stats li { display: flex; justify-content: space-between; gap: 1rem; padding: .6rem 0; border-top: 1px solid var(--t-rule); font-size: .88rem; }
+.tome-stats li:first-child { border-top: 0; }
+.tome-stats span:last-child { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+.tome-saved { margin: 0; font-size: .85rem; color: var(--t-muted); }
+.tome-event summary { font-size: .82rem; color: var(--t-muted); cursor: pointer; }
+.tome-event pre {
+  margin: .5rem 0 0; padding: .7rem; background: var(--t-surface); border-radius: var(--t-radius);
+  font: .7rem/1.5 var(--t-mono); overflow-x: auto; color: var(--t-ink);
+}
+.tome-actions { margin-top: auto; display: flex; flex-direction: column; gap: .5rem; }
+.tome-again {
+  width: 100%; padding: .95rem 1rem; border: 0; border-radius: var(--t-radius); background: var(--t-accent); color: var(--t-accent-ink);
+  font: 600 1rem var(--t-ui); cursor: pointer;
+}
+.tome-done { text-align: center; color: var(--t-muted); font-size: .9rem; padding: .5rem; text-decoration: none; }
+
+/* ---------- Paper extras ---------- */
+[data-tome-theme="paper"] .tome-runner-bar { border-bottom: 1px solid var(--t-rule); padding-bottom: .7rem; }
+[data-tome-theme="paper"] .tome-kicker { font-variant: small-caps; text-transform: none; letter-spacing: .08em; font-size: .8rem; }
+[data-tome-theme="paper"] .tome-progress { height: 2px; border-radius: 0; }
+[data-tome-theme="paper"] .tome-answer { background: transparent; }
+[data-tome-theme="paper"] .tome-score { font-style: italic; }
+
+/* ---------- Meadow extras ---------- */
+[data-tome-theme="meadow"] .tome-runner {
+  background:
+    radial-gradient(120% 45% at 10% 112%, color-mix(in srgb, #c4dea6 60%, transparent) 0 40%, transparent 41%),
+    var(--t-bg);
+}
+[data-tome-theme="meadow"] .tome-kicker { text-transform: none; letter-spacing: 0; font-weight: 700; }
+[data-tome-theme="meadow"] .tome-progress { height: 8px; }
+[data-tome-theme="meadow"] .tome-play { border: 0; background: var(--t-accent); color: var(--t-accent-ink); box-shadow: 0 6px 0 color-mix(in srgb, var(--t-accent) 60%, #000); }
+[data-tome-theme="meadow"] .tome-play:active { transform: translateY(4px); box-shadow: 0 2px 0 color-mix(in srgb, var(--t-accent) 60%, #000); }
+[data-tome-theme="meadow"] .tome-play[data-playing]::after { border-color: var(--t-petal); }
+[data-tome-theme="meadow"] .tome-say { font-style: normal; font-weight: 500; }
+[data-tome-theme="meadow"] .tome-answer { border: 0; box-shadow: 0 3px 0 var(--t-rule); }
+[data-tome-theme="meadow"] .tome-answer b { font-weight: 500; }
+[data-tome-theme="meadow"] .tome-again { border-radius: 99px; font-family: var(--t-display); font-weight: 500; box-shadow: 0 4px 0 color-mix(in srgb, var(--t-accent) 60%, #000); }
+.meadow-leaf {
+  position: absolute; left: 50%; top: 30%; width: 11px; height: 11px; border-radius: 0 80% 0 80%;
+  background: var(--t-leaf); pointer-events: none; animation: leaf-up 900ms ease-out forwards;
+}
+@keyframes leaf-up {
+  from { transform: translate(-50%, 0) rotate(0deg) scale(.6); opacity: 1; }
+  to { transform: translate(calc(-50% + var(--dx)), -60px) rotate(var(--rot)) scale(1); opacity: 0; }
+}
+/* ---------- Wide layout: one centred column ---------- */
+@container (min-width: 720px) {
+  .tome-runner { padding: 1.5rem max(2rem, calc((100% - 34rem) / 2)) 2rem; gap: 1.2rem; }
+  .tome-play { width: 8.5rem; height: 8.5rem; }
+  .tome-answer { aspect-ratio: 1; }
+  .tome-answer kbd { font-size: .75rem; border: 1px solid var(--t-rule); border-radius: 4px; padding: 0 .35rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .meadow-leaf { display: none; }
+  .tome-play[data-playing]::after { animation: none; }
+  .tome-progress span { transition: none; }
+}
+</style>
+
+<div class="page">
+  <header class="intro">
+    <h1>Tomewise drill runner</h1>
+    <p>A Morse listening drill on K, M, R, S and the new letter U, which comes up about half the time. Tap the circle to hear a letter at 20 WPM, then pick it. The dit-dah pattern appears only after you answer, as your notes ask. Keys work too: Space plays, and K, M, R, S, U answer in the drill you last touched. After 12 sounds you get the summary your agent would read. Below the phones, a desktop window runs the same drill as one centred column.</p>
+  </header>
+
+  <div class="frames" id="frames"></div>
+
+  <div class="desktop" id="desktop">
+    <div class="desktop-head">
+      <div><strong>Desktop</strong> <span>· same drill, answer with the keyboard</span></div>
+      <div class="theme-switch" role="group" aria-label="Theme">
+        <button type="button" id="sw-paper" data-theme-id="paper" aria-pressed="true">Paper</button>
+        <button type="button" id="sw-meadow" data-theme-id="meadow" aria-pressed="false">Meadow</button>
+      </div>
+    </div>
+    <div class="window">
+      <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i><span class="window-url">homelab:4310/morse-code/drills/listen</span></div>
+      <div class="screen"></div>
+    </div>
+  </div>
+
+  <section class="contract">
+    <div>
+      <h2>Runner layout</h2>
+      <ul>
+        <li>Top bar with close, subject, drill name and count</li>
+        <li>One prompt in the middle, nothing else</li>
+        <li>Answers within thumb reach at the bottom</li>
+        <li>Summary with the numbers your notes ask for</li>
+      </ul>
+    </div>
+    <div>
+      <h2>What a theme targets</h2>
+      <ul>
+        <li><code>.tome-play</code>, <code>[data-playing]</code></li>
+        <li><code>.tome-answer[data-state]</code></li>
+        <li><code>.tome-feedback</code>, <code>.tome-verdict</code></li>
+        <li><code>.tome-summary</code>, <code>.tome-stats</code></li>
+        <li><code>--t-good</code> and <code>--t-bad</code> for results</li>
+      </ul>
+    </div>
+    <div>
+      <h2>Sample data</h2>
+      <p>Nothing here is saved. In the real app every answer is an attempt event, and the summary is built from those events.</p>
+    </div>
+  </section>
+</div>
+
+<template id="tome-runner">
+  <div class="tome-runner">
+    <header class="tome-runner-bar">
+      <a class="tome-close" href="#today" aria-label="End session">×</a>
+      <div class="tome-runner-title"><span class="tome-kicker">Morse code</span><span class="tome-runner-name">Listen · K M R S U</span></div>
+      <span class="tome-count">1 / 12</span>
+    </header>
+    <div class="tome-progress" aria-hidden="true"><span></span></div>
+
+    <div class="tome-stage">
+      <button class="tome-play" type="button" aria-label="Play the sound">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z" fill="currentColor"/></svg>
+      </button>
+      <p class="tome-hint">Tap to play · <kbd>Space</kbd></p>
+      <div class="tome-feedback" aria-live="polite"></div>
+    </div>
+
+    <div class="tome-answers" role="group" aria-label="Which letter was it?">
+      <button class="tome-answer" type="button" data-char="K" disabled><b>K</b><kbd>k</kbd></button>
+      <button class="tome-answer" type="button" data-char="M" disabled><b>M</b><kbd>m</kbd></button>
+      <button class="tome-answer" type="button" data-char="R" disabled><b>R</b><kbd>r</kbd></button>
+      <button class="tome-answer" type="button" data-char="S" disabled><b>S</b><kbd>s</kbd></button>
+      <button class="tome-answer" type="button" data-char="U" disabled><b>U</b><kbd>u</kbd></button>
+    </div>
+
+    <section class="tome-summary" hidden>
+      <div class="tome-summary-head">
+        <span class="tome-kicker">Session done</span>
+        <span class="tome-score">0%</span>
+        <span class="tome-score-sub"></span>
+      </div>
+      <ul class="tome-stats"></ul>
+      <p class="tome-saved">Saved to your history. Your agent reads these numbers before Lesson 5, so no screenshots needed.</p>
+      <details class="tome-event"><summary>What got saved for the last answer</summary><pre></pre></details>
+      <div class="tome-actions">
+        <button class="tome-again" type="button">Run again</button>
+        <a class="tome-done" href="#today">Back to today</a>
+      </div>
+    </section>
+  </div>
+</template>
+
+<script>
+(function () {
+  var CODES = { K: "-.-", M: "--", R: ".-.", S: "...", U: "..-" };
+  var SAY = { K: "dah-di-dah", M: "dah-dah", R: "di-dah-dit", S: "di-di-dit", U: "di-di-dah" };
+  var CHARS = ["K", "M", "R", "S", "U"], FOCUS = "U", TRIALS = 12, WPM = 20;
+  var UNIT = 1.2 / WPM; // seconds per dit
+  var audio = null, activeDrill = null;
+
+  function ctx() {
+    if (!audio) { var AC = window.AudioContext || window.webkitAudioContext; if (AC) audio = new AC(); }
+    if (audio && audio.state === "suspended") audio.resume();
+    return audio;
+  }
+  // Plays one character; returns its length in seconds.
+  function playChar(ch) {
+    var a = ctx(), code = CODES[ch], t, total = 0, i;
+    for (i = 0; i < code.length; i++) total += (code[i] === "-" ? 3 : 1) * UNIT + (i < code.length - 1 ? UNIT : 0);
+    if (!a) return total;
+    t = a.currentTime + 0.05;
+    var osc = a.createOscillator(), gain = a.createGain();
+    osc.frequency.value = 620; osc.type = "sine";
+    gain.gain.setValueAtTime(0, t);
+    osc.connect(gain); gain.connect(a.destination);
+    for (i = 0; i < code.length; i++) {
+      var len = (code[i] === "-" ? 3 : 1) * UNIT;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.35, t + 0.005);
+      gain.gain.setValueAtTime(0.35, t + len - 0.005);
+      gain.gain.linearRampToValueAtTime(0, t + len);
+      t += len + UNIT;
+    }
+    osc.start(a.currentTime); osc.stop(t + 0.05);
+    return total + 0.05;
+  }
+
+  function makeTrials() {
+    var out = [], others = CHARS.filter(function (c) { return c !== FOCUS; });
+    for (var i = 0; i < TRIALS; i++) out.push(Math.random() < 0.5 ? FOCUS : others[Math.floor(Math.random() * others.length)]);
+    return out;
+  }
+  function pattern(ch) {
+    return CODES[ch].split("").map(function (s) { return '<i class="' + (s === "-" ? "dah" : "dit") + '"></i>'; }).join("");
+  }
+  function median(xs) {
+    var s = xs.slice().sort(function (a, b) { return a - b; }), m = Math.floor(s.length / 2);
+    return s.length ? (s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2) : 0;
+  }
+  function ulid() {
+    var abc = "0123456789ABCDEFGHJKMNPQRSTVWXYZ", s = "01JD";
+    for (var i = 0; i < 22; i++) s += abc[Math.floor(Math.random() * 32)];
+    return s;
+  }
+
+  function Drill(root, theme) {
+    var self = this;
+    this.root = root; this.theme = theme;
+    this.play = root.querySelector(".tome-play");
+    this.hint = root.querySelector(".tome-hint");
+    this.feedback = root.querySelector(".tome-feedback");
+    this.answers = Array.prototype.slice.call(root.querySelectorAll(".tome-answer"));
+    this.count = root.querySelector(".tome-count");
+    this.bar = root.querySelector(".tome-progress span");
+    this.stage = root.querySelector(".tome-stage");
+    this.answersBox = root.querySelector(".tome-answers");
+    this.summary = root.querySelector(".tome-summary");
+    this.sessionId = ulid();
+    root.addEventListener("pointerdown", function () { activeDrill = self; });
+    root.addEventListener("focusin", function () { activeDrill = self; });
+    this.play.addEventListener("click", function () { self.replay(); });
+    this.answers.forEach(function (b) { b.addEventListener("click", function () { self.answer(b.getAttribute("data-char")); }); });
+    root.querySelector(".tome-again").addEventListener("click", function () { self.reset(); self.replay(); });
+    this.reset();
+  }
+  Drill.prototype.reset = function () {
+    this.trials = makeTrials(); this.i = 0; this.results = []; this.locked = true; this.started = false;
+    this.summary.hidden = true; this.stage.hidden = false; this.answersBox.hidden = false;
+    this.render();
+  };
+  Drill.prototype.render = function () {
+    this.count.textContent = Math.min(this.i + 1, TRIALS) + " / " + TRIALS;
+    this.bar.style.width = (this.i / TRIALS * 100) + "%";
+    this.feedback.innerHTML = "";
+    this.hint.innerHTML = this.started ? "Tap to hear it again · <kbd>Space</kbd>" : "Tap to play · <kbd>Space</kbd>";
+    this.answers.forEach(function (b) { b.removeAttribute("data-state"); b.disabled = true; });
+  };
+  Drill.prototype.replay = function () {
+    var self = this, ch = this.trials[this.i];
+    if (ch == null) return;
+    this.started = true;
+    this.hint.innerHTML = "Tap to hear it again · <kbd>Space</kbd>";
+    var len = playChar(ch);
+    this.play.setAttribute("data-playing", "");
+    clearTimeout(this.playTimer);
+    this.playTimer = setTimeout(function () { self.play.removeAttribute("data-playing"); }, len * 1000);
+    if (this.locked) {
+      this.locked = false;
+      this.answers.forEach(function (b) { b.disabled = false; });
+      this.heardAt = performance.now() + len * 1000;
+    }
+  };
+  Drill.prototype.answer = function (given) {
+    if (this.locked) return;
+    var self = this, heard = this.trials[this.i], ok = given === heard;
+    var ms = Math.max(120, Math.round(performance.now() - this.heardAt));
+    this.locked = true;
+    this.results.push({ heard: heard, given: given, ok: ok, ms: ms });
+    this.answers.forEach(function (b) {
+      var c = b.getAttribute("data-char");
+      b.disabled = true;
+      b.setAttribute("data-state", c === heard ? "correct" : c === given ? "wrong" : "faded");
+    });
+    this.feedback.innerHTML =
+      '<div class="tome-pattern" aria-hidden="true">' + pattern(heard) + '</div>' +
+      '<p class="tome-say">' + heard + ' · ' + SAY[heard] + '</p>' +
+      '<p class="tome-verdict" data-state="' + (ok ? "correct" : "wrong") + '">' +
+      (ok ? "Right · " : "You picked " + given + " · ") + (ms / 1000).toFixed(2) + " s</p>";
+    this.lastEvent = {
+      id: ulid(), ts: new Date().toISOString(), subject: "morse-code", kind: "attempt",
+      ref: "morse-" + heard, sessionId: this.sessionId, duration: ms,
+      outcome: ok ? "correct" : "wrong", schemaVersion: 1,
+      data: { heard: heard, answered: given, wpm: WPM }
+    };
+    if (ok && this.root.getAttribute("data-tome-theme") === "meadow") leaves(this.root.querySelector('.tome-answer[data-char="' + heard + '"]'));
+    setTimeout(function () {
+      self.i++;
+      if (self.i >= TRIALS) { self.finish(); return; }
+      self.render();
+      self.replay();
+    }, ok ? 900 : 1600);
+  };
+  Drill.prototype.finish = function () {
+    var r = this.results, right = r.filter(function (x) { return x.ok; }).length;
+    var focus = r.filter(function (x) { return x.heard === FOCUS; });
+    var focusRight = focus.filter(function (x) { return x.ok; }).length;
+    var pairs = {}, worst = null;
+    r.forEach(function (x) { if (!x.ok) { var k = x.heard + " heard as " + x.given; pairs[k] = (pairs[k] || 0) + 1; if (!worst || pairs[k] > pairs[worst]) worst = k; } });
+    this.bar.style.width = "100%";
+    this.count.textContent = TRIALS + " / " + TRIALS;
+    this.stage.hidden = true; this.answersBox.hidden = true; this.summary.hidden = false;
+    this.summary.querySelector(".tome-score").textContent = Math.round(right / TRIALS * 100) + "%";
+    this.summary.querySelector(".tome-score-sub").textContent = right + " of " + TRIALS + " right";
+    this.summary.querySelector(".tome-stats").innerHTML =
+      "<li><span>Median answer time</span><span>" + (median(r.map(function (x) { return x.ms; })) / 1000).toFixed(2) + " s</span></li>" +
+      "<li><span>New letter " + FOCUS + "</span><span>" + focusRight + " of " + focus.length + "</span></li>" +
+      "<li><span>Most confused</span><span>" + (worst ? worst + (pairs[worst] > 1 ? " (" + pairs[worst] + "×)" : "") : "none") + "</span></li>";
+    this.summary.querySelector(".tome-event pre").textContent = JSON.stringify(this.lastEvent, null, 2);
+    this.summary.querySelector(".tome-again").focus({ preventScroll: true });
+  };
+
+  function leaves(btn) {
+    if (!btn) return;
+    for (var i = 0; i < 5; i++) {
+      var leaf = document.createElement("span");
+      leaf.className = "meadow-leaf";
+      leaf.style.setProperty("--dx", (i - 2) * 16 + "px");
+      leaf.style.setProperty("--rot", (i - 2) * 45 + "deg");
+      leaf.style.animationDelay = i * 40 + "ms";
+      btn.appendChild(leaf);
+      setTimeout(function (l) { return function () { l.remove(); }; }(leaf), 1300);
+    }
+  }
+
+  var frames = document.getElementById("frames"), tpl = document.getElementById("tome-runner");
+  [{ id: "paper", name: "Paper", note: "built-in · from your Morse stylesheet" },
+   { id: "meadow", name: "Meadow", note: "built-in · nature" }].forEach(function (t, n) {
+    var frame = document.createElement("div");
+    frame.className = "frame";
+    frame.innerHTML = '<div class="frame-label"><strong>' + t.name + '</strong><span>' + t.note + '</span></div><div class="phone"></div>';
+    var app = tpl.content.firstElementChild.cloneNode(true);
+    app.setAttribute("data-tome-theme", t.id);
+    frame.querySelector(".phone").appendChild(app);
+    frames.appendChild(frame);
+    var d = new Drill(app, t.id);
+    if (n === 0) activeDrill = d;
+  });
+
+  var wide = tpl.content.firstElementChild.cloneNode(true);
+  wide.setAttribute("data-tome-theme", "paper");
+  document.querySelector("#desktop .screen").appendChild(wide);
+  new Drill(wide, "paper");
+  var switches = document.querySelectorAll("#desktop .theme-switch button");
+  Array.prototype.forEach.call(switches, function (b) {
+    b.addEventListener("click", function () {
+      wide.setAttribute("data-tome-theme", b.getAttribute("data-theme-id"));
+      Array.prototype.forEach.call(switches, function (o) { o.setAttribute("aria-pressed", String(o === b)); });
+    });
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if (!activeDrill || e.metaKey || e.ctrlKey || e.altKey) return;
+    var k = e.key.toUpperCase();
+    if (e.key === " ") {
+      if (e.target.closest && e.target.closest("button, summary, a")) return;
+      e.preventDefault(); activeDrill.replay();
+    } else if (CODES[k]) {
+      activeDrill.answer(k);
+    }
+  });
+})();
+</script>

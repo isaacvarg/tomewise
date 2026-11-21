@@ -19,4 +19,4 @@ The learner's theme applies to the app, the widgets and the lessons. Lessons sta
 - Theme JavaScript runs on every page, including lessons that post events, so a theme is trusted code. The docs say to install only themes you trust, and community themes are reviewed in their pull request.
 - The theming skill, a separate `theme-check` skill for the learner's review loop, the `/styleguide` page and `tome theme check` (screenshots at phone and desktop widths in both modes, contrast and overflow checks) together keep themes working.
 - The app's and widgets' markup (class names, structure) becomes part of the theme contract and needs the same care as the widget API.
-- Two themes ship in v1, Paper (from the Morse workspace's stylesheet) and one contrasting theme, to prove the contract is really modular.
+- Two themes ship in v1, Paper (from the Morse workspace's stylesheet) and Meadow (a nature theme), to prove the contract is really modular. Both are mocked up in `docs/mockups/`.

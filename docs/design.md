@@ -125,7 +125,7 @@ Agents query history in layers: raw files with `jq` always work (the files are t
 
 ## Themes
 
-A theme is a folder: `theme.json` (name, author, version), `tokens.css` (light and dark), optional extra CSS, JavaScript and assets. Themes may change anything about appearance, layout included. Theme JavaScript runs on every page, lessons included, so themes are trusted code: install only ones you trust. Built-ins ship in the tool's `themes/`; personal themes go in the learning home's `themes/`; community themes come by pull request. The chosen theme is stored in `tomewise.json` and applies to the app, the widgets and lessons. v1 ships Paper (from the Morse workspace's stylesheet) and one contrasting theme. See ADR 0012.
+A theme is a folder: `theme.json` (name, author, version), `tokens.css` (light and dark), optional extra CSS, JavaScript and assets. Themes may change anything about appearance, layout included. Theme JavaScript runs on every page, lessons included, so themes are trusted code: install only ones you trust. Built-ins ship in the tool's `themes/`; personal themes go in the learning home's `themes/`; community themes come by pull request. The chosen theme is stored in `tomewise.json` and applies to the app, the widgets and lessons. v1 ships Paper (from the Morse workspace's stylesheet) and Meadow, a nature theme. See ADR 0012. Both are mocked up, tokens included, in [mockups/](./mockups/).
 
 Checking a theme: the app has a `/styleguide` page showing every page and widget state with demo data. `tome theme check <name>` screenshots it at phone, tablet and desktop widths in light and dark, and reports contrast failures and horizontal overflow. CI runs it on every theme in a pull request.
 
