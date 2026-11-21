@@ -72,6 +72,7 @@ Finding the learning home: walk up from the current directory to `tomewise.json`
 ## App
 
 - Vite + React SPA with a Hono server in a single Node process.
+- Works equally on phone, tablet and desktop. The phone is one of several places to learn, not the main target, so every page is designed for each width and the drill runner works by touch and by keyboard.
 - Serves lessons from the learning home. `tome.js` posts to `/api/events` on the same origin.
 - Widgets are served under a major-version path (`/widgets/v1/tome.js`). Within a major version they only gain features; a v2 ships alongside v1 and both stay served, so old lessons keep working.
 - Watches the learning home so new content shows up live.
@@ -79,9 +80,9 @@ Finding the learning home: walk up from the current directory to `tomewise.json`
 - The app is the only writer of history: `tome log` posts to it, and falls back to a per-machine event file when it's unreachable. Content travels by git: the agent pushes, the app pulls, commits events and pushes (ADR 0011).
 - Themes are modular from day one (see below).
 - Pages:
-  - home, top to bottom: activity heatmap; a visual grid of subjects (no progress shown); what's due; streak; one Start button;
+  - home, top to bottom: activity heatmap; a visual grid of subjects (no progress shown); what's due; streak; one Start button. Wide screens keep that order but use the width: the heatmap spans a year, subjects sit four across, and due and streak sit side by side;
   - subject home (curriculum roadmap, lessons, drills, charts, goals);
-  - review/drill runner;
+  - review/drill runner, a centred column at every width;
   - prompts such as "ask your agent for your quiz".
 
 ## CLI
@@ -122,7 +123,7 @@ Agents query history in layers: raw files with `jq` always work (the files are t
 
 A theme is a folder: `theme.json` (name, author, version), `tokens.css` (light and dark), optional extra CSS, JavaScript and assets. Themes may change anything about appearance, layout included. Theme JavaScript runs on every page, lessons included, so themes are trusted code: install only ones you trust. Built-ins ship in the tool's `themes/`; personal themes go in the learning home's `themes/`; community themes come by pull request. The chosen theme is stored in `tomewise.json` and applies to the app, the widgets and lessons. v1 ships Paper (from the Morse workspace's stylesheet) and one contrasting theme. See ADR 0012.
 
-Checking a theme: the app has a `/styleguide` page showing every page and widget state with demo data. `tome theme check <name>` screenshots it at phone and desktop widths in light and dark, and reports contrast failures and horizontal overflow. CI runs it on every theme in a pull request.
+Checking a theme: the app has a `/styleguide` page showing every page and widget state with demo data. `tome theme check <name>` screenshots it at phone, tablet and desktop widths in light and dark, and reports contrast failures and horizontal overflow. CI runs it on every theme in a pull request.
 
 Styling stack: plain CSS with tokens, semantic class names and `@layer`; no Tailwind. Widgets are Lit components rendered in the light DOM so themes can reach them (ADR 0013).
 
