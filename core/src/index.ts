@@ -27,3 +27,5 @@ export type { DueItem } from "./due.ts";
 export { readActivity } from "./activity.ts";
 export type { Activity, ActivityDay, ActivityOptions, GoalResult, Streak } from "./activity.ts";
 export type { Goal, StreakRules } from "./schemas.ts";
+export { JSON_SCHEMA_DIR, jsonSchemas } from "./json-schemas.ts";
+export type { JsonSchema, SchemaFile } from "./json-schemas.ts";

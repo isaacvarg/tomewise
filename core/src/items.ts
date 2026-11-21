@@ -53,7 +53,8 @@ const TimedAudio = z
   .refine((item) => item.prompt !== undefined || item.audio !== undefined, {
     path: ["audio"],
     error: "A timed-audio item needs an audio file, a prompt, or both",
-  });
+  })
+  .meta({ anyOf: [{ required: ["prompt"] }, { required: ["audio"] }] });
 
 const Routine = z.strictObject({
   ...common,
@@ -70,3 +71,5 @@ export const Item = z.discriminatedUnion("type", [Flashcard, MultipleChoice, Typ
 });
 
 export type Item = z.output<typeof Item>;
+
+export const ItemSetFile = z.array(Item);

@@ -63,9 +63,16 @@ function refTargets(kinds: readonly RefKind[]): string {
   return article(orList(kinds)).toLowerCase();
 }
 
-const Ref = z.string().refine((ref) => parseRef(ref) !== undefined, {
-  error: `Use kind:id, such as "item:letter-k"; kinds are ${refKinds.join(", ")}`,
-});
+function refPattern(kinds: readonly RefKind[]): string {
+  return `^(?:${kinds.join("|")}):.+$`;
+}
+
+const Ref = z
+  .string()
+  .refine((ref) => parseRef(ref) !== undefined, {
+    error: `Use kind:id, such as "item:letter-k"; kinds are ${refKinds.join(", ")}`,
+  })
+  .meta({ pattern: refPattern(refKinds) });
 
 const Fields = z.strictObject({
   id: Ulid,
@@ -80,6 +87,25 @@ const Fields = z.strictObject({
   schemaVersion: z.int().min(1),
   data: z.record(z.string(), z.unknown()).default({}),
 });
+
+function kindRule(kind: EventKind): z.core.JSONSchema.JSONSchema {
+  const allowed = refsFor[kind];
+  const required = [
+    ...(allowed.length > 0 ? ["ref"] : []),
+    ...(inSession.includes(kind) ? ["sessionId"] : []),
+    ...(kind === "session.end" ? ["duration"] : []),
+    ...(kind === "attempt" ? ["outcome", "grade"] : []),
+  ];
+  const forbidden = [...(allowed.length === 0 ? ["ref"] : []), ...(kind === "attempt" ? [] : ["grade"])];
+  return {
+    if: { properties: { kind: { const: kind } }, required: ["kind"] },
+    then: {
+      ...(allowed.length > 0 && { properties: { ref: { type: "string", pattern: refPattern(allowed) } } }),
+      ...(required.length > 0 && { required }),
+      ...(forbidden.length > 0 && { not: { anyOf: forbidden.map((name) => ({ required: [name] })) } }),
+    },
+  };
+}
 
 export const EventEnvelope = Fields.superRefine((event, ctx) => {
   const issue = (path: string, message: string) => ctx.addIssue({ code: "custom", path: [path], message });
@@ -104,6 +130,6 @@ export const EventEnvelope = Fields.superRefine((event, ctx) => {
   } else if (event.grade !== undefined) {
     issue("grade", "Only attempts have a grade");
   }
-});
+}).meta({ allOf: eventKinds.map(kindRule) });
 
 export type LearningEvent = z.output<typeof EventEnvelope>;

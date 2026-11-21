@@ -1,0 +1,282 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Tomewise format v1: Item set (items/*.json)",
+  "type": "array",
+  "items": {
+    "oneOf": [
+      {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "unlockedBy": {
+            "type": "string",
+            "minLength": 1
+          },
+          "tags": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "retired": {
+            "default": false,
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string",
+            "const": "flashcard"
+          },
+          "front": {
+            "type": "string",
+            "minLength": 1
+          },
+          "back": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "front",
+          "back"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "unlockedBy": {
+            "type": "string",
+            "minLength": 1
+          },
+          "tags": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "retired": {
+            "default": false,
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string",
+            "const": "multiple-choice"
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 1
+          },
+          "choices": {
+            "minItems": 2,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "answer": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "prompt",
+          "choices",
+          "answer"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "unlockedBy": {
+            "type": "string",
+            "minLength": 1
+          },
+          "tags": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "retired": {
+            "default": false,
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string",
+            "const": "typed-answer"
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 1
+          },
+          "answer": {
+            "type": "string",
+            "minLength": 1
+          },
+          "accept": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "prompt",
+          "answer"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "unlockedBy": {
+            "type": "string",
+            "minLength": 1
+          },
+          "tags": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "retired": {
+            "default": false,
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string",
+            "const": "timed-audio"
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 1
+          },
+          "audio": {
+            "type": "string",
+            "minLength": 1
+          },
+          "answer": {
+            "type": "string",
+            "minLength": 1
+          },
+          "timeLimitSeconds": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "answer"
+        ],
+        "additionalProperties": false,
+        "anyOf": [
+          {
+            "required": [
+              "prompt"
+            ]
+          },
+          {
+            "required": [
+              "audio"
+            ]
+          }
+        ]
+      },
+      {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "unlockedBy": {
+            "type": "string",
+            "minLength": 1
+          },
+          "tags": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "retired": {
+            "default": false,
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string",
+            "const": "routine"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "steps": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "seconds": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
+              },
+              "required": [
+                "text"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "name",
+          "steps"
+        ],
+        "additionalProperties": false
+      }
+    ]
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "valid": {
+    "minimal": { "name": "Due Spanish", "select": { "from": "due" } },
+    "every setting": {
+      "name": "Listen",
+      "select": { "from": "unlocked", "tags": ["letter"] },
+      "count": 12,
+      "format": "multiple-choice",
+      "timeLimits": { "perItemSeconds": 5, "totalSeconds": 120 }
+    }
+  },
+  "invalid": {
+    "not an object": [],
+    "no name": { "select": { "from": "due" } },
+    "no select": { "name": "Due" },
+    "unknown selection": { "name": "Due", "select": { "from": "all" } },
+    "routine format": { "name": "Due", "select": { "from": "due" }, "format": "routine" },
+    "zero count": { "name": "Due", "select": { "from": "due" }, "count": 0 },
+    "fractional count": { "name": "Due", "select": { "from": "due" }, "count": 1.5 },
+    "zero time limit": { "name": "Due", "select": { "from": "due" }, "timeLimits": { "perItemSeconds": 0 } },
+    "unknown time limit": { "name": "Due", "select": { "from": "due" }, "timeLimits": { "perDay": 5 } },
+    "unknown field": { "name": "Due", "select": { "from": "due" }, "shuffle": true }
+  },
+  "zodOnly": {}
+}

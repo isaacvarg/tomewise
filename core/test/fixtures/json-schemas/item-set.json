@@ -1,0 +1,35 @@
+{
+  "valid": {
+    "empty set": [],
+    "one of each type": [
+      { "id": "hola", "type": "flashcard", "front": "hola", "back": "hello", "tags": ["greeting"], "unlockedBy": "0001-greetings" },
+      { "id": "adios", "type": "multiple-choice", "prompt": "adiós", "choices": ["bye", "hi"], "answer": "bye", "retired": true },
+      { "id": "gracias", "type": "typed-answer", "prompt": "gracias", "answer": "thanks", "accept": ["thank you"] },
+      { "id": "letter-k", "type": "timed-audio", "audio": "assets/audio/k.wav", "answer": "K", "timeLimitSeconds": 5 },
+      { "id": "letter-m", "type": "timed-audio", "prompt": "-- ", "answer": "M" },
+      { "id": "sun-salute", "type": "routine", "name": "Sun salute", "steps": [{ "text": "Mountain", "seconds": 5 }, { "text": "Fold" }] }
+    ]
+  },
+  "invalid": {
+    "not an array": { "id": "hola", "type": "flashcard", "front": "hola", "back": "hello" },
+    "unknown item type": [{ "id": "hola", "type": "flash-card", "front": "hola", "back": "hello" }],
+    "no type": [{ "id": "hola", "front": "hola", "back": "hello" }],
+    "flashcard without back": [{ "id": "hola", "type": "flashcard", "front": "hola" }],
+    "uppercase id": [{ "id": "Hola", "type": "flashcard", "front": "hola", "back": "hello" }],
+    "double hyphen in id": [{ "id": "letter--k", "type": "flashcard", "front": "k", "back": "k" }],
+    "empty tag": [{ "id": "hola", "type": "flashcard", "front": "hola", "back": "hello", "tags": [""] }],
+    "retired as a string": [{ "id": "hola", "type": "flashcard", "front": "hola", "back": "hello", "retired": "no" }],
+    "unknown field": [{ "id": "hola", "type": "flashcard", "front": "hola", "back": "hello", "hint": "hi" }],
+    "field from another type": [{ "id": "hola", "type": "flashcard", "front": "hola", "back": "hello", "choices": ["a", "b"] }],
+    "one choice": [{ "id": "adios", "type": "multiple-choice", "prompt": "adiós", "choices": ["bye"], "answer": "bye" }],
+    "timed-audio with neither prompt nor audio": [{ "id": "letter-k", "type": "timed-audio", "answer": "K" }],
+    "zero time limit": [{ "id": "letter-k", "type": "timed-audio", "audio": "k.wav", "answer": "K", "timeLimitSeconds": 0 }],
+    "routine without steps": [{ "id": "sun-salute", "type": "routine", "name": "Sun salute", "steps": [] }],
+    "routine step with unknown field": [{ "id": "sun-salute", "type": "routine", "name": "Sun salute", "steps": [{ "text": "Fold", "reps": 2 }] }]
+  },
+  "zodOnly": {
+    "multiple-choice answer not among choices": [
+      { "id": "adios", "type": "multiple-choice", "prompt": "adiós", "choices": ["bye", "hi"], "answer": "later" }
+    ]
+  }
+}

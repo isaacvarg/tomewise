@@ -1,0 +1,27 @@
+{
+  "valid": {
+    "no units": { "units": [] },
+    "units with milestones": {
+      "units": [
+        { "title": "Basics" },
+        {
+          "title": "Koch letters",
+          "milestones": [
+            { "id": "first-five", "title": "Copy five letters", "status": "current", "lessons": ["0001-k-and-m"], "exam": "first-five" },
+            { "id": "next-five", "title": "Copy five more", "status": "upcoming" }
+          ]
+        }
+      ]
+    }
+  },
+  "invalid": {
+    "no units": {},
+    "unit without title": { "units": [{ "milestones": [] }] },
+    "unknown status": { "units": [{ "title": "Basics", "milestones": [{ "id": "one", "title": "One", "status": "started" }] }] },
+    "milestone without title": { "units": [{ "title": "Basics", "milestones": [{ "id": "one", "status": "done" }] }] },
+    "bad milestone id": { "units": [{ "title": "Basics", "milestones": [{ "id": "One", "title": "One", "status": "done" }] }] },
+    "empty exam": { "units": [{ "title": "Basics", "milestones": [{ "id": "one", "title": "One", "status": "done", "exam": "" }] }] },
+    "unknown field": { "units": [], "mission": "Copy at 20 wpm" }
+  },
+  "zodOnly": {}
+}
