@@ -10,7 +10,12 @@ export const EVENTS = "subjects/morse-code/events";
 export async function startTestApp(prepare?: (root: string) => Promise<void>) {
   const root = await copyExample("morse");
   await prepare?.(root);
-  const server = await startServer(await loadLearningHome(root), { host: "127.0.0.1", port: 0 });
+  const reloadErrors: unknown[] = [];
+  const server = await startServer(await loadLearningHome(root), {
+    host: "127.0.0.1",
+    port: 0,
+    watch: { onError: (error) => reloadErrors.push(error) },
+  });
   onTestFinished(() => server.close());
 
   async function post(body: unknown) {
@@ -45,5 +50,5 @@ export async function startTestApp(prepare?: (root: string) => Promise<void>) {
     return (await readdir(join(root, EVENTS))).sort();
   }
 
-  return { root, url: server.url, get, post, lines, eventFiles };
+  return { root, url: server.url, get, post, lines, eventFiles, reloadErrors };
 }

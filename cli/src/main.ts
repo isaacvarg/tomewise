@@ -145,7 +145,10 @@ async function serve(io: Io, args: string[]): Promise<number> {
   const home = await loadLearningHome(root);
   let server;
   try {
-    server = await startServer(home, listen);
+    server = await startServer(home, {
+      ...listen,
+      watch: { onError: (error) => io.stderr(`Not reloading ${root}: ${(error as Error).message}`) },
+    });
   } catch (error) {
     const { code, message } = error as NodeJS.ErrnoException;
     if (!code) throw error;

@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { appendEvents, InvalidEventError, type LearningHome } from "@tomewise/core";
 
-export function eventRoutes(home: LearningHome): Hono {
+export function eventRoutes(home: () => LearningHome): Hono {
   const routes = new Hono();
 
   routes.post("/", async (c) => {
@@ -14,7 +14,7 @@ export function eventRoutes(home: LearningHome): Hono {
     const inputs = Array.isArray(body) ? body : [body];
     if (inputs.length === 0) return c.json({ issues: [{ file: "request", path: "", message: "No events" }] }, 400);
     try {
-      const appended = await appendEvents(home, inputs, { target: "main" });
+      const appended = await appendEvents(home(), inputs, { target: "main" });
       return c.json({ events: appended.map(({ event }) => event) }, 201);
     } catch (error) {
       if (error instanceof InvalidEventError) return c.json({ issues: error.issues }, 400);
