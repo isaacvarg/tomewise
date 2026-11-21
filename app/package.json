@@ -1,0 +1,14 @@
+{
+  "name": "@tomewise/app",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.11",
+    "@tomewise/core": "workspace:*",
+    "hono": "^4.13.19"
+  }
+}

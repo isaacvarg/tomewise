@@ -156,7 +156,7 @@ describe("owning event files", () => {
   it("is the only source module that writes files under events/", async () => {
     const sources = new URL("../../", import.meta.url);
     const writers: string[] = [];
-    for (const dir of ["core/src", "cli/src"]) {
+    for (const dir of ["core/src", "cli/src", "app/src"]) {
       for (const name of await readdir(new URL(dir, sources), { recursive: true })) {
         if (!name.endsWith(".ts")) continue;
         const text = await readFile(new URL(`${dir}/${name}`, sources), "utf8");

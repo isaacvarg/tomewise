@@ -1,11 +1,11 @@
 import { appendFile, mkdir, readdir, readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { checkAgainstSubject, historyOf } from "./event-checks.ts";
+import { checkAgainstSubject, historyOf, type History } from "./event-checks.ts";
 import { InvalidEventError, InvalidLearningHomeError, SubjectNotFoundError } from "./errors.ts";
 import { EventEnvelope, type LearningEvent } from "./events.ts";
 import { issuesFrom, type ValidationIssue } from "./issues.ts";
 import { loadSubject, type LearningHome } from "./load.ts";
-import { SUBJECTS_DIR, subjectPath } from "./subject.ts";
+import { SUBJECTS_DIR, subjectPath, type Subject } from "./subject.ts";
 import { ulid } from "./ulid.ts";
 
 export type EventTarget = "main" | { machine: string };
@@ -147,34 +147,76 @@ function queued<T>(task: () => Promise<T>): Promise<T> {
   return result;
 }
 
-export function appendEvent(home: LearningHome, input: unknown, options: AppendOptions) {
-  return queued(() => validateAndAppend(home, input, options));
+export interface AppendedEvent {
+  event: LearningEvent;
+  file: string;
 }
 
-async function validateAndAppend(home: LearningHome, input: unknown, options: AppendOptions) {
-  const parsed = EventEnvelope.safeParse(withGenerated(input, options.now ?? new Date()));
-  if (!parsed.success) throw new InvalidEventError(issuesFrom(EVENT, parsed.error));
-  const event: LearningEvent = parsed.data;
+export async function appendEvent(home: LearningHome, input: unknown, options: AppendOptions): Promise<AppendedEvent> {
+  const [appended] = await queued(() => validateAndAppend(home, [input], options, () => EVENT));
+  return appended!;
+}
 
-  if (!home.subjects.includes(event.subject)) {
-    throw new InvalidEventError([
-      {
-        file: EVENT,
+export function appendEvents(home: LearningHome, inputs: unknown[], options: AppendOptions): Promise<AppendedEvent[]> {
+  return queued(() => validateAndAppend(home, inputs, options, (index) => `events[${index}]`));
+}
+
+interface Known {
+  subject: Subject;
+  history: History;
+}
+
+async function validateAndAppend(
+  home: LearningHome,
+  inputs: unknown[],
+  options: AppendOptions,
+  label: (index: number) => string,
+): Promise<AppendedEvent[]> {
+  const now = options.now ?? new Date();
+  const known = new Map<string, Known>();
+  const accepted: AppendedEvent[] = [];
+  const issues: ValidationIssue[] = [];
+
+  for (const [index, input] of inputs.entries()) {
+    const file = label(index);
+    const parsed = EventEnvelope.safeParse(withGenerated(input, now));
+    if (!parsed.success) {
+      issues.push(...issuesFrom(file, parsed.error));
+      continue;
+    }
+    const event: LearningEvent = parsed.data;
+    if (!home.subjects.includes(event.subject)) {
+      issues.push({
+        file,
         path: "subject",
         message: `No subject "${event.subject}"; subjects: ${home.subjects.join(", ") || "none"}`,
-      },
-    ]);
+      });
+      continue;
+    }
+    let subject = known.get(event.subject);
+    if (!subject) {
+      subject = {
+        subject: await loadSubject(home, event.subject),
+        history: historyOf((await scanEvents(home.root, event.subject)).lines.map((line) => line.event)),
+      };
+      known.set(event.subject, subject);
+    }
+    const eventIssues: ValidationIssue[] = [];
+    if (subject.history.byId.has(event.id)) eventIssues.push({ file, path: "id", message: `Event id "${event.id}" is already used` });
+    eventIssues.push(...checkAgainstSubject(event, subject.subject, subject.history).map((issue) => ({ file, ...issue })));
+    if (eventIssues.length > 0) {
+      issues.push(...eventIssues);
+      continue;
+    }
+    subject.history.byId.set(event.id, event);
+    accepted.push({ event, file: subjectPath(event.subject, "events", fileName(monthOf(event.ts), options.target)) });
   }
-  const subject = await loadSubject(home, event.subject);
-  const history = historyOf((await scanEvents(home.root, event.subject)).lines.map((line) => line.event));
-  const issues: ValidationIssue[] = [];
-  if (history.byId.has(event.id)) issues.push({ file: EVENT, path: "id", message: `Event id "${event.id}" is already used` });
-  issues.push(...checkAgainstSubject(event, subject, history).map((issue) => ({ file: EVENT, ...issue })));
   if (issues.length > 0) throw new InvalidEventError(issues);
 
-  const file = subjectPath(event.subject, "events", fileName(monthOf(event.ts), options.target));
-  const full = join(home.root, file);
-  await mkdir(dirname(full), { recursive: true });
-  await appendFile(full, `${JSON.stringify(event)}\n`);
-  return { event, file };
+  for (const [file, group] of Map.groupBy(accepted, (appended) => appended.file)) {
+    const full = join(home.root, file);
+    await mkdir(dirname(full), { recursive: true });
+    await appendFile(full, group.map(({ event }) => `${JSON.stringify(event)}\n`).join(""));
+  }
+  return accepted;
 }
