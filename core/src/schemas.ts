@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PayloadSchemas } from "./payload.ts";
 
 export const SUPPORTED_FORMAT_VERSION = 1;
 
@@ -56,6 +57,7 @@ export const SubjectSettings = z.strictObject({
 export const SubjectFile = z.strictObject({
   name: z.string().min(1),
   settings: SubjectSettings.default({}),
+  payloadSchemas: PayloadSchemas,
 });
 
 export type SubjectFile = z.output<typeof SubjectFile>;

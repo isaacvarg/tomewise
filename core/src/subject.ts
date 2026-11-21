@@ -14,6 +14,7 @@ import {
   missingUnlockingLessons,
   unknownDrillTags,
 } from "./references.ts";
+import { NO_PAYLOAD, payloadSchemaIssues, type PayloadSchemaVersion } from "./payload.ts";
 import { SubjectFile, type TomewiseConfig } from "./schemas.ts";
 
 export const SUBJECTS_DIR = "subjects";
@@ -35,10 +36,13 @@ export interface Subject {
   name: string;
   settings: SubjectSettingsResolved;
   lessons: string[];
+  quizzes: string[];
+  exams: string[];
   itemSets: ItemSet[];
   items: Item[];
   drills: Drill[];
   curriculum?: Curriculum;
+  payloadSchemas: PayloadSchemaVersion[];
 }
 
 export type SubjectContent = Omit<Subject, "settings"> & { file: SubjectFile };
@@ -139,9 +143,13 @@ export async function readSubject(root: string, id: string): Promise<SubjectRead
   const issues: ValidationIssue[] = [];
   const dir = join(root, SUBJECTS_DIR, id);
 
-  const subjectFile = await readParsed(root, subjectPath(id, "subject.json"), SubjectFile, issues);
+  const subjectFileName = subjectPath(id, "subject.json");
+  const subjectFile = await readParsed(root, subjectFileName, SubjectFile, issues);
+  if (subjectFile) issues.push(...payloadSchemaIssues(subjectFile.payloadSchemas, subjectFileName));
 
   const lessons = await namesIn(join(dir, "lessons"), ".html");
+  const quizzes = await namesIn(join(dir, "quizzes"), ".html");
+  const exams = await namesIn(join(dir, "exams"), ".html");
 
   const itemSets: ItemSet[] = [];
   const located: Located<Item>[] = [];
@@ -173,10 +181,13 @@ export async function readSubject(root: string, id: string): Promise<SubjectRead
       name: subjectFile.name,
       file: subjectFile,
       lessons,
+      quizzes,
+      exams,
       itemSets,
       items: itemSets.flatMap((set) => set.items),
       drills: [reviewDrill, ...drills.map((drill) => drill.value)],
       ...(curriculum && { curriculum }),
+      payloadSchemas: subjectFile.payloadSchemas.length > 0 ? subjectFile.payloadSchemas : NO_PAYLOAD,
     },
     issues,
   };

@@ -16,12 +16,27 @@ export class UnsupportedFormatVersionError extends Error {
   override name = "UnsupportedFormatVersionError";
 }
 
-export class InvalidLearningHomeError extends Error {
-  override name = "InvalidLearningHomeError";
+abstract class IssuesError extends Error {
   readonly issues: ValidationIssue[];
 
-  constructor(issues: ValidationIssue[]) {
-    super(["The learning home has problems:", ...issues.map((i) => `  ${formatIssue(i)}`)].join("\n"));
+  constructor(heading: string, issues: ValidationIssue[]) {
+    super([heading, ...issues.map((i) => `  ${formatIssue(i)}`)].join("\n"));
     this.issues = issues;
+  }
+}
+
+export class InvalidLearningHomeError extends IssuesError {
+  override name = "InvalidLearningHomeError";
+
+  constructor(issues: ValidationIssue[]) {
+    super("The learning home has problems:", issues);
+  }
+}
+
+export class InvalidEventError extends IssuesError {
+  override name = "InvalidEventError";
+
+  constructor(issues: ValidationIssue[]) {
+    super("The event was not logged:", issues);
   }
 }

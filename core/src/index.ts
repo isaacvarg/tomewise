@@ -12,8 +12,13 @@ export type { ValidationIssue } from "./issues.ts";
 export { TomewiseConfig, SUPPORTED_FORMAT_VERSION } from "./schemas.ts";
 export {
   GlobalConfigError,
+  InvalidEventError,
   InvalidLearningHomeError,
   LearningHomeNotFoundError,
   SubjectNotFoundError,
   UnsupportedFormatVersionError,
 } from "./errors.ts";
+export { appendEvent, machineName, readEvents } from "./event-files.ts";
+export type { AppendOptions, EventRange } from "./event-files.ts";
+export type { LearningEvent, EventKind } from "./events.ts";
+export type { PayloadSchemaVersion } from "./payload.ts";

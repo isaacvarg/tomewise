@@ -2,12 +2,14 @@ import type { z } from "zod";
 
 export interface ValidationIssue {
   file: string;
+  line?: number;
   path: string;
   message: string;
 }
 
 export function formatIssue(issue: ValidationIssue): string {
-  return issue.path ? `${issue.file}: ${issue.path}: ${issue.message}` : `${issue.file}: ${issue.message}`;
+  const where = issue.line === undefined ? issue.file : `${issue.file}:${issue.line}`;
+  return issue.path ? `${where}: ${issue.path}: ${issue.message}` : `${where}: ${issue.message}`;
 }
 
 export function formatPath(path: readonly PropertyKey[]): string {

@@ -1,3 +1,34 @@
 {
-  "name": "Morse code"
+  "name": "Morse code",
+  "payloadSchemas": [
+    {
+      "version": 1,
+      "kinds": {
+        "attempt": {
+          "type": "object",
+          "properties": {
+            "heard": { "type": "string" },
+            "answer": { "type": "string" },
+            "responseTime": { "type": "integer", "unit": "ms" }
+          },
+          "required": ["heard", "answer", "responseTime"]
+        }
+      }
+    },
+    {
+      "version": 2,
+      "kinds": {
+        "attempt": {
+          "type": "object",
+          "properties": {
+            "heard": { "type": "string" },
+            "answer": { "type": "string" },
+            "responseTime": { "type": "integer", "unit": "ms" },
+            "wpm": { "type": "number", "unit": "wpm" }
+          },
+          "required": ["heard", "answer", "responseTime", "wpm"]
+        }
+      }
+    }
+  ]
 }
