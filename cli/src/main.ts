@@ -2,7 +2,7 @@
 import { hostname } from "node:os";
 import { text } from "node:stream/consumers";
 import { parseArgs } from "node:util";
-import { startServer } from "@tomewise/app";
+import { BUILT_SPA, startServer } from "@tomewise/app";
 import {
   appendEvent,
   findLearningHome,
@@ -145,7 +145,7 @@ async function serve(io: Io, args: string[]): Promise<number> {
   const home = await loadLearningHome(root);
   let server;
   try {
-    server = await startServer(home, listen);
+    server = await startServer(home, { ...listen, spa: BUILT_SPA });
   } catch (error) {
     const { code, message } = error as NodeJS.ErrnoException;
     if (!code) throw error;

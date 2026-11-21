@@ -1,12 +1,19 @@
+import { existsSync } from "node:fs";
 import type { AddressInfo } from "node:net";
 import { createAdaptorServer } from "@hono/node-server";
 import { Hono } from "hono";
 import type { LearningHome } from "@tomewise/core";
 import { eventRoutes } from "./events.ts";
+import { spaRoutes } from "./spa.ts";
 
-export function createApp(home: LearningHome): Hono {
+export interface AppOptions {
+  spa?: string;
+}
+
+export function createApp(home: LearningHome, { spa }: AppOptions = {}): Hono {
   const app = new Hono();
   app.route("/api/events", eventRoutes(home));
+  if (spa !== undefined && existsSync(spa)) app.route("/", spaRoutes(spa));
   return app;
 }
 
@@ -20,8 +27,8 @@ export interface RunningServer {
   close: () => Promise<void>;
 }
 
-export async function startServer(home: LearningHome, { host, port }: ListenOptions): Promise<RunningServer> {
-  const server = createAdaptorServer({ fetch: createApp(home).fetch });
+export async function startServer(home: LearningHome, { host, port, ...options }: ListenOptions & AppOptions): Promise<RunningServer> {
+  const server = createAdaptorServer({ fetch: createApp(home, options).fetch });
   await new Promise<void>((resolve, reject) => {
     server.once("error", reject);
     server.listen(port, host, () => {
