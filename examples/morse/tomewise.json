@@ -1,0 +1,6 @@
+{
+  "formatVersion": 1,
+  "timezone": "Europe/London",
+  "weekStart": "monday",
+  "minimumSessionSeconds": 60
+}
