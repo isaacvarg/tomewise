@@ -11,7 +11,13 @@ export async function startTestApp(prepare?: (root: string) => Promise<void>) {
   const root = await copyExample("morse");
   await prepare?.(root);
   const server = await startServer(await loadLearningHome(root), { host: "127.0.0.1", port: 0 });
-  onTestFinished(() => server.close());
+  let running = true;
+  async function stop() {
+    if (!running) return;
+    running = false;
+    await server.close();
+  }
+  onTestFinished(stop);
 
   async function post(body: unknown) {
     const response = await fetch(`${server.url}/api/events`, {
@@ -40,5 +46,5 @@ export async function startTestApp(prepare?: (root: string) => Promise<void>) {
     return (await readdir(join(root, EVENTS))).sort();
   }
 
-  return { root, url: server.url, post, lines, eventFiles };
+  return { root, url: server.url, post, lines, eventFiles, stop };
 }

@@ -6,8 +6,15 @@ import { readJson } from "./json.ts";
 
 export const CONFIG_FILE = "tomewise.json";
 const HOME_ENV_VAR = "TOMEWISE_HOME";
+const URL_ENV_VAR = "TOMEWISE_URL";
 
-const GlobalConfig = z.object({ learningHome: z.string().optional() });
+const AppUrl = z.url({ protocol: /^https?$/, error: "Use an http:// or https:// URL" });
+
+const GlobalConfig = z.object({
+  learningHome: z.string().optional(),
+  appUrl: AppUrl.optional(),
+});
+type GlobalConfig = z.infer<typeof GlobalConfig>;
 
 export interface FindOptions {
   cwd?: string;
@@ -37,7 +44,7 @@ function globalConfigPath(env: NodeJS.ProcessEnv): string | undefined {
   return env.HOME ? join(env.HOME, ".config", "tomewise", "config.json") : undefined;
 }
 
-async function fromGlobalConfig(env: NodeJS.ProcessEnv): Promise<string | undefined> {
+async function readGlobalConfig(env: NodeJS.ProcessEnv): Promise<{ path: string; config: GlobalConfig } | undefined> {
   const path = globalConfigPath(env);
   if (!path) return undefined;
   const read = await readJson(path);
@@ -47,8 +54,23 @@ async function fromGlobalConfig(env: NodeJS.ProcessEnv): Promise<string | undefi
   }
   const parsed = GlobalConfig.safeParse(read.value);
   if (!parsed.success) throw new GlobalConfigError(`${path}: ${z.prettifyError(parsed.error)}`);
-  const { learningHome } = parsed.data;
-  return learningHome ? homeAt(resolve(dirname(path), learningHome)) : undefined;
+  return { path, config: parsed.data };
+}
+
+async function fromGlobalConfig(env: NodeJS.ProcessEnv): Promise<string | undefined> {
+  const global = await readGlobalConfig(env);
+  const learningHome = global?.config.learningHome;
+  return global && learningHome ? homeAt(resolve(dirname(global.path), learningHome)) : undefined;
+}
+
+export async function findAppUrl(env: NodeJS.ProcessEnv = process.env): Promise<string | undefined> {
+  const value = env[URL_ENV_VAR];
+  if (value) {
+    const parsed = AppUrl.safeParse(value);
+    if (!parsed.success) throw new GlobalConfigError(`${URL_ENV_VAR} (${value}): ${z.prettifyError(parsed.error)}`);
+    return parsed.data;
+  }
+  return (await readGlobalConfig(env))?.config.appUrl;
 }
 
 async function fromEnv(cwd: string, env: NodeJS.ProcessEnv): Promise<string | undefined> {

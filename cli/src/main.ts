@@ -1,10 +1,14 @@
 #!/usr/bin/env node
+import { request as httpRequest } from "node:http";
+import { request as httpsRequest } from "node:https";
 import { hostname } from "node:os";
+import { join } from "node:path";
 import { text } from "node:stream/consumers";
 import { parseArgs } from "node:util";
 import { startServer } from "@tomewise/app";
 import {
   appendEvent,
+  findAppUrl,
   findLearningHome,
   formatIssue,
   GlobalConfigError,
@@ -14,6 +18,7 @@ import {
   loadLearningHome,
   UnsupportedFormatVersionError,
   validateLearningHome,
+  type ValidationIssue,
 } from "@tomewise/core";
 
 export interface Io {
@@ -36,6 +41,7 @@ const USAGE = [
 
 const DEFAULT_HOST = "127.0.0.1";
 const DEFAULT_PORT = 4777;
+const SEND_TIMEOUT_MS = 2000;
 
 async function findRoot(io: Io): Promise<string | undefined> {
   try {
@@ -63,27 +69,119 @@ async function validate(io: Io): Promise<number> {
   return 1;
 }
 
+type Sent =
+  | { outcome: "sent"; event: unknown }
+  | { outcome: "rejected"; issues: ValidationIssue[] }
+  | { outcome: "failed"; message: string }
+  | { outcome: "unreachable"; reason: string };
+
+class SendTimeout extends Error {}
+
+interface Answer {
+  status: number;
+  statusText: string;
+  body: string;
+}
+
+function postJson(url: URL, json: string): Promise<Answer> {
+  const request = url.protocol === "https:" ? httpsRequest : httpRequest;
+  return new Promise((resolve, reject) => {
+    const req = request(
+      url,
+      { method: "POST", headers: { "content-type": "application/json", "content-length": Buffer.byteLength(json) } },
+      (res) => {
+        let body = "";
+        res.setEncoding("utf8");
+        res.on("data", (chunk: string) => (body += chunk));
+        res.on("end", () => resolve({ status: res.statusCode ?? 0, statusText: res.statusMessage ?? "", body }));
+        res.on("error", reject);
+      },
+    );
+    const timer = setTimeout(() => req.destroy(new SendTimeout()), SEND_TIMEOUT_MS);
+    req.on("close", () => clearTimeout(timer));
+    req.on("error", reject);
+    req.end(json);
+  });
+}
+
+function parseBody(text: string): any {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+}
+
+async function send(appUrl: string, input: unknown): Promise<Sent> {
+  const url = new URL(`${appUrl.replace(/\/+$/, "")}/api/events`);
+  let answer: Answer;
+  try {
+    answer = await postJson(url, JSON.stringify(input));
+  } catch (error) {
+    const reason =
+      error instanceof SendTimeout ? `no answer within ${SEND_TIMEOUT_MS / 1000}s` : ((error as NodeJS.ErrnoException).code ?? (error as Error).message);
+    return { outcome: "unreachable", reason };
+  }
+  const body = parseBody(answer.body);
+  if (answer.status === 201 && Array.isArray(body?.events) && body.events.length === 1) {
+    return { outcome: "sent", event: body.events[0] };
+  }
+  if (answer.status === 400 && Array.isArray(body?.issues)) return { outcome: "rejected", issues: body.issues };
+  return { outcome: "failed", message: `${url} answered ${answer.status} ${answer.statusText}; event not logged` };
+}
+
+async function readEventArg(io: Io, arg: string): Promise<{ input: unknown } | undefined> {
+  const source = arg === "-" ? await (io.readStdin ?? (() => text(process.stdin)))() : arg;
+  try {
+    return { input: JSON.parse(source) };
+  } catch (error) {
+    io.stderr(formatIssue({ file: "event", path: "", message: `Invalid JSON: ${(error as Error).message}` }));
+    return undefined;
+  }
+}
+
 async function log(io: Io, arg: string | undefined): Promise<number> {
   if (arg === undefined) {
     io.stderr(USAGE);
     return 2;
   }
-  const root = await findRoot(io);
-  if (!root) return 2;
+  const read = await readEventArg(io, arg);
+  if (!read) return 1;
 
-  const source = arg === "-" ? await (io.readStdin ?? (() => text(process.stdin)))() : arg;
-  let input: unknown;
+  let appUrl: string | undefined;
   try {
-    input = JSON.parse(source);
+    appUrl = await findAppUrl(io.env);
   } catch (error) {
-    io.stderr(formatIssue({ file: "event", path: "", message: `Invalid JSON: ${(error as Error).message}` }));
-    return 1;
+    if (!(error instanceof GlobalConfigError)) throw error;
+    io.stderr(error.message);
+    return 2;
   }
 
+  let notice = "No app URL set (appUrl in ~/.config/tomewise/config.json or TOMEWISE_URL)";
+  if (appUrl) {
+    const sent = await send(appUrl, read.input);
+    if (sent.outcome === "sent") {
+      io.stdout(JSON.stringify(sent.event));
+      return 0;
+    }
+    if (sent.outcome === "rejected") {
+      for (const issue of sent.issues) io.stderr(formatIssue(issue));
+      return 1;
+    }
+    if (sent.outcome === "failed") {
+      io.stderr(sent.message);
+      return 1;
+    }
+    notice = `Could not reach the app at ${appUrl} (${sent.reason})`;
+  }
+
+  const root = await findRoot(io);
+  if (!root) return 2;
   try {
     const home = await loadLearningHome(root);
-    const { event } = await appendEvent(home, input, { target: { machine: io.machine ?? hostname() } });
+    const { event, file } = await appendEvent(home, read.input, { target: { machine: io.machine ?? hostname() } });
     io.stdout(JSON.stringify(event));
+    io.stderr(`${notice}; wrote the event to ${join(root, file)} instead.`);
     return 0;
   } catch (error) {
     if (error instanceof InvalidEventError) {

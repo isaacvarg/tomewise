@@ -99,7 +99,10 @@ describe("tome log", () => {
     const root = await buildHome(homeFiles());
     const main = new URL("../src/main.ts", import.meta.url).pathname;
 
-    await promisify(execFile)(process.execPath, [main, "log", JSON.stringify(start)], { cwd: root });
+    await promisify(execFile)(process.execPath, [main, "log", JSON.stringify(start)], {
+      cwd: root,
+      env: { PATH: process.env.PATH, HOME: await mkdtemp(join(tmpdir(), "tomewise-cli-home-")) },
+    });
 
     expect(await readdir(join(root, "subjects/morse-code/events"))).toEqual([`2026-11.${machineName(hostname())}.jsonl`]);
   });
