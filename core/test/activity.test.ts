@@ -222,6 +222,45 @@ describe("goals", () => {
   });
 });
 
+describe("date range", () => {
+  const day = (n: number, time = "18:00") => `2026-11-${n}T${time}:00.000Z`;
+
+  it("reads activity as of the end of the range", async () => {
+    const learningHome = await home({ events: [16, 17, 19].map((n) => session(day(n), 10)) });
+
+    const activity = await readActivity(learningHome, { to: "2026-11-17", now: new Date(day(21)) });
+
+    expect(activity.today).toBe("2026-11-17");
+    expect(dates(activity)).toEqual(["2026-11-16", "2026-11-17"]);
+    expect(activity.streak.days).toBe(2);
+  });
+
+  it("leaves out days and goal periods that end before the start of the range", async () => {
+    const learningHome = await home({
+      subject: { goals: [{ id: "daily-copy", per: "day", minutes: 10 }, { id: "weekly-copy", per: "week", minutes: 30 }] },
+      events: [15, 16, 17, 18].map((n) => session(day(n), 10)),
+    });
+
+    const activity = await readActivity(learningHome, { from: "2026-11-17", to: "2026-11-18" });
+
+    expect(dates(activity)).toEqual(["2026-11-17", "2026-11-18"]);
+    expect(activity.goals.map(({ goal, from, to }) => `${goal.id} ${from}..${to}`)).toEqual([
+      "weekly-copy 2026-11-16..2026-11-22",
+      "daily-copy 2026-11-17..2026-11-17",
+      "daily-copy 2026-11-18..2026-11-18",
+    ]);
+    expect(activity.streak.days).toBe(4);
+  });
+
+  it("rejects a date that isn't YYYY-MM-DD", async () => {
+    const learningHome = await home({ events: [] });
+
+    await expect(readActivity(learningHome, { from: "17/11/2026" })).rejects.toThrow(
+      new RangeError("Not a date: 17/11/2026; use YYYY-MM-DD"),
+    );
+  });
+});
+
 describe("rule changes", () => {
   it("rejects a goal.changed or streak.changed without the rules it replaced", async () => {
     const root = await buildHome({

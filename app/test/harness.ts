@@ -22,6 +22,11 @@ export async function startTestApp(prepare?: (root: string) => Promise<void>) {
     return { status: response.status, body: (await response.json()) as any };
   }
 
+  async function get(path: string) {
+    const response = await fetch(`${server.url}${path}`);
+    return { status: response.status, body: (await response.json()) as any };
+  }
+
   async function lines(name: string): Promise<any[]> {
     let text: string;
     try {
@@ -40,5 +45,5 @@ export async function startTestApp(prepare?: (root: string) => Promise<void>) {
     return (await readdir(join(root, EVENTS))).sort();
   }
 
-  return { root, url: server.url, post, lines, eventFiles };
+  return { root, url: server.url, get, post, lines, eventFiles };
 }

@@ -3,10 +3,12 @@ import { createAdaptorServer } from "@hono/node-server";
 import { Hono } from "hono";
 import type { LearningHome } from "@tomewise/core";
 import { eventRoutes } from "./events.ts";
+import { readRoutes } from "./reads.ts";
 
 export function createApp(home: LearningHome): Hono {
   const app = new Hono();
   app.route("/api/events", eventRoutes(home));
+  app.route("/api", readRoutes(home));
   return app;
 }
 
