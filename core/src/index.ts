@@ -24,3 +24,6 @@ export type { LearningEvent, EventKind } from "./events.ts";
 export type { PayloadSchemaVersion } from "./payload.ts";
 export { dueItems } from "./due.ts";
 export type { DueItem } from "./due.ts";
+export { readActivity } from "./activity.ts";
+export type { Activity, ActivityDay, ActivityOptions, GoalResult, Streak } from "./activity.ts";
+export type { Goal, StreakRules } from "./schemas.ts";

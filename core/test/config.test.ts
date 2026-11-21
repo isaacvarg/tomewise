@@ -13,6 +13,7 @@ describe("loading tomewise.json", () => {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       weekStart: "monday",
       minimumSessionSeconds: 60,
+      streak: { restDaysPerWeek: 0 },
     });
   });
 
@@ -23,6 +24,7 @@ describe("loading tomewise.json", () => {
         timezone: "Pacific/Auckland",
         weekStart: "sunday",
         minimumSessionSeconds: 120,
+        streak: { restDaysPerWeek: 2 },
       },
     });
 
@@ -33,6 +35,7 @@ describe("loading tomewise.json", () => {
       timezone: "Pacific/Auckland",
       weekStart: "sunday",
       minimumSessionSeconds: 120,
+      streak: { restDaysPerWeek: 2 },
     });
   });
 });

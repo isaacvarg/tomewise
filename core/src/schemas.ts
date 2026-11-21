@@ -34,6 +34,25 @@ export function formatVersionTooNew(version: number): string {
   return `This learning home uses formatVersion ${version}, but this version of Tomewise supports up to ${SUPPORTED_FORMAT_VERSION}. Upgrade Tomewise to open it.`;
 }
 
+const RestDaysPerWeek = z.int().min(0).max(6);
+
+export const StreakRules = z.strictObject({ restDaysPerWeek: RestDaysPerWeek });
+
+export type StreakRules = z.output<typeof StreakRules>;
+
+export const Goal = z.strictObject({
+  id: z.string().min(1),
+  per: z.enum(["day", "week"]),
+  minutes: z.number().positive(),
+});
+
+export type Goal = z.output<typeof Goal>;
+
+export const ruleChanges = {
+  "goal.changed": z.strictObject({ from: z.array(Goal), to: z.array(Goal) }),
+  "streak.changed": z.strictObject({ from: StreakRules, to: StreakRules }),
+};
+
 export const TomewiseConfig = z.strictObject({
   formatVersion: z.int().min(1).max(SUPPORTED_FORMAT_VERSION, {
     error: (issue) => formatVersionTooNew(issue.input as number),
@@ -41,6 +60,7 @@ export const TomewiseConfig = z.strictObject({
   timezone: Timezone.default(systemTimezone),
   weekStart: z.enum(weekdays).default("monday"),
   minimumSessionSeconds: z.number().min(0).default(60),
+  streak: z.strictObject({ restDaysPerWeek: RestDaysPerWeek.default(0) }).default({ restDaysPerWeek: 0 }),
 });
 
 export type TomewiseConfig = z.output<typeof TomewiseConfig>;
@@ -57,6 +77,7 @@ export const SubjectSettings = z.strictObject({
 export const SubjectFile = z.strictObject({
   name: z.string().min(1),
   settings: SubjectSettings.default({}),
+  goals: z.array(Goal).default([]),
   payloadSchemas: PayloadSchemas,
 });
 

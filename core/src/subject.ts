@@ -15,7 +15,7 @@ import {
   unknownDrillTags,
 } from "./references.ts";
 import { NO_PAYLOAD, payloadSchemaIssues, type PayloadSchemaVersion } from "./payload.ts";
-import { SubjectFile, type TomewiseConfig } from "./schemas.ts";
+import { type Goal, SubjectFile, type TomewiseConfig } from "./schemas.ts";
 
 export const SUBJECTS_DIR = "subjects";
 
@@ -43,6 +43,7 @@ export interface Subject {
   drills: Drill[];
   curriculum?: Curriculum;
   payloadSchemas: PayloadSchemaVersion[];
+  goals: Goal[];
 }
 
 export type SubjectContent = Omit<Subject, "settings"> & { file: SubjectFile };
@@ -188,6 +189,7 @@ export async function readSubject(root: string, id: string): Promise<SubjectRead
       drills: [reviewDrill, ...drills.map((drill) => drill.value)],
       ...(curriculum && { curriculum }),
       payloadSchemas: subjectFile.payloadSchemas.length > 0 ? subjectFile.payloadSchemas : NO_PAYLOAD,
+      goals: subjectFile.goals,
     },
     issues,
   };
