@@ -1,4 +1,5 @@
 import { readdir, readFile } from "node:fs/promises";
+import { request } from "node:http";
 import { join } from "node:path";
 import { onTestFinished } from "vitest";
 import { loadLearningHome } from "@tomewise/core";
@@ -40,5 +41,20 @@ export async function startTestApp(prepare?: (root: string) => Promise<void>) {
     return (await readdir(join(root, EVENTS))).sort();
   }
 
-  return { root, url: server.url, post, lines, eventFiles };
+  function get(path: string): Promise<{ status: number; type: string | undefined; body: Buffer }> {
+    return new Promise((resolve, reject) => {
+      request(`${server.url}${path}`, { path }, (response) => {
+        const chunks: Buffer[] = [];
+        response.on("data", (chunk: Buffer) => chunks.push(chunk));
+        response.on("end", () =>
+          resolve({ status: response.statusCode!, type: response.headers["content-type"], body: Buffer.concat(chunks) }),
+        );
+        response.on("error", reject);
+      })
+        .on("error", reject)
+        .end();
+    });
+  }
+
+  return { root, url: server.url, post, get, lines, eventFiles };
 }
