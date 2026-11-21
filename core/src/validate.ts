@@ -1,6 +1,6 @@
 import { readConfig } from "./config.ts";
 import { checkAgainstSubject, historyOf } from "./event-checks.ts";
-import { monthOf, scanEvents } from "./event-files.ts";
+import { monthOf, scanEvents } from "./event-store.ts";
 import type { ValidationIssue } from "./issues.ts";
 import { listSubjects, readSubject, type SubjectContent } from "./subject.ts";
 

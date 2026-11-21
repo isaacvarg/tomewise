@@ -1,6 +1,6 @@
 import type { z } from "zod";
 import { InvalidLearningHomeError } from "./errors.ts";
-import { type EventLine, scanEvents } from "./event-files.ts";
+import { type EventLine, scanEvents } from "./event-store.ts";
 import { issuesFrom, type ValidationIssue } from "./issues.ts";
 import { loadSubject, type LearningHome } from "./load.ts";
 import { type Goal, ruleChanges, type StreakRules, weekdays } from "./schemas.ts";

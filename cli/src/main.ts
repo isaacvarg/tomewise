@@ -72,7 +72,7 @@ async function log(io: Io, arg: string | undefined): Promise<number> {
 
   try {
     const home = await loadLearningHome(root);
-    const { event } = await appendEvent(home, input, { machine: io.machine ?? hostname() });
+    const { event } = await appendEvent(home, input, { target: { machine: io.machine ?? hostname() } });
     io.stdout(JSON.stringify(event));
     return 0;
   } catch (error) {

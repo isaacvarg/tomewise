@@ -8,8 +8,10 @@ import { loadSubject, type LearningHome } from "./load.ts";
 import { SUBJECTS_DIR, subjectPath } from "./subject.ts";
 import { ulid } from "./ulid.ts";
 
+export type EventTarget = "main" | { machine: string };
+
 export interface AppendOptions {
-  machine: string;
+  target: EventTarget;
   now?: Date;
 }
 
@@ -133,7 +135,23 @@ function withGenerated(input: unknown, now: Date): unknown {
   return event;
 }
 
-export async function appendEvent(home: LearningHome, input: unknown, options: AppendOptions) {
+function fileName(month: string, target: EventTarget): string {
+  return target === "main" ? `${month}.jsonl` : `${month}.${machineName(target.machine)}.jsonl`;
+}
+
+let queue: Promise<unknown> = Promise.resolve();
+
+function queued<T>(task: () => Promise<T>): Promise<T> {
+  const result = queue.then(task);
+  queue = result.catch(() => undefined);
+  return result;
+}
+
+export function appendEvent(home: LearningHome, input: unknown, options: AppendOptions) {
+  return queued(() => validateAndAppend(home, input, options));
+}
+
+async function validateAndAppend(home: LearningHome, input: unknown, options: AppendOptions) {
   const parsed = EventEnvelope.safeParse(withGenerated(input, options.now ?? new Date()));
   if (!parsed.success) throw new InvalidEventError(issuesFrom(EVENT, parsed.error));
   const event: LearningEvent = parsed.data;
@@ -154,7 +172,7 @@ export async function appendEvent(home: LearningHome, input: unknown, options: A
   issues.push(...checkAgainstSubject(event, subject, history).map((issue) => ({ file: EVENT, ...issue })));
   if (issues.length > 0) throw new InvalidEventError(issues);
 
-  const file = subjectPath(event.subject, "events", `${monthOf(event.ts)}.${machineName(options.machine)}.jsonl`);
+  const file = subjectPath(event.subject, "events", fileName(monthOf(event.ts), options.target));
   const full = join(home.root, file);
   await mkdir(dirname(full), { recursive: true });
   await appendFile(full, `${JSON.stringify(event)}\n`);
