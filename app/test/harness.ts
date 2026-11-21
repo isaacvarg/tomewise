@@ -4,14 +4,14 @@ import { join } from "node:path";
 import { onTestFinished } from "vitest";
 import { loadLearningHome } from "@tomewise/core";
 import { copyExample } from "../../core/test/helpers.ts";
-import { startServer } from "../src/index.ts";
+import { startServer, type ToolDirs } from "../src/index.ts";
 
 export const EVENTS = "subjects/morse-code/events";
 
-export async function startTestApp(prepare?: (root: string) => Promise<void>) {
+export async function startTestApp(prepare?: (root: string) => Promise<void>, tool?: ToolDirs) {
   const root = await copyExample("morse");
   await prepare?.(root);
-  const server = await startServer(await loadLearningHome(root), { host: "127.0.0.1", port: 0 });
+  const server = await startServer(await loadLearningHome(root), { host: "127.0.0.1", port: 0, tool });
   onTestFinished(() => server.close());
 
   async function post(body: unknown) {

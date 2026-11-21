@@ -18,15 +18,15 @@ async function withPages(root: string) {
 }
 
 describe("learning-home pages", () => {
-  it("serves a lesson as written, as HTML", async () => {
+  it("serves a lesson as HTML", async () => {
     const app = await startTestApp();
-    const written = await readFile(join(app.root, SUBJECT, "lessons/0001-k-and-m.html"));
+    const written = await readFile(join(app.root, SUBJECT, "lessons/0001-k-and-m.html"), "utf8");
 
     const response = await app.get("/s/morse-code/lessons/0001-k-and-m.html");
 
     expect(response.status).toBe(200);
     expect(response.type).toBe("text/html; charset=utf-8");
-    expect(response.body.equals(written)).toBe(true);
+    expect(response.body.toString()).toContain(written.slice(written.indexOf("<body>")));
   });
 
   it.each([
