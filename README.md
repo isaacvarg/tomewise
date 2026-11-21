@@ -8,5 +8,5 @@ Status: **designed, not built.** Start here:
 - [docs/design.md](./docs/design.md): the v1 design overview.
 - [docs/adr/](./docs/adr/): why the big decisions went the way they did.
 - [docs/future.md](./docs/future.md): ideas parked for later.
-- [docs/names.md](./docs/names.md): name candidates.
+- [docs/names.md](./docs/names.md): the name and how each part uses it.
 - [skill/](./skill/): the skill, forked from Matt Pocock's `teach` (MIT). The first commit is the untouched upstream copy.

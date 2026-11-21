@@ -20,7 +20,7 @@ tomewise/                        the tool (what gets published)
   .claude-plugin/
 
 ~/learning/                    a learning home (the learner's own git repo)
-  tomewise.json                   formatVersion, global defaults, streak rules, git settings
+  tomewise.json                   formatVersion, global defaults, timezone, week start, streak rules, git settings
   subjects/
     morse-code/
       subject.json             payload schema, chart specs, goals, assessment settings
@@ -41,19 +41,22 @@ Finding the learning home: walk up from the current directory to `tomewise.json`
 ## Data
 
 - **Events** are appended to `events/YYYY-MM.jsonl`, one per attempt, plus lesson/session events.
-  - Envelope: `ts`, `subject`, `kind`, `ref`, `sessionId`, `duration`, `outcome`.
+  - Envelope: `id` (ULID), `ts`, `subject`, `kind`, `ref`, `sessionId`, `duration`, `outcome`, `schemaVersion`.
   - Payload: `data`, shaped by the schema in `subject.json`.
-- **Items** (`items/*.json`): stable `id`, `type`, type-specific fields, `unlockedBy`, tags. Built-in types: flashcard, multiple choice, typed answer, timed/audio, routine (guided sequence, self-rated 1–4). Custom types come with a widget in `assets/`.
+  - A session opens with `session.start` (its `ref` is the lesson, drill, quiz or exam) and closes with `session.end`. An attempt's `ref` is always the item. An event about another event (an explanation's grade) uses that event's `id` as its `ref`.
+  - Payload schemas are versioned and only ever extended, so old events stay valid. Each event records the `schemaVersion` it was written under.
+- **Items** (`items/*.json`): stable `id`, `type`, type-specific fields, `unlockedBy`, tags, `retired`. Items are edited in place; a change of meaning retires the item and adds a new one with a new `id`. Retired items are never deleted. Built-in types: flashcard, multiple choice, typed answer, timed/audio, routine (guided sequence, self-rated 1–4). Routines are recorded and charted but skip the scheduler; how often they're done comes from a goal. Custom types come with a widget in `assets/`.
 - **Drills** (`drills/*.json`): which items (due / tag / all unlocked), how many, the format, time limits. "Review everything due" is a built-in drill.
 - **Chart specs** in `subject.json` are declarative and written by the agent.
 - **Settings** have defaults in `tomewise.json`, overridden per subject in `subject.json`.
+- **Days and weeks**: all day boundaries use the `timezone` in `tomewise.json` (defaulting to the system zone at `init`). A session counts on the day it started. Weeks run Monday to Sunday by default. Sessions shorter than a minimum length (default 60s) don't make an activity day.
 
 ## Learning model
 
 - **Lessons** teach once and are never locked. Completion is a `lesson.completed` event, sent when the final check passes or when the learner clicks Done. Completing a lesson unlocks its items, drills and reference sheets.
-- **Review** happens in the app with no agent: the scheduler (FSRS or similar) picks due items and every attempt updates them.
-- **Quizzes** are short and scored and mix items across lessons. **Exams** are longer and cumulative and use new questions. Both are written by the agent ahead of time; the agent writes a quiz together with the lesson after which it comes due.
-- **Assessment settings**: assessments on/off, quiz frequency (every N lessons / weekly / on demand), quiz length, exams on/off, timed or untimed, score display (number / pass-fail / hidden). Hidden scores are still recorded.
+- **Review** happens in the app with no agent: the scheduler (FSRS via `ts-fsrs`, default parameters at first, tuned to the learner's own history once there are enough reviews) picks due items. Every attempt on an item updates its schedule, whether it came from a review, a drill, a quiz or a lesson check; the algorithm handles early practice.
+- **Quizzes** are short and scored and mix items across lessons. **Exams** are longer and cumulative and use exam questions: new, never scheduled, each naming the items it tests. Both are written by the agent ahead of time; the agent writes a quiz together with the lesson after which it comes due. If a quiz comes due (say, weekly) and none has been written, the app builds one by rule from the scheduler's state (the weakest items plus some that used to be missed), and the agent reads the results next time.
+- **Assessment settings**: assessments on/off, quiz frequency (every N lessons / weekly / on demand), quiz length, exams on/off, timed or untimed, score display (number / pass-fail / hidden). Hidden scores are still recorded. Defaults are chosen during `init` and stored in `tomewise.json`; each subject can override them in `subject.json`.
 - **Results** feed the agent's choice of next lesson, are suggested as evidence for learning records (the learner confirms), and missed items move forward in the review schedule.
 - **Curriculum** (optional): units and milestones with statuses. The agent drafts it from real syllabi in `RESOURCES.md`. It's a compass: changes are proposed and confirmed, and each gets a learning record.
 - **Exams and milestones**: when a milestone's lessons are done it shows "exam ready" (or "ask your agent to prepare it"). Passing marks the milestone done; failing locks nothing. With exams off, the learner or the agent marks milestones done.
@@ -70,12 +73,13 @@ Finding the learning home: walk up from the current directory to `tomewise.json`
 
 - Vite + React SPA with a Hono server in a single Node process.
 - Serves lessons from the learning home. `tome.js` posts to `/api/events` on the same origin.
+- Widgets are served under a major-version path (`/widgets/v1/tome.js`). Within a major version they only gain features; a v2 ships alongside v1 and both stay served, so old lessons keep working.
 - Watches the learning home so new content shows up live.
-- No auth; meant for localhost or a private network. Ships as an OCI image and via `npx`.
+- No auth; meant for localhost or a private network. The expected setup is the app on a home server, reached from phone and laptop over Tailscale. A second learner in the same household runs their own instance with their own learning home (the docs include a two-instance compose example). Ships as an OCI image and via `npx`.
+- The app is the only writer of history: `tome log` posts to it, and falls back to a per-machine event file when it's unreachable. Content travels by git: the agent pushes, the app pulls, commits events and pushes (ADR 0011).
+- Themes are modular from day one (see below).
 - Pages:
-  - all subjects;
-  - activity heatmap and streak;
-  - due today;
+  - home, top to bottom: activity heatmap; a visual grid of subjects (no progress shown); what's due; streak; one Start button;
   - subject home (curriculum roadmap, lessons, drills, charts, goals);
   - review/drill runner;
   - prompts such as "ask your agent for your quiz".
@@ -96,18 +100,43 @@ Finding the learning home: walk up from the current directory to `tomewise.json`
 `init` asks:
 1. Where to put the learning home. Using Obsidian? Then which subfolder of which vault.
 2. Use git? If so, the auto-commit cadence (per session / hourly / daily) and whether to push to a remote. If not, the learner commits by hand.
-3. Install the skill for which agents.
-4. Run the app now, install it as a service, or print the Docker command.
-5. Create a first subject now (hands off to the agent).
+3. Default assessment settings (subjects can override them later).
+4. Install the skill for which agents.
+5. Run the app now, install it as a service, or print the Docker command.
+6. Create a first subject now (hands off to the agent).
+
+Commit messages in a learning home follow Conventional Commits, scoped by subject folder (or `home` for `tomewise.json`), with no attribution lines:
+
+```
+feat(morse): add lesson 5 (A, the short pair)       agent: new content
+fix(morse): correct item R audio speed              agent: content fix
+chore(morse): update curriculum, milestone 1 done   agent: curriculum or settings
+chore(history): 2026-11-21 · morse 3 sessions, 18 min, 96 attempts   app: events
+```
+
+`tome import <dir>` copies a `teach` workspace into a new subject, then the agent converts its interactive drills into widgets that follow the event contract (generic ones become built-ins, subject-specific ones go in the subject's `assets/`) and rewrites the lessons to use them. Lessons that existed are marked complete; history kept only in the browser (`localStorage`) is dropped, and the learning records and `NOTES.md` carry what was learned.
 
 Agents query history in layers: raw files with `jq` always work (the files are the contract); the CLI is the documented interface the skill uses; an MCP server may wrap the same core later.
 
-## Skill
+## Themes
 
-A fork of `teach` (MIT, credited) in the Agent Skills format, shipped as a Claude Code plugin and through skills.sh. On top of `teach`, it:
+A theme is a folder: `theme.json` (name, author, version), `tokens.css` (light and dark), optional extra CSS, JavaScript and assets. Themes may change anything about appearance, layout included. Theme JavaScript runs on every page, lessons included, so themes are trusted code: install only ones you trust. Built-ins ship in the tool's `themes/`; personal themes go in the learning home's `themes/`; community themes come by pull request. The chosen theme is stored in `tomewise.json` and applies to the app, the widgets and lessons. v1 ships Paper (from the Morse workspace's stylesheet) and one contrasting theme. See ADR 0012.
+
+Checking a theme: the app has a `/styleguide` page showing every page and widget state with demo data. `tome theme check <name>` screenshots it at phone and desktop widths in light and dark, and reports contrast failures and horizontal overflow. CI runs it on every theme in a pull request.
+
+Styling stack: plain CSS with tokens, semantic class names and `@layer`; no Tailwind. Widgets are Lit components rendered in the light DOM so themes can reach them (ADR 0013).
+
+## Skills
+
+A Claude Code plugin named `tomewise` (skills also on skills.sh with a `tomewise-` prefix, since it has no namespaces) bundling several skills in the Agent Skills format:
+- **`teach`** (`/tomewise:teach`): a fork of `teach` (MIT, credited);
+- **`theme`** (`/tomewise:theme`): build or change a theme, following the theme contract and checklist (phone width, light and dark, contrast, every page and widget);
+- **`theme-check`** (`/tomewise:theme-check`): the review loop, kept separate because the learner iterates on a theme many times. It runs `tome theme check`, shows the screenshots, takes the learner's feedback, and repeats until they're happy.
+
+On top of `teach`, the teaching skill:
 - reads history and the schedule before planning;
 - writes items, drills, quizzes, exams, `subject.json` and `curriculum.json`;
-- builds lessons from the widgets;
+- builds lessons from the widgets, styled only with theme tokens;
 - logs only through the CLI;
 - asks the learner about their assessment preferences when setting up a subject;
 - grades ungraded explanations.
@@ -118,6 +147,4 @@ Scaffolds into a vault subfolder, writes a Markdown note per session (frontmatte
 
 ## Still open
 
-- **Name: settled, Tomewise.** Repo, npm package and skill are `tomewise`; the CLI command is `tome`. See [names.md](./names.md).
 - The concrete JSON schemas (envelope fields and types, item and drill files, `subject.json`, `curriculum.json`). This is spec work.
-- The choice of scheduling algorithm (FSRS vs SM-2) and its parameters.
