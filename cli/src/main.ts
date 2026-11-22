@@ -20,6 +20,7 @@ import {
   validateLearningHome,
   type ValidationIssue,
 } from "@tomewise/core";
+import { due } from "./due.ts";
 
 export interface Io {
   cwd: string;
@@ -31,11 +32,12 @@ export interface Io {
   signal?: AbortSignal;
 }
 
-const USAGE = [
+export const USAGE = [
   "Usage:",
   "  tome validate",
   "  tome log <event JSON>",
   "  tome log -        read the event from stdin",
+  "  tome due [<subject>] [--date YYYY-MM-DD] [--json]",
   "  tome serve [--host <host>] [--port <port>]",
 ].join("\n");
 
@@ -43,7 +45,7 @@ const DEFAULT_HOST = "127.0.0.1";
 const DEFAULT_PORT = 4777;
 const SEND_TIMEOUT_MS = 2000;
 
-async function findRoot(io: Io): Promise<string | undefined> {
+export async function findRoot(io: Io): Promise<string | undefined> {
   try {
     return await findLearningHome({ cwd: io.cwd, env: io.env });
   } catch (error) {
@@ -269,6 +271,7 @@ export async function run(args: string[], io: Io): Promise<number> {
   if (command === "validate") return validate(io);
   if (command === "log") return log(io, rest[0]);
   if (command === "serve") return serve(io, rest);
+  if (command === "due") return due(io, rest);
   io.stderr(USAGE);
   return 2;
 }
