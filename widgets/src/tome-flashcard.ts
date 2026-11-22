@@ -112,7 +112,9 @@ export class TomeFlashcard extends TomeElement {
       this.state = "back";
       this.chosen = undefined;
       this.notice = messageOf(error);
+      return;
     }
+    await this.completed().catch((error: unknown) => (this.notice = messageOf(error)));
   }
 
   #onKey(event: KeyboardEvent): void {

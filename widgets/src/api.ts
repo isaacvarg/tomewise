@@ -62,6 +62,7 @@ export class Tome {
   #session?: Promise<Session>;
   #current?: Session;
   #watching = false;
+  #completion?: Promise<LearningEvent>;
 
   constructor(win: Window = window) {
     this.#window = win;
@@ -116,6 +117,14 @@ export class Tome {
     });
   }
 
+  complete(): Promise<LearningEvent> {
+    this.#completion ??= this.#postCompleted().catch((error: unknown) => {
+      this.#completion = undefined;
+      throw error;
+    });
+    return this.#completion;
+  }
+
   end(): void {
     const session = this.#current;
     if (!session || this.#schemaVersion === undefined) return;
@@ -137,7 +146,9 @@ export class Tome {
   watch(): void {
     if (this.#watching || !readPageContext(this.#window.document)) return;
     this.#watching = true;
-    const begin = () => void this.start().catch(() => undefined);
+    const begin = () => {
+      if (!this.#completion) void this.start().catch(() => undefined);
+    };
     for (const type of ["pointerdown", "keydown"]) {
       this.#window.addEventListener(type, begin, { capture: true, passive: true });
     }
@@ -164,6 +175,15 @@ export class Tome {
     const event = await this.#post({ kind: "session.start", ref: this.page, data: {} });
     this.#current = { id: event.id, startedAt };
     return this.#current;
+  }
+
+  async #postCompleted(): Promise<LearningEvent> {
+    const { kind } = this.context;
+    if (kind !== "lesson") throw new TomeError(`Only a lesson can be completed; this page is a ${kind}.`);
+    const session = await this.start();
+    const event = await this.#post({ kind: "lesson.completed", ref: this.page, sessionId: session.id, data: {} });
+    this.end();
+    return event;
   }
 
   #envelope(fields: Record<string, unknown>): Record<string, unknown> {

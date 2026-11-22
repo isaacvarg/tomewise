@@ -1,4 +1,5 @@
 import { LitElement } from "lit";
+import { tome } from "./api.ts";
 
 const adopted = new Set<string>();
 
@@ -18,6 +19,10 @@ export class TomeElement extends LitElement {
   override connectedCallback(): void {
     super.connectedCallback();
     adoptStyles("tome", BASE_CSS);
+  }
+
+  protected async completed(): Promise<void> {
+    if (this.hasAttribute("final")) await tome.complete();
   }
 
   protected override createRenderRoot(): HTMLElement {
