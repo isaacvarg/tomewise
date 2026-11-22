@@ -2,6 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
 import type { Item } from "@tomewise/core";
 import { type Grade, type Outcome, tome } from "./api.ts";
 import { adoptStyles, messageOf, TomeElement } from "./element.ts";
+import { showUnsaved } from "./notice.ts";
 
 export type AnswerState = "loading" | "error" | "ready" | "saving" | "failed" | "saved";
 
@@ -147,8 +148,12 @@ export abstract class AnswerElement<T extends Prompted> extends TomeElement {
   protected record(answer: Answer): Promise<unknown> {
     if (this.recorder) return this.recorder(answer);
     const { ref, outcome, grade, duration } = answer;
-    if (!ref) return Promise.reject(new Error(`An answer written in the page is only recorded inside <tome-exam-question>.`));
-    return tome.attempt({ ref, outcome, grade, duration });
+    if (!ref) {
+      const message = "An answer written in the page is only recorded inside <tome-exam-question>.";
+      showUnsaved(this, message);
+      return Promise.reject(new Error(message));
+    }
+    return tome.attempt({ ref, outcome, grade, duration }, this);
   }
 
   protected abstract inlineItem(answer: string, options: string[]): T;
@@ -193,9 +198,8 @@ export abstract class AnswerElement<T extends Prompted> extends TomeElement {
           detail: { ref: result.ref, outcome: result.outcome, grade: result.grade, duration: Math.round(result.duration) },
         }),
       );
-    } catch (error) {
+    } catch {
       this.state = "failed";
-      this.notice = messageOf(error);
       void this.updateComplete.then(() => this.querySelector<HTMLButtonElement>(".tome-retry")?.focus());
     }
   }

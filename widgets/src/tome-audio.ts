@@ -227,7 +227,7 @@ export class TomeAudio extends TomeElement {
         grade: result.grade,
         duration: result.responseTime,
         data: await this.#data(result),
-      });
+      }, this);
       this.state = "saved";
       this.dispatchEvent(
         new CustomEvent("tome-answered", {
@@ -236,9 +236,8 @@ export class TomeAudio extends TomeElement {
           detail: { ref: `item:${this.item.id}`, outcome: result.outcome, grade: result.grade, duration: result.responseTime },
         }),
       );
-    } catch (error) {
+    } catch {
       this.state = "unsaved";
-      this.notice = messageOf(error);
     }
   }
 

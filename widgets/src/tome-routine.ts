@@ -108,12 +108,11 @@ export class TomeRoutine extends TomeElement {
     this.chosen = grade;
     this.notice = undefined;
     try {
-      await tome.attempt({ ref: `item:${this.item.id}`, outcome: outcomeOf(grade), grade, duration: this.#duration });
+      await tome.attempt({ ref: `item:${this.item.id}`, outcome: outcomeOf(grade), grade, duration: this.#duration }, this);
       this.state = "saved";
-    } catch (error) {
+    } catch {
       this.state = "rate";
       this.chosen = undefined;
-      this.notice = messageOf(error);
     }
   }
 

@@ -1,6 +1,6 @@
 import { html, nothing } from "lit";
 import { tome } from "./api.ts";
-import { adoptStyles, messageOf, TomeElement } from "./element.ts";
+import { adoptStyles, TomeElement } from "./element.ts";
 
 type State = "ready" | "saving" | "done";
 
@@ -16,12 +16,10 @@ export class TomeDone extends TomeElement {
   static override properties = {
     label: { type: String },
     state: { state: true },
-    notice: { state: true },
   };
 
   declare label: string;
   declare state: State;
-  declare notice: string | undefined;
 
   constructor() {
     super();
@@ -37,13 +35,11 @@ export class TomeDone extends TomeElement {
   async #complete(): Promise<void> {
     if (this.state !== "ready") return;
     this.state = "saving";
-    this.notice = undefined;
     try {
-      await tome.complete();
+      await tome.complete(this);
       this.state = "done";
-    } catch (error) {
+    } catch {
       this.state = "ready";
-      this.notice = messageOf(error);
     }
   }
 
@@ -54,7 +50,6 @@ export class TomeDone extends TomeElement {
           ${this.label}
         </button>
         ${this.state === "done" ? html`<p class="tome-verdict" role="status">Lesson complete</p>` : nothing}
-        ${this.notice ? html`<p class="tome-notice" role="alert">${this.notice}</p>` : nothing}
       </div>
     `;
   }

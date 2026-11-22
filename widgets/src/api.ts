@@ -120,10 +120,14 @@ export class Tome {
     return this.#session;
   }
 
-  async attempt(input: AttemptInput, widget?: Element): Promise<LearningEvent> {
+  attempt(input: AttemptInput, widget?: Element): Promise<LearningEvent> {
+    return this.#reported(widget, () => this.#postAttempt(input));
+  }
+
+  async #reported<T>(widget: Element | undefined, post: () => Promise<T>): Promise<T> {
     if (widget) clearUnsaved(widget);
     try {
-      return await this.#postAttempt(input);
+      return await post();
     } catch (error) {
       if (widget) showUnsaved(widget, error instanceof Error ? error.message : String(error));
       throw error;
@@ -143,19 +147,23 @@ export class Tome {
     });
   }
 
-  complete(): Promise<LearningEvent> {
-    this.#completion ??= this.#postCompleted().catch((error: unknown) => {
-      this.#completion = undefined;
-      throw error;
+  complete(widget?: Element): Promise<LearningEvent> {
+    return this.#reported(widget, () => {
+      this.#completion ??= this.#postCompleted().catch((error: unknown) => {
+        this.#completion = undefined;
+        throw error;
+      });
+      return this.#completion;
     });
-    return this.#completion;
   }
 
-  async explain(text: string, ref: string, _widget?: HTMLElement): Promise<LearningEvent> {
-    const trimmed = text.trim();
-    if (!trimmed) throw new TomeError("Write your explanation first; an empty one can't be saved.");
-    const session = await this.start();
-    return this.#post({ kind: "explanation.saved", ref, sessionId: session.id, data: { text: trimmed } });
+  explain(text: string, ref: string, widget?: Element): Promise<LearningEvent> {
+    return this.#reported(widget, async () => {
+      const trimmed = text.trim();
+      if (!trimmed) throw new TomeError("Write your explanation first; an empty one can't be saved.");
+      const session = await this.start();
+      return this.#post({ kind: "explanation.saved", ref, sessionId: session.id, data: { text: trimmed } });
+    });
   }
 
   end(): void {

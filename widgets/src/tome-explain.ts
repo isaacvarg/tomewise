@@ -1,6 +1,6 @@
-import { html, nothing } from "lit";
+import { html } from "lit";
 import { tome } from "./api.ts";
-import { adoptStyles, messageOf, TomeElement } from "./element.ts";
+import { adoptStyles, TomeElement } from "./element.ts";
 
 type State = "editing" | "saving" | "saved";
 
@@ -25,14 +25,12 @@ export class TomeExplain extends TomeElement {
     prompt: { type: String },
     text: { state: true },
     state: { state: true },
-    notice: { state: true },
   };
 
   declare ref: string;
   declare prompt: string;
   declare text: string;
   declare state: State;
-  declare notice: string | undefined;
 
   readonly #id = `tome-explain-${++ids}`;
 
@@ -68,13 +66,11 @@ export class TomeExplain extends TomeElement {
   async #save(): Promise<void> {
     if (!this.#canSave) return;
     this.state = "saving";
-    this.notice = undefined;
     try {
       await tome.explain(this.text, this.ref, this);
       this.state = "saved";
-    } catch (error) {
+    } catch {
       this.state = "editing";
-      this.notice = messageOf(error);
     }
   }
 
@@ -98,7 +94,6 @@ export class TomeExplain extends TomeElement {
             ? html`<p class="tome-verdict" role="status">Saved for grading</p>`
             : html`<p class="tome-hint"><kbd>Ctrl</kbd>+<kbd>Enter</kbd> saves</p>`}
         </div>
-        ${this.notice ? html`<p class="tome-notice" role="alert">${this.notice}</p>` : nothing}
       </div>
     `;
   }

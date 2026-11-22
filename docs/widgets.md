@@ -47,12 +47,12 @@ await tome.attempt({ ref: "item:letter-k", outcome: "correct", grade: 3, duratio
 | Member                     | Does                                                                                                   |
 | -------------------------- | ------------------------------------------------------------------------------------------------------ |
 | `tome.attempt(input, widget?)` | Posts one attempt in the page's session, starting it if needed. Resolves to the stored event. Pass the widget element to get the failure notice in it. |
-| `tome.explain(text, ref)`  | Posts `explanation.saved` for `ref` (`lesson:<id>` or `item:<id>`) with the trimmed text as `data.text`, ungraded. Rejects empty text. |
+| `tome.explain(text, ref, widget?)` | Posts `explanation.saved` for `ref` (`lesson:<id>` or `item:<id>`) with the trimmed text as `data.text`, ungraded. Rejects empty text. |
 | `tome.item(ref)`           | Resolves to the item for `item:<id>` from the subject's item sets.                                     |
 | `tome.subject()`           | Resolves to the subject as `/api/subjects/:subject` returns it.                                       |
 | `tome.due()`               | Resolves to the items due today, most overdue first.                                                   |
 | `tome.unlocked()`          | Resolves to the unretired items whose lesson is completed, or that need none.                          |
-| `tome.complete()`          | Posts `lesson.completed` for the page's lesson in its session, then ends the session. Once per page: later calls resolve to the same event. Lesson pages only. |
+| `tome.complete(widget?)`   | Posts `lesson.completed` for the page's lesson in its session, then ends the session. Once per page: later calls resolve to the same event. Lesson pages only. |
 | `tome.start()`, `tome.end()` | Start or end the page's session by hand. Widgets rarely need these.                                   |
 | `tome.context`, `tome.page`  | The page context, and its ref (`lesson:<id>`).                                                         |
 
@@ -60,7 +60,7 @@ await tome.attempt({ ref: "item:letter-k", outcome: "correct", grade: 3, duratio
 
 Failures reject with a `TomeError` whose `message` is fit to show the learner: the app can't be reached, or it rejected the event (`issues` lists why). There is no offline queue (ADR 0004): nothing is queued or retried.
 
-When `attempt` is given the widget element, a failure appends a notice as the widget's last child, and the next `attempt` from that widget removes it:
+When `attempt`, `explain` or `complete` is given the widget element, a failure appends a notice as the widget's last child, and the widget's next post through any of them removes it. Every built-in widget passes itself:
 
 ```html
 <p class="tome-notice" role="alert" data-state="unsaved">Couldn't reach the app, so this wasn't saved. …</p>
@@ -129,8 +129,9 @@ Once saved, the widget dispatches a bubbling `tome-answered` event with `detail:
       <p class="tome-verdict" data-state="correct | wrong | skipped">Not quite · the answer is rojo</p>
     </div>
     <button class="tome-retry">Save again</button>                <!-- failed save -->
-    <p class="tome-notice" role="alert">…</p>                     <!-- wrong item, failed save -->
+    <p class="tome-notice" role="alert">…</p>                     <!-- wrong item -->
   </div>
+  <p class="tome-notice" role="alert" data-state="unsaved">…</p>  <!-- failed save -->
 </tome-choice>
 
 <tome-typed ref="item:gracias">
@@ -142,6 +143,7 @@ Once saved, the widget dispatches a bubbling `tome-answered` event with `detail:
     </form>
     <!-- .tome-skip, .tome-feedback, .tome-retry, .tome-notice as above -->
   </div>
+  <!-- unsaved .tome-notice as above -->
 </tome-typed>
 ```
 
@@ -191,8 +193,9 @@ Keyboard: Tab to the play button, Enter or Space to play; Space replays while fo
       <input class="tome-input"><button class="tome-submit">Answer</button>
     </form>
     <button class="tome-retry">Save again</button>          <!-- after a failed save -->
-    <p class="tome-notice" role="alert">…</p>
+    <p class="tome-notice" role="alert">…</p>             <!-- unknown item, sound won't play -->
   </div>
+  <p class="tome-notice" role="alert" data-state="unsaved">…</p>  <!-- failed save -->
 </tome-audio>
 ```
 
@@ -227,7 +230,7 @@ Runs a drill as a sequence of the item widgets, one item at a time. `review` is 
 - **Pace.** After an answer the drill moves on by itself (0.9 s when right, 1.6 s otherwise), or at once with Next. From the second item on, audio items play by themselves.
 - **End.** The summary shows the score, right out of answered, median answer time, how many were skipped or out of time, and the missed items. A selection with nothing in it shows an empty state instead.
 
-A failed save keeps the item on screen with its notice and "Save again"; the drill waits for it.
+A failed save keeps the item on screen with its notice (inside the item widget) and "Save again"; the drill waits for it.
 
 Keyboard: focus moves into each new item (the play button, the first choice, the answer field or "Show answer"), so the item's own keys work; after answering, focus is on Next, so Enter moves on; at the end, focus is on "Run again". Touch: tap.
 
@@ -261,7 +264,7 @@ Keyboard: focus moves into each new item (the play button, the first choice, the
       <p class="tome-empty-title">Nothing is due</p>
       <p class="tome-hint">…</p>
     </div>
-    <p class="tome-notice" role="alert">…</p>                               <!-- unknown drill, app down -->
+    <p class="tome-notice" role="alert">…</p>                               <!-- unknown drill, can't load -->
   </div>
 </tome-drill>
 ```
@@ -301,17 +304,19 @@ A question with no `id`, no `tests`, an unknown item in `tests` or no answer con
     </div>
     <p class="tome-notice" role="alert">…</p>         <!-- missing id, tests or answer; unknown items -->
   </div>
+  <p class="tome-notice" role="alert" data-state="unsaved">…</p>  <!-- failed save -->
 </tome-exam-question>
 ```
 
 These class names, `data-*` states and this structure are part of the theme contract.
+
 ## `<tome-done>`
 
 | Attribute | Meaning                                  |
 | --------- | ---------------------------------------- |
 | `label`   | Button text; `Done` if absent            |
 
-Marks the end of a lesson. Pressing the button calls `tome.complete()`: it posts `lesson.completed` (ref = the lesson) and `session.end`, then shows "Lesson complete" and disables itself. If the post fails, it shows the notice and stays pressable.
+Marks the end of a lesson. Pressing the button calls `tome.complete(this)`: it posts `lesson.completed` (ref = the lesson) and `session.end`, then shows "Lesson complete" and disables itself. If the post fails, it shows the notice and stays pressable.
 
 Keyboard: Tab to the button, Enter or Space. Touch: tap it.
 
@@ -320,8 +325,8 @@ Keyboard: Tab to the button, Enter or Space. Touch: tap it.
   <div class="tome-done" data-state="ready | saving | done">
     <button class="tome-done-button">Done</button>
     <p class="tome-verdict" role="status">Lesson complete</p>   <!-- once done -->
-    <p class="tome-notice" role="alert">…</p>                   <!-- failed save -->
   </div>
+  <p class="tome-notice" role="alert" data-state="unsaved">…</p>  <!-- failed save -->
 </tome-done>
 ```
 
@@ -333,7 +338,7 @@ Instead of a Done button, mark one widget as the lesson's final check with the `
 <tome-flashcard ref="item:adios" final></tome-flashcard>
 ```
 
-Completion is sent once per page, so a lesson may have both a `final` widget and `<tome-done>`. Widgets support `final` by calling `this.completed()` (from `TomeElement`) once their last attempt is saved.
+Completion is sent once per page, so a lesson may have both a `final` widget and `<tome-done>`. Widgets support `final` by calling `this.completed()` (from `TomeElement`) once their last attempt is saved; a failed completion shows the unsaved notice in that widget.
 
 ## `<tome-routine>`
 
@@ -364,8 +369,9 @@ Keyboard: Tab to Start, Enter or Space to start; focus stays on Next, and Enter 
       <button class="tome-grade" data-grade="1..4" data-state="chosen">Again<kbd>1</kbd></button>
     </div>
     <p class="tome-verdict" data-state="correct | wrong">Saved: Good</p>
-    <p class="tome-notice" role="alert">…</p>             <!-- unknown item, failed save -->
+    <p class="tome-notice" role="alert">…</p>             <!-- unknown item -->
   </div>
+  <p class="tome-notice" role="alert" data-state="unsaved">…</p>  <!-- failed save -->
 </tome-routine>
 ```
 
@@ -421,8 +427,8 @@ Keyboard: Tab into the text box, Ctrl+Enter (⌘+Enter) saves. Touch: tap Save e
       <p class="tome-hint"><kbd>Ctrl</kbd>+<kbd>Enter</kbd> saves</p>   <!-- until saved -->
       <p class="tome-verdict" role="status">Saved for grading</p>        <!-- once saved -->
     </div>
-    <p class="tome-notice" role="alert">…</p>                           <!-- failed save -->
   </div>
+  <p class="tome-notice" role="alert" data-state="unsaved">…</p>  <!-- failed save -->
 </tome-explain>
 ```
 

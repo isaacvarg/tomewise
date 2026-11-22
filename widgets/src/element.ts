@@ -22,7 +22,7 @@ export class TomeElement extends LitElement {
   }
 
   protected async completed(): Promise<void> {
-    if (this.hasAttribute("final")) await tome.complete();
+    if (this.hasAttribute("final")) await tome.complete(this);
   }
 
   protected override createRenderRoot(): HTMLElement {

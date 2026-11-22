@@ -86,7 +86,7 @@ export class TomeExamQuestion extends TomeElement {
     const { outcome, grade, duration } = answer;
     for (const ref of this.#refs) {
       if (this.#saved.has(ref)) continue;
-      await tome.attempt({ ref, outcome, grade, duration, data: { question: this.id } });
+      await tome.attempt({ ref, outcome, grade, duration, data: { question: this.id } }, this);
       this.#saved.add(ref);
     }
   }
