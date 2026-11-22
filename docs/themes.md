@@ -148,6 +148,8 @@ The check serves your learning home (or, outside one, the built-in demo home), l
 
 It writes a full-page screenshot for each width and mode to `--out` (default: a new temporary folder), prints the folder, and exits with 1 if it found any problem.
 
+CI runs the check on every theme folder under `app/themes/` that a pull request changes, and uploads the screenshots as the `theme-check-screenshots` artifact.
+
 The check drives a browser with Playwright. In a clone of this repo it is already installed (`pnpm tome theme check meadow`). With the installed tool, add Playwright alongside it:
 
 ```
