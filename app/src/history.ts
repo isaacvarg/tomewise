@@ -6,6 +6,8 @@ interface Totals {
   attempts: number;
 }
 
+export const HISTORY_PREFIX = "chore(history): ";
+
 const noTotals = (): Totals => ({ sessions: 0, minutes: 0, attempts: 0 });
 
 function count(n: number, singular: string): string {
@@ -37,11 +39,11 @@ export function historyMessage(events: LearningEvent[], timezone: string): strin
     .sort(([a], [b]) => (a < b ? -1 : 1))
     .map(([subject, inSubject]) => ({ subject, totals: totalsOf(inSubject) }));
   const lines = bySubject.map(({ subject, totals }) => `${subject} ${describe(totals)}`);
-  if (lines.length === 1) return `chore(history): ${date} · ${lines[0]}`;
+  if (lines.length === 1) return `${HISTORY_PREFIX}${date} · ${lines[0]}`;
   const total = bySubject.reduce((sum, { totals }) => ({
     sessions: sum.sessions + totals.sessions,
     minutes: sum.minutes + totals.minutes,
     attempts: sum.attempts + totals.attempts,
   }), noTotals());
-  return [`chore(history): ${date} · ${count(lines.length, "subject")}, ${describe(total)}`, "", ...lines].join("\n");
+  return [`${HISTORY_PREFIX}${date} · ${count(lines.length, "subject")}, ${describe(total)}`, "", ...lines].join("\n");
 }

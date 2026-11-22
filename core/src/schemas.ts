@@ -97,7 +97,7 @@ export const GitSettings = z
     cadence: z
       .enum(GIT_CADENCES, { error: `Use one of ${GIT_CADENCES.map((cadence) => `"${cadence}"`).join(", ")}` })
       .default(DEFAULT_GIT_CADENCE)
-      .meta({ description: "How often the app commits events: after each session, hourly or daily." }),
+      .meta({ description: "When the app commits events: after each session, at the top of each hour, or at midnight in the learning home's timezone." }),
     remote: GitRemote.optional().meta({
       description:
         "Name of the git remote to pull from and push to, such as \"origin\". The remote itself is set up in each clone with git remote add. Without one the app only commits.",

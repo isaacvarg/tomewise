@@ -2,8 +2,8 @@ import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { Hono } from "hono";
-import { type LearningEvent, type LearningHome, readEvents } from "@tomewise/core";
-import { historyMessage } from "./history.ts";
+import { type GitCadence, isoDate, type LearningEvent, type LearningHome, localDay, readEvents } from "@tomewise/core";
+import { HISTORY_PREFIX, historyMessage } from "./history.ts";
 
 export interface Clock {
   now: () => Date;
@@ -41,7 +41,7 @@ export interface GitSync {
 const GIT_TIMEOUT_MS = 120_000;
 const GIT_MAX_BUFFER = 64 * 1024 * 1024;
 const EVENT_FILES = ":(glob)subjects/*/events/**";
-const CADENCE_MS = { hourly: 3_600_000, daily: 86_400_000 } as const;
+const CADENCE_CHECK_MS = 60_000;
 const REJECTED = /\[rejected\]|non-fast-forward|fetch first/;
 const AUTH_FAILED = /Permission denied \(|Permission to \S+ denied|Host key verification failed|Authentication failed|could not read (Username|Password)|terminal prompts disabled|returned error: 40[13]/i;
 
@@ -60,6 +60,13 @@ function git(cwd: string, args: string[]): Promise<string> {
       },
     );
   });
+}
+
+function periodOf(cadence: Exclude<GitCadence, "session">, time: Date, timezone: string): string {
+  const day = isoDate(localDay(time.getTime(), timezone));
+  if (cadence === "daily") return day;
+  const hour = new Intl.DateTimeFormat("en-US", { timeZone: timezone, hour: "numeric", hourCycle: "h23" }).format(time);
+  return `${day}T${hour}`;
 }
 
 export const syncOff: GitSync = {
@@ -100,7 +107,7 @@ export function startSync(home: () => LearningHome, { clock = systemClock }: { c
   }
 
   async function checkedBranch(): Promise<string> {
-    if (await rebasing()) throw new Error("A rebase is in progress in the learning home; finish or abort it, then restart the app");
+    if (await rebasing()) throw new Error("A rebase is in progress in the learning home; finish or abort it, then sync again");
     return branch();
   }
 
@@ -111,11 +118,11 @@ export function startSync(home: () => LearningHome, { clock = systemClock }: { c
       const message = (error as Error).message;
       if (REJECTED.test(message)) {
         throw new Error(
-          `"${remote}/${target}" has diverged from the learning home, so git rejected the push; the app never force-pushes. Pull and push by hand, then restart the app. ${message}`,
+          `"${remote}/${target}" has diverged from the learning home, so git rejected the push; the app never force-pushes. Pull and push by hand, then sync again. ${message}`,
         );
       }
       if (AUTH_FAILED.test(message)) {
-        throw new Error(`Git couldn't sign in to "${remote}"; check the app's git credentials, then restart the app. ${message}`);
+        throw new Error(`Git couldn't sign in to "${remote}"; check the app's git credentials, then sync again. ${message}`);
       }
       throw error;
     }
@@ -124,7 +131,15 @@ export function startSync(home: () => LearningHome, { clock = systemClock }: { c
 
   async function pushPending(remote: string, target: string) {
     if (!settings.push) return;
-    if ((await git(root, ["rev-list", "--count", "FETCH_HEAD..HEAD"])) !== "0") await push(remote, target);
+    const unpushed = (await git(root, ["log", "--format=%s", "FETCH_HEAD..HEAD"])).split("\n").filter((line) => line !== "");
+    if (unpushed.length === 0) return;
+    const others = unpushed.filter((line) => !line.startsWith(HISTORY_PREFIX));
+    if (others.length > 0) {
+      throw new Error(
+        `The learning home has commits the app didn't make that aren't on "${remote}" yet (${others.map((line) => JSON.stringify(line)).join(", ")}); the app only pushes its own history. Push or drop them by hand, then sync again.`,
+      );
+    }
+    await push(remote, target);
   }
 
   async function pull(remote: string): Promise<string> {
@@ -173,11 +188,13 @@ export function startSync(home: () => LearningHome, { clock = systemClock }: { c
     await pushPending(remote, await pull(remote));
   }
 
-  function step(work: () => Promise<void>): Promise<SyncStatus> {
+  function step(work: () => Promise<void>, { retry = false } = {}): Promise<SyncStatus> {
     return exclusive(async () => {
-      if (closed || state.stopped) return status();
+      if (closed || (state.stopped && !retry)) return status();
       try {
         await work();
+        state.stopped = false;
+        state.lastError = null;
       } catch (error) {
         state.stopped = true;
         state.lastError = { at: clock.now().toISOString(), message: (error as Error).message };
@@ -190,15 +207,25 @@ export function startSync(home: () => LearningHome, { clock = systemClock }: { c
     return { ...state, lastError: state.lastError && { ...state.lastError } };
   }
 
-  const syncNow = () => step(pullContent);
+  const syncNow = () => step(pullContent, { retry: true });
+
+  function onTheClock(cadence: Exclude<GitCadence, "session">): () => void {
+    let period = periodOf(cadence, clock.now(), config.timezone);
+    return clock.every(CADENCE_CHECK_MS, async () => {
+      const now = periodOf(cadence, clock.now(), config.timezone);
+      if (now === period) return;
+      period = now;
+      await step(commitHistory);
+    });
+  }
 
   function recorded(events: LearningEvent[]) {
     if (settings.cadence === "session" && events.some((event) => event.kind === "session.end")) void step(commitHistory);
   }
 
   const stopTimers = [
-    settings.remote === undefined ? () => {} : clock.every(settings.pullIntervalMinutes * 60_000, syncNow),
-    settings.cadence === "session" ? () => {} : clock.every(CADENCE_MS[settings.cadence], () => step(commitHistory)),
+    settings.remote === undefined ? () => {} : clock.every(settings.pullIntervalMinutes * 60_000, () => step(pullContent)),
+    settings.cadence === "session" ? () => {} : onTheClock(settings.cadence),
   ];
 
   return {
@@ -207,7 +234,6 @@ export function startSync(home: () => LearningHome, { clock = systemClock }: { c
     recorded,
     exclusive,
     async close() {
-      await step(commitHistory);
       closed = true;
       for (const stop of stopTimers) stop();
       await queue;
@@ -220,7 +246,7 @@ export function syncRoutes(sync: GitSync): Hono {
   routes.get("/", (c) => c.json(sync.status()));
   routes.post("/", async (c) => {
     const before = sync.status();
-    if (!before.enabled || before.stopped) return c.json(before, 409);
+    if (!before.enabled) return c.json(before, 409);
     return c.json(await sync.syncNow());
   });
   return routes;

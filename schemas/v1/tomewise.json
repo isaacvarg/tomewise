@@ -62,7 +62,7 @@
         },
         "cadence": {
           "default": "session",
-          "description": "How often the app commits events: after each session, hourly or daily.",
+          "description": "When the app commits events: after each session, at the top of each hour, or at midnight in the learning home's timezone.",
           "type": "string",
           "enum": [
             "session",

@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -175,7 +175,22 @@ describe("git sync", () => {
 
     await advanceMinutes(5);
     expect((await app.get("/api/sync")).body).toEqual(response.body);
-    expect((await app.send("POST", "/api/sync")).status).toBe(409);
+    expect((await appGitCalls(app.root)).filter((call) => /^pull\b/.test(call))).toHaveLength(1);
+  });
+
+  it("tries again on Sync now after a failure, and clears the error once it works", async () => {
+    const { app, remote } = await cloneSeam();
+    const moved = `${remote}-away`;
+    await rename(remote, moved);
+    expect((await app.send("POST", "/api/sync")).body).toMatchObject({ stopped: true });
+
+    expect((await app.send("POST", "/api/sync")).body).toMatchObject({ stopped: true, lastError: { message: expect.stringContaining("git pull") } });
+
+    await rename(moved, remote);
+    const response = await app.send("POST", "/api/sync");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({ stopped: false, lastPull: expect.any(String), lastError: null });
   });
 
   it("stops on a conflict and puts the app's clone back as it was", async () => {
@@ -348,29 +363,47 @@ describe("history commits", () => {
     expect((await app.get("/api/sync")).body.lastCommit).toBe("2026-11-22T10:00:00.000Z");
   });
 
-  it("commits what's left when the app stops, so restarts can't starve the cadence", async () => {
+  it("commits nothing when the app stops, and commits at the next boundary after a restart", async () => {
     const { clock, advanceMinutes } = fakeClock();
     const { app } = await cloneSeam({ cadence: "daily" }, clock);
     expect((await app.post(practice(1))).status).toBe(201);
     await advanceMinutes(60);
 
     await app.restart(async () => {
-      expect(await subjects(app.root)).toEqual([ONE_SESSION, "chore: start"]);
+      expect(await subjects(app.root)).toEqual(["chore: start"]);
     });
-    expect(await git(app.root, "status", "--porcelain")).toBe("");
+    expect(await subjects(app.root)).toEqual(["chore: start"]);
+
+    await advanceMinutes(14 * 60);
+    expect(await subjects(app.root)).toEqual([ONE_SESSION, "chore: start"]);
   });
 
-  it("commits daily on the clock", async () => {
+  it("commits daily at midnight in the learning home's timezone, not a day after the app started", async () => {
     const { clock, advanceMinutes } = fakeClock();
     const { app } = await cloneSeam({ cadence: "daily" }, clock);
     expect((await app.post(practice(1))).status).toBe(201);
     expect((await app.post(practice(2, { minutes: 10, attempts: 5 }))).status).toBe(201);
 
-    await advanceMinutes(24 * 60 - 1);
+    await advanceMinutes(15 * 60 - 1);
     expect(await subjects(app.root)).toEqual(["chore: start"]);
 
     await advanceMinutes(1);
     expect(await subjects(app.root)).toEqual(["chore(history): 2026-11-22 · morse-code 2 sessions, 13 min, 7 attempts", "chore: start"]);
+    expect((await app.get("/api/sync")).body.lastCommit).toBe("2026-11-23T00:00:00.000Z");
+  });
+
+  it("commits hourly at the top of the hour, not an hour after the app started", async () => {
+    const { clock, advanceMinutes } = fakeClock();
+    await advanceMinutes(30);
+    const { app } = await cloneSeam({ cadence: "hourly" }, clock);
+    expect((await app.post(practice(1))).status).toBe(201);
+
+    await advanceMinutes(29);
+    expect(await subjects(app.root)).toEqual(["chore: start"]);
+
+    await advanceMinutes(1);
+    expect(await subjects(app.root)).toEqual([ONE_SESSION, "chore: start"]);
+    expect((await app.get("/api/sync")).body.lastCommit).toBe("2026-11-22T10:00:00.000Z");
   });
 
   it("stops syncing and says why when git can't commit", async () => {
@@ -547,15 +580,31 @@ describe("pushing history", () => {
     for (const call of await appGitCalls(app.root)) expect(call).not.toMatch(/--force|\s\+\S/);
   });
 
-  it("pushes history left behind by a failed push once sync runs again", async () => {
+  it("pushes only the app's own history, and stops when the learner's commits are waiting", async () => {
+    const { app, remote } = await cloneSeam({ remote: "origin", push: true });
+    await writeFiles(app.root, { [`${SUBJECT}/notes.md`]: "server edit\n" });
+    await git(app.root, "add", "-A");
+    await git(app.root, "commit", "--quiet", "-m", "server edit");
+
+    expect((await app.post(practice(1))).status).toBe(201);
+
+    await poll(async () => (await app.get("/api/sync")).body).toMatchObject({
+      stopped: true,
+      lastPush: null,
+      lastError: { message: expect.stringContaining("server edit") },
+    });
+    expect(await subjects(app.root)).toEqual([ONE_SESSION, "server edit", "chore: start"]);
+    expect(await subjects(remote)).toEqual(["chore: start"]);
+    expect(await appGitCalls(app.root)).not.toContainEqual(expect.stringMatching(/^push\b/));
+  });
+
+  it("pushes history left behind by a failed push on Sync now", async () => {
     const { app, remote } = await cloneSeam({ remote: "origin", push: true });
     await refuseSshPush(app.root);
     expect((await app.post(practice(1))).status).toBe(201);
     await poll(async () => (await app.get("/api/sync")).body.stopped).toBe(true);
 
-    await app.restart(async () => {
-      await git(app.root, "config", "--unset", "remote.origin.pushurl");
-    });
+    await git(app.root, "config", "--unset", "remote.origin.pushurl");
     const response = await app.send("POST", "/api/sync");
 
     expect(response.body).toMatchObject({ stopped: false, lastPush: expect.any(String), lastError: null });
