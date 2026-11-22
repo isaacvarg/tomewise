@@ -16,6 +16,8 @@
   .styleguide-state { margin: 0; min-width: 0; display: flex; flex-direction: column; gap: .5rem; }
   .styleguide-state > figcaption { font-size: .8rem; color: var(--t-muted); font-family: var(--t-mono); }
   .styleguide-lesson { border: 1px solid var(--t-rule); border-radius: var(--t-radius); padding: 0 1rem 1rem; }
+  .styleguide-screen { display: flex; flex-direction: column; container-type: inline-size; border: 1px solid var(--t-rule); border-radius: var(--t-radius); overflow: hidden; }
+  .styleguide-unbuilt { margin: 0; padding: 1rem; color: var(--t-muted); }
 }
 </style>
 </head>
@@ -24,6 +26,7 @@
   <h1>Styleguide</h1>
   <p>Every page and widget state in the <strong data-styleguide-theme></strong> theme, with demo data. Nothing here touches your learning home.</p>
   <ul class="styleguide-nav">
+    <li><a href="#home">Home</a></li>
     <li><a href="#lesson">Lesson</a></li>
     <li><a href="#flashcard">Flashcard</a></li>
     <li><a href="#choice">Choice</a></li>
@@ -37,6 +40,11 @@
     <li><a href="#drill">Drill</a></li>
   </ul>
 </header>
+
+<section class="styleguide-section" id="home">
+  <h2>Home</h2>
+  <div class="styleguide-screen" data-styleguide-home></div>
+</section>
 
 <section class="styleguide-section" id="lesson">
   <h2>Lesson</h2>

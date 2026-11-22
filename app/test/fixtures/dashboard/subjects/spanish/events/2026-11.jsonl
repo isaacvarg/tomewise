@@ -1,0 +1,6 @@
+{"id":"01M7SPAN000000000000000S00","ts":"2026-11-08T09:00:00.000Z","subject":"spanish","kind":"session.start","ref":"drill:review","sessionId":"01M7SPAN000000000000000S00","schemaVersion":1,"data":{}}
+{"id":"01M7SPAN000000000000000E00","ts":"2026-11-08T09:02:00.000Z","subject":"spanish","kind":"session.end","ref":"drill:review","sessionId":"01M7SPAN000000000000000S00","duration":120000,"schemaVersion":1,"data":{}}
+{"id":"01M7SPAN000000000000000S01","ts":"2026-11-20T08:00:00.000Z","subject":"spanish","kind":"session.start","ref":"drill:review","sessionId":"01M7SPAN000000000000000S01","schemaVersion":1,"data":{}}
+{"id":"01M7SPAN000000000000000E01","ts":"2026-11-20T08:03:00.000Z","subject":"spanish","kind":"session.end","ref":"drill:review","sessionId":"01M7SPAN000000000000000S01","duration":180000,"schemaVersion":1,"data":{}}
+{"id":"01M7SPAN000000000000000S02","ts":"2026-11-21T08:00:00.000Z","subject":"spanish","kind":"session.start","ref":"drill:review","sessionId":"01M7SPAN000000000000000S02","schemaVersion":1,"data":{}}
+{"id":"01M7SPAN000000000000000E02","ts":"2026-11-21T08:03:00.000Z","subject":"spanish","kind":"session.end","ref":"drill:review","sessionId":"01M7SPAN000000000000000S02","duration":180000,"schemaVersion":1,"data":{}}

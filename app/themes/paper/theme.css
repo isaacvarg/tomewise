@@ -1,6 +1,7 @@
 h1, h2, h3 { font-weight: 400; }
 h1 { font-style: italic; }
 
+.tome-section-head h3 { font-weight: 600; }
 .tome-header { border-bottom: 1px solid var(--t-rule); padding-bottom: .9rem; }
 .tome-kicker { font-variant: small-caps; text-transform: none; letter-spacing: .08em; font-size: .85rem; }
 .tome-title { font-style: italic; }

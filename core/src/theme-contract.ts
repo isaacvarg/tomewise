@@ -44,9 +44,11 @@ export const widgetClasses: Readonly<Record<string, readonly string[]>> = {
 };
 
 export const appClasses: readonly string[] = [
-  "tome-activity", "tome-app", "tome-cell", "tome-due", "tome-header", "tome-heat-days", "tome-heat-legend", "tome-heatmap",
-  "tome-heatmap-wrap", "tome-kicker", "tome-runner", "tome-runner-bar", "tome-section", "tome-section-head", "tome-stage",
-  "tome-start", "tome-streak", "tome-subject", "tome-subject-name", "tome-subjects", "tome-title",
+  "tome-activity", "tome-app", "tome-cell", "tome-due", "tome-due-how", "tome-due-what", "tome-header", "tome-heat-days",
+  "tome-heat-legend", "tome-heatmap", "tome-heatmap-wrap", "tome-hint", "tome-kicker", "tome-mark", "tome-mark-letter",
+  "tome-meta", "tome-meta-narrow", "tome-meta-wide", "tome-notice", "tome-runner", "tome-runner-bar", "tome-section",
+  "tome-section-head", "tome-stage", "tome-start", "tome-streak", "tome-streak-num", "tome-streak-text", "tome-subject",
+  "tome-subject-name", "tome-subjects", "tome-title",
 ];
 
 export const requiredTokenNames = (kind?: TokenKind): string[] =>

@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import type { Browser, Page } from "playwright";
-import { startServer, STYLEGUIDE } from "@tomewise/app";
+import { BUILT_SPA, startServer, STYLEGUIDE } from "@tomewise/app";
 import { findLearningHome, loadLearningHome, requiredTokenNames } from "@tomewise/core";
 import type { Io } from "./main.ts";
 
@@ -207,7 +207,7 @@ export async function themeCheck(io: Io, args: string[], usage: string): Promise
   const out = parsed.values.out ? resolve(io.cwd, parsed.values.out) : await mkdtemp(join(tmpdir(), `tomewise-theme-${name}-`));
   await mkdir(out, { recursive: true });
 
-  const server = await startServer(home, { host: "127.0.0.1", port: 0, tool: io.tool, warn: () => {} });
+  const server = await startServer(home, { host: "127.0.0.1", port: 0, tool: io.tool, spa: BUILT_SPA, warn: () => {} });
   const browser = await launch(io, playwright);
   if (!browser) {
     await server.close();

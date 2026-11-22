@@ -31,6 +31,7 @@ h1, h2, h3, h4 { font-weight: 500; }
 .tome-start, .tome-again {
   box-shadow: 0 4px 0 color-mix(in srgb, var(--t-accent) 60%, #000);
 }
+.tome-start small { opacity: 1; }
 .tome-start:active, .tome-again:active {
   transform: translateY(3px);
   box-shadow: 0 1px 0 color-mix(in srgb, var(--t-accent) 60%, #000);

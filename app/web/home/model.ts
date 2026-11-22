@@ -1,0 +1,83 @@
+import type { Activity, DueItem, Subject } from "../api.ts";
+
+export type WeekStart = Subject["settings"]["weekStart"];
+
+const DAY_MS = 86_400_000;
+const WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const;
+
+export const HEATMAP_WEEKS = 52;
+export const NARROW_WEEKS = 18;
+export const SECONDS_PER_ITEM = 40;
+
+const dayOf = (date: string) => Date.parse(date) / DAY_MS;
+const dateOf = (day: number) => new Date(day * DAY_MS).toISOString().slice(0, 10);
+const weekdayOf = (day: number) => (new Date(day * DAY_MS).getUTCDay() + 6) % 7;
+
+export interface HeatCell {
+  date: string;
+  level: number;
+  today: boolean;
+  future: boolean;
+  old: boolean;
+}
+
+export function heatmapCells(activity: Activity, weekStart: WeekStart, subjectCount: number): HeatCell[] {
+  const today = dayOf(activity.today);
+  const first = today - ((weekdayOf(today) - WEEKDAYS.indexOf(weekStart) + 7) % 7) - (HEATMAP_WEEKS - 1) * 7;
+  const active = new Map(activity.days.map((day) => [day.date, day.subjects.length]));
+  return Array.from({ length: HEATMAP_WEEKS * 7 }, (_, index) => {
+    const day = first + index;
+    const date = dateOf(day);
+    const subjects = active.get(date) ?? 0;
+    return {
+      date,
+      level: subjects === 0 ? 0 : Math.min(4, Math.ceil((4 * subjects) / Math.max(subjectCount, subjects))),
+      today: day === today,
+      future: day > today,
+      old: index < (HEATMAP_WEEKS - NARROW_WEEKS) * 7,
+    };
+  });
+}
+
+export function weekdayLetters(weekStart: WeekStart): string[] {
+  const start = WEEKDAYS.indexOf(weekStart);
+  return WEEKDAYS.map((_, index) => (index % 2 === 0 ? WEEKDAYS[(start + index) % 7]![0]!.toUpperCase() : ""));
+}
+
+export function longDate(date: string): string {
+  return new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(
+    new Date(Date.parse(date)),
+  );
+}
+
+export function bySubjectName(a: Subject, b: Subject): number {
+  return a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
+}
+
+export interface DueRow {
+  subject: Subject;
+  items: number;
+  minutes: number;
+}
+
+export interface DueToday {
+  rows: DueRow[];
+  items: number;
+  minutes: number;
+}
+
+export const minutesFor = (items: number) => Math.ceil((items * SECONDS_PER_ITEM) / 60);
+
+export function dueToday(subjects: { subject: Subject; due: DueItem[] }[]): DueToday {
+  const rows = subjects
+    .map(({ subject, due }) => ({ subject, items: due.length }))
+    .filter((row) => row.items > 0)
+    .map((row) => ({ ...row, minutes: minutesFor(row.items) }));
+  return {
+    rows,
+    items: rows.reduce((sum, row) => sum + row.items, 0),
+    minutes: rows.reduce((sum, row) => sum + row.minutes, 0),
+  };
+}
+
+export const count = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;

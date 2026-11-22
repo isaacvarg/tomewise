@@ -55,6 +55,7 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm exec playwright install --with-deps chromium
           pnpm build:widgets
+          pnpm build:app
           status=0
           for theme in $THEMES; do
             pnpm tome theme check "$theme" --out "theme-check/$theme" || status=1

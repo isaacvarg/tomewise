@@ -33,3 +33,37 @@ export function spaRoutes(root: string, home: () => LearningHome, resolveTheme: 
   routes.get("*", async (c) => (isClientRoute(c.req.path) ? index(c) : c.notFound()));
   return routes;
 }
+
+interface ManifestChunk {
+  file: string;
+  css?: string[];
+  imports?: string[];
+}
+
+export interface EntryAssets {
+  script: string;
+  styles: string[];
+}
+
+export async function entryAssets(root: string, entry: string): Promise<EntryAssets | undefined> {
+  let manifest: Record<string, ManifestChunk>;
+  try {
+    manifest = JSON.parse(await readFile(join(root, ".vite/manifest.json"), "utf8"));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    throw error;
+  }
+  const chunk = manifest[entry];
+  if (!chunk) return undefined;
+  const styles = new Set<string>();
+  const seen = new Set<string>();
+  const collect = (key: string) => {
+    if (seen.has(key)) return;
+    seen.add(key);
+    const { css = [], imports = [] } = manifest[key] ?? { css: [] };
+    imports.forEach(collect);
+    for (const file of css) styles.add(`/${file}`);
+  };
+  collect(entry);
+  return { script: `/${chunk.file}`, styles: [...styles] };
+}
