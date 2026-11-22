@@ -104,14 +104,15 @@ export class TomeFlashcard extends TomeElement {
     const duration = performance.now() - (this.#shownAt ?? performance.now());
     this.state = "saving";
     this.chosen = grade;
-    this.notice = undefined;
     try {
-      await tome.attempt({ ref: `item:${this.item.id}`, outcome: grade === 1 ? "wrong" : "correct", grade, duration });
+      await tome.attempt(
+        { ref: `item:${this.item.id}`, outcome: grade === 1 ? "wrong" : "correct", grade, duration },
+        this,
+      );
       this.state = "saved";
-    } catch (error) {
+    } catch {
       this.state = "back";
       this.chosen = undefined;
-      this.notice = messageOf(error);
     }
   }
 

@@ -45,7 +45,7 @@ await tome.attempt({ ref: "item:letter-k", outcome: "correct", grade: 3, duratio
 
 | Member                     | Does                                                                                                   |
 | -------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `tome.attempt(input)`      | Posts one attempt in the page's session, starting it if needed. Resolves to the stored event.         |
+| `tome.attempt(input, widget?)` | Posts one attempt in the page's session, starting it if needed. Resolves to the stored event. Pass the widget element to get the failure notice in it. |
 | `tome.item(ref)`           | Resolves to the item for `item:<id>` from the subject's item sets.                                     |
 | `tome.subject()`           | Resolves to the subject as `/api/subjects/:subject` returns it.                                       |
 | `tome.start()`, `tome.end()` | Start or end the page's session by hand. Widgets rarely need these.                                   |
@@ -53,7 +53,15 @@ await tome.attempt({ ref: "item:letter-k", outcome: "correct", grade: 3, duratio
 
 `attempt` takes `ref`, `outcome` (`correct`, `wrong`, `skipped`), `grade` (1–4), `duration` (ms, rounded to whole ms) and `data` (the payload; validated against the subject's newest payload schema version). Events carry that version as `schemaVersion`.
 
-Failures reject with a `TomeError` whose `message` is fit to show the learner: the app can't be reached, or it rejected the event (`issues` lists why). There is no offline queue (ADR 0004); show the message and keep the learner's answer on screen.
+Failures reject with a `TomeError` whose `message` is fit to show the learner: the app can't be reached, or it rejected the event (`issues` lists why). There is no offline queue (ADR 0004): nothing is queued or retried.
+
+When `attempt` is given the widget element, a failure appends a notice as the widget's last child, and the next `attempt` from that widget removes it:
+
+```html
+<p class="tome-notice" role="alert" data-state="unsaved">Couldn't reach the app, so this wasn't saved. …</p>
+```
+
+The widget keeps the learner's answer on screen and lets them try again.
 
 ## `<tome-flashcard>`
 
@@ -79,8 +87,9 @@ Keyboard: Tab to "Show answer", Enter or Space to reveal; focus moves to Good; k
       <button class="tome-grade" data-grade="1..4" data-state="chosen">Again<kbd>1</kbd></button>
     </div>
     <p class="tome-verdict" data-state="correct | wrong">Saved: Good</p>
-    <p class="tome-notice" role="alert">…</p>             <!-- unknown item, failed save -->
+    <p class="tome-notice" role="alert">…</p>             <!-- unknown item -->
   </div>
+  <p class="tome-notice" role="alert" data-state="unsaved">…</p>  <!-- failed save -->
 </tome-flashcard>
 ```
 

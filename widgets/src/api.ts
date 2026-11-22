@@ -1,4 +1,5 @@
 import type { Item, LearningEvent, Subject } from "@tomewise/core";
+import { clearUnsaved, showUnsaved } from "./notice.ts";
 
 export type PageKind = "lesson" | "quiz" | "exam" | "drill";
 export type Outcome = "correct" | "wrong" | "skipped";
@@ -103,7 +104,17 @@ export class Tome {
     return this.#session;
   }
 
-  async attempt({ ref, outcome, grade, duration, data = {} }: AttemptInput): Promise<LearningEvent> {
+  async attempt(input: AttemptInput, widget?: Element): Promise<LearningEvent> {
+    if (widget) clearUnsaved(widget);
+    try {
+      return await this.#postAttempt(input);
+    } catch (error) {
+      if (widget) showUnsaved(widget, error instanceof Error ? error.message : String(error));
+      throw error;
+    }
+  }
+
+  async #postAttempt({ ref, outcome, grade, duration, data = {} }: AttemptInput): Promise<LearningEvent> {
     const session = await this.start();
     return this.#post({
       kind: "attempt",
