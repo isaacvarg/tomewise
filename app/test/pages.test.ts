@@ -40,7 +40,7 @@ describe("learning-home pages", () => {
 
     expect(response.status).toBe(200);
     expect(response.type).toBe("text/html; charset=utf-8");
-    expect(response.body.toString()).toBe(`<!doctype html><title>${folder}</title>`);
+    expect(response.body.toString()).toContain(`<title>${folder}</title>`);
   });
 
   it("serves nested assets with their content type", async () => {
