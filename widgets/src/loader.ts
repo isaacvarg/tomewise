@@ -6,6 +6,8 @@ export const widgets: Record<string, () => Promise<unknown>> = {
   "tome-drill": () => import("./tome-drill.ts"),
   "tome-exam-question": () => import("./tome-exam-question.ts"),
   "tome-done": () => import("./tome-done.ts"),
+  "tome-routine": () => import("./tome-routine.ts"),
+  "tome-timer": () => import("./tome-timer.ts"),
 };
 
 export function loadWidgets(root: ParentNode): void {

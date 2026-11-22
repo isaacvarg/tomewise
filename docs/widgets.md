@@ -334,6 +334,67 @@ Instead of a Done button, mark one widget as the lesson's final check with the `
 
 Completion is sent once per page, so a lesson may have both a `final` widget and `<tome-done>`. Widgets support `final` by calling `this.completed()` (from `TomeElement`) once their last attempt is saved.
 
+## `<tome-routine>`
+
+| Attribute | Meaning                                  |
+| --------- | ---------------------------------------- |
+| `ref`     | `item:<id>` of a `routine` item          |
+
+Shows the routine's `name` and a Start button. Start shows the first step; Next moves on, and the last step's button is Finish. A step with `seconds` shows a `<tome-timer>` that starts on its own; the learner can move on before it's done. Finish asks Again / Hard / Good / Easy, as on a flashcard: the rating is the grade (1–4), Again is `wrong`, the rest `correct`. One attempt is posted, with `duration` from Start to Finish.
+
+Leaving midway posts no attempt. The session still ends with its time, but an unfinished routine has no rating to record, and routines skip the scheduler, so a `skipped` attempt would say nothing.
+
+Keyboard: Tab to Start, Enter or Space to start; focus stays on Next, and Enter or → advances; on Finish focus moves to Good and keys 1–4 rate. Touch: tap the buttons.
+
+### Markup
+
+```html
+<tome-routine ref="item:warm-up">
+  <div class="tome-routine" data-state="ready | step | rate | saving | saved | loading | error">
+    <p class="tome-routine-name">Warm-up</p>
+    <p class="tome-progress">Step 2 of 3</p>              <!-- "3 steps" before Start, "How did it go?" when rating -->
+    <button class="tome-start">Start</button>             <!-- before Start -->
+    <div class="tome-stage">                              <!-- during steps -->
+      <p class="tome-step">Hold the rolled r</p>
+      <tome-timer seconds="20" autostart>…</tome-timer>   <!-- timed steps -->
+    </div>
+    <button class="tome-next">Next | Finish</button>       <!-- during steps -->
+    <div class="tome-grades" role="group">                <!-- after Finish -->
+      <button class="tome-grade" data-grade="1..4" data-state="chosen">Again<kbd>1</kbd></button>
+    </div>
+    <p class="tome-verdict" data-state="correct | wrong">Saved: Good</p>
+    <p class="tome-notice" role="alert">…</p>             <!-- unknown item, failed save -->
+  </div>
+</tome-routine>
+```
+
+## `<tome-timer>`
+
+| Attribute   | Meaning                                         |
+| ----------- | ----------------------------------------------- |
+| `seconds`   | Length in seconds (may be fractional)           |
+| `autostart` | Start counting as soon as it's shown            |
+
+A countdown, usable on its own in a lesson or inside `<tome-routine>`. Start counts down; Pause and Resume hold and continue it; Reset goes back to the full time. At zero it shows "Time's up" and dispatches a bubbling `tome-timer-done` event. It posts nothing.
+
+Keyboard: Tab to the buttons, Enter or Space to press. Touch: tap them.
+
+### Markup
+
+```html
+<tome-timer seconds="90">
+  <div class="tome-timer" data-state="idle | running | paused | done | error">
+    <p class="tome-clock" role="timer">1:30</p>
+    <div class="tome-timer-controls">
+      <button class="tome-timer-toggle">Start | Pause | Resume</button>   <!-- not when done -->
+      <button class="tome-timer-reset">Reset</button>                     <!-- once started -->
+    </div>
+    <p class="tome-verdict" role="status">Time's up</p>                   <!-- when done -->
+    <p class="tome-notice" role="alert">…</p>                             <!-- missing or invalid seconds -->
+  </div>
+</tome-timer>
+```
+
 ## Styling
 
 Widgets ship base styles in the `tome.widgets` cascade layer, so any theme rule wins. Base styles use only `--t-*` tokens: `--t-bg`, `--t-surface`, `--t-ink`, `--t-muted`, `--t-rule`, `--t-accent`, `--t-accent-ink`, `--t-good`, `--t-good-bg`, `--t-bad`, `--t-bad-bg`, `--t-display`, `--t-ui`, `--t-mono`, `--t-radius`.
