@@ -1,6 +1,7 @@
 import type { z } from "zod";
 import { InvalidLearningHomeError } from "./errors.ts";
 import { type EventLine, scanEvents } from "./event-store.ts";
+import type { LearningEvent } from "./events.ts";
 import { issuesFrom, type ValidationIssue } from "./issues.ts";
 import { loadSubject, type LearningHome } from "./load.ts";
 import { type Goal, ruleChanges, type StreakRules, weekdays } from "./schemas.ts";
@@ -67,7 +68,10 @@ export interface Session {
 }
 
 export function sessionsIn(lines: EventLine[], timezone: string): Session[] {
-  const events = lines.map((line) => line.event);
+  return sessionsOf(lines.map((line) => line.event), timezone);
+}
+
+export function sessionsOf(events: readonly LearningEvent[], timezone: string): Session[] {
   const bySession = Map.groupBy(events, (event) => event.sessionId);
   return events
     .filter((event) => event.kind === "session.start")
