@@ -114,7 +114,6 @@ body {
   height: 100%; overflow-y: auto; background: var(--t-bg); color: var(--t-ink); font-family: var(--t-ui);
   padding: 1.1rem 1.1rem 1.6rem; display: flex; flex-direction: column; gap: 1.35rem; position: relative;
 }
-.tome-page { display: contents; }
 .tome-header { display: flex; flex-direction: column; gap: .1rem; position: relative; }
 .tome-back { align-self: flex-start; font-size: .82rem; color: var(--t-muted); text-decoration: none; margin-bottom: .5rem; }
 .tome-back:hover { color: var(--t-ink); }
@@ -215,13 +214,52 @@ body {
 .tome-chart .bar[data-today] { fill: color-mix(in srgb, var(--t-accent) 50%, var(--t-bg)); }
 .tome-chart .goal { stroke: var(--t-ink); stroke-width: 1; stroke-dasharray: 4 3; opacity: .55; }
 
-[data-tome-theme="paper"] .tome-header { border-bottom: 1px solid var(--t-rule); padding-bottom: .9rem; }
+.tome-tabs {
+  display: flex; flex: none; gap: 0; overflow-x: auto; scrollbar-width: none; position: sticky; top: -1.1rem; z-index: 2;
+  margin-top: -.6rem; padding: .5rem 0 0; background: var(--t-bg); border-bottom: 1px solid var(--t-rule);
+}
+.tome-tabs::-webkit-scrollbar { display: none; }
+.tome-tab {
+  flex: none; border: 0; background: transparent; color: var(--t-muted); font: 600 .78rem var(--t-ui);
+  padding: .5rem .36rem .6rem; cursor: pointer; box-shadow: inset 0 -2px 0 transparent;
+}
+.tome-tab:hover { color: var(--t-ink); }
+.tome-tab[aria-selected="true"] { color: var(--t-ink); box-shadow: inset 0 -2px 0 var(--t-accent); }
+.tome-tab:focus-visible { outline: 2px solid var(--t-accent); outline-offset: -2px; }
+.tome-view { display: flex; flex-direction: column; gap: 1.35rem; }
+
+.tome-heatmap-wrap { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px; }
+.tome-heat-days { display: grid; grid-template-rows: repeat(7, 1fr); gap: 3px; font-size: .6rem; color: var(--t-muted); line-height: 1; }
+.tome-heat-days span { display: flex; align-items: center; }
+.tome-heatmap { display: grid; grid-template-columns: repeat(18, minmax(0, 1fr)); grid-auto-flow: column; grid-template-rows: repeat(7, 1fr); gap: 3px; }
+.tome-cell { aspect-ratio: 1; max-width: 100%; border-radius: var(--t-cell-radius); background: var(--t-heat-0); }
+.tome-cell[data-level="1"] { background: var(--t-heat-1); }
+.tome-cell[data-level="2"] { background: var(--t-heat-2); }
+.tome-cell[data-level="3"] { background: var(--t-heat-3); }
+.tome-cell[data-level="4"] { background: var(--t-heat-4); }
+.tome-cell[data-future] { background: transparent; }
+.tome-cell[data-old] { display: none; }
+.tome-cell[data-today] { outline: 1.5px solid var(--t-ink); outline-offset: 1px; }
+.tome-meta-wide { display: none; }
+.tome-heat-legend { display: flex; align-items: center; gap: 3px; justify-content: flex-end; font-size: .68rem; color: var(--t-muted); }
+.tome-heat-legend .tome-cell { width: 10px; }
+.tome-heat-legend span:first-child { margin-right: 3px; }
+.tome-heat-legend span:last-child { margin-left: 3px; }
+
+.tome-totals { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; }
+.tome-totals li { padding: .7rem .8rem; border-radius: var(--t-radius); background: var(--t-surface); display: flex; flex-direction: column; gap: .1rem; }
+.tome-totals b { white-space: nowrap; font-family: var(--t-display); font-weight: 400; font-size: 1.35rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.tome-totals span { font-size: .72rem; color: var(--t-muted); }
+
 [data-tome-theme="paper"] .tome-kicker { font-variant: small-caps; text-transform: none; letter-spacing: .08em; font-size: .85rem; }
 [data-tome-theme="paper"] .tome-title { font-style: italic; }
 [data-tome-theme="paper"] .tome-goal-num b { font-style: italic; }
 [data-tome-theme="paper"] .tome-goal-bar { height: 3px; border-radius: 0; }
 [data-tome-theme="paper"] .tome-goal-week i { border-radius: 0; height: 3px; }
 [data-tome-theme="paper"] .tome-drills .tome-row, [data-tome-theme="paper"] .tome-reference .tome-row { background: transparent; }
+[data-tome-theme="paper"] .tome-tab { font-weight: 500; }
+[data-tome-theme="paper"] .tome-totals li { background: transparent; border-top: 1px solid var(--t-rule); border-radius: 0; padding-inline: 0; }
+[data-tome-theme="paper"] .tome-totals b { font-style: italic; }
 [data-tome-theme="paper"] .tome-start:active { transform: translateY(1px); }
 
 [data-tome-theme="meadow"] .tome-app {
@@ -244,6 +282,12 @@ body {
 [data-tome-theme="meadow"] .tome-check { border-radius: 2px 70% 2px 70%; }
 [data-tome-theme="meadow"] .tome-chart .bar { rx: 3px; }
 [data-tome-theme="meadow"] .tome-chart .line { stroke-width: 3; }
+[data-tome-theme="meadow"] .tome-tabs { border-bottom: 0; padding-bottom: .5rem; }
+[data-tome-theme="meadow"] .tome-tab { font-family: var(--t-display); font-weight: 500; border-radius: 99px; padding: .35rem .4rem; box-shadow: none; }
+[data-tome-theme="meadow"] .tome-tab[aria-selected="true"] { background: var(--t-accent); color: var(--t-accent-ink); box-shadow: 0 3px 0 color-mix(in srgb, var(--t-accent) 60%, #000); }
+[data-tome-theme="meadow"] .tome-heatmap { gap: 4px; }
+[data-tome-theme="meadow"] .tome-totals li { box-shadow: 0 2px 0 var(--t-rule); }
+[data-tome-theme="meadow"] .tome-totals b { font-weight: 500; }
 [data-tome-theme="meadow"] .tome-start { border-radius: 99px; box-shadow: 0 4px 0 color-mix(in srgb, var(--t-accent) 60%, #000); font-family: var(--t-display); font-weight: 500; }
 [data-tome-theme="meadow"] .tome-start:active { transform: translateY(3px); box-shadow: 0 1px 0 color-mix(in srgb, var(--t-accent) 60%, #000); }
 .meadow-leaf {
@@ -257,21 +301,25 @@ body {
 @media (prefers-reduced-motion: reduce) { .meadow-leaf { display: none; } }
 
 @container (min-width: 720px) {
-  .tome-app { display: block; padding: 1.6rem max(2.5rem, calc((100% - 62rem) / 2)) 2.5rem; }
-  .tome-page {
+  .tome-app { padding: 1.6rem max(2.5rem, calc((100% - 62rem) / 2)) 2.5rem; gap: 1.5rem; }
+  .tome-tabs { top: -1.6rem; gap: .5rem; }
+  .tome-tab { font-size: .88rem; padding-inline: .7rem; }
+  .tome-overview {
     display: grid; gap: 1.5rem 2.4rem; align-items: start;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-rows: auto auto auto auto auto auto 1fr auto;
-    grid-template-areas: "header header" "goal roadmap" "prompts roadmap" "due roadmap" "drills roadmap" "reference roadmap" "reference roadmap" "charts charts";
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    grid-template-areas: "goal activity" "prompts due";
   }
-  .tome-header { grid-area: header; }
   .tome-goal { grid-area: goal; }
+  .tome-activity { grid-area: activity; }
   .tome-prompts { grid-area: prompts; }
   .tome-due { grid-area: due; }
-  .tome-roadmap { grid-area: roadmap; }
-  .tome-drills { grid-area: drills; }
-  .tome-reference { grid-area: reference; }
-  .tome-charts { grid-area: charts; grid-template-columns: 1fr 1fr; gap: 2.4rem; border-top: 1px solid var(--t-rule); padding-top: 1.3rem; }
+  .tome-heatmap { grid-template-columns: repeat(52, minmax(0, 1fr)); gap: 2px; }
+  .tome-cell[data-old] { display: block; }
+  .tome-meta-narrow { display: none; }
+  .tome-meta-wide { display: inline; }
+  .tome-view[data-view="curriculum"] { max-width: 44rem; }
+  .tome-drills ul, .tome-reference ul { grid-template-columns: 1fr 1fr; }
+  .tome-charts { grid-template-columns: 1fr 1fr; gap: 2.4rem; }
   .tome-chart-plot { grid-template-rows: 10rem auto; }
 }
 </style>
@@ -279,14 +327,14 @@ body {
 <div class="page">
   <header class="intro">
     <h1>Tomewise subject home</h1>
-    <p>The page you reach by tapping Morse code on the home screen. Top to bottom: today's goal, what to ask your agent, what's due here with its own Start, the curriculum, drills, reference and charts. Both phones use the same markup in Paper and Meadow, and each follows your system's light or dark setting. The desktop window below lays the same markup out in two columns: today's things on the left, the roadmap on the right, charts underneath, two across.</p>
+    <p>The page you reach by tapping Morse code on the home screen: a dashboard for one subject, with tabs for the rest. Overview shows the goal, this subject's activity, anything to ask your agent and what's due here with its own Start. Curriculum, Drills, Reference and Stats each get a tab. Tap the tabs in any frame. Both phones use the same markup in Paper and Meadow, and each follows your system's light or dark setting. The desktop window lays the same markup out for the extra width.</p>
   </header>
 
   <div class="frames" id="frames"></div>
 
   <div class="desktop" id="desktop">
     <div class="desktop-head">
-      <div><strong>Desktop</strong> <span>· same markup, two columns</span></div>
+      <div><strong>Desktop</strong> <span>· same markup, wider layout</span></div>
       <div class="theme-switch" role="group" aria-label="Theme">
         <button type="button" id="sw-paper" data-theme-id="paper" aria-pressed="true">Paper</button>
         <button type="button" id="sw-meadow" data-theme-id="meadow" aria-pressed="false">Meadow</button>
@@ -300,142 +348,171 @@ body {
 
   <section class="contract">
     <div>
-      <h2>Subject home order</h2>
+      <h2>Subject home tabs</h2>
       <ul>
-        <li>Goal progress, today or this week</li>
-        <li>"Ask your agent" prompts, derived from state</li>
-        <li>Due here, with a Start for this subject</li>
-        <li>Roadmap: units, milestones and their lessons, then "Other lessons"</li>
+        <li>Overview: goal, activity heatmap, "ask your agent" prompts (only when there are any), due here with Start</li>
+        <li>Curriculum: units, milestones and their lessons, then "Other lessons"</li>
         <li>Drills, dimmed until one of their items is unlocked</li>
-        <li>Reference: the built-in glossary of items, then the agent's reference sheets</li>
-        <li>Charts from the subject's chart specs</li>
+        <li>Reference: the built-in glossary, then the agent's reference sheets</li>
+        <li>Stats: totals, then charts from the subject's chart specs</li>
       </ul>
     </div>
     <div>
       <h2>What a theme targets</h2>
       <ul>
-        <li><code>.tome-goal</code>, <code>.tome-goal-bar</code></li>
-        <li><code>.tome-prompt</code>, <code>.tome-say</code></li>
+        <li><code>.tome-tabs</code>, <code>.tome-tab[aria-selected]</code></li>
+        <li><code>.tome-goal</code>, <code>.tome-heatmap</code>, <code>.tome-prompt</code></li>
         <li><code>.tome-milestone</code>, <code>.tome-status[data-status]</code></li>
         <li><code>.tome-lessons [data-done]</code>, <code>[data-later]</code></li>
         <li><code>.tome-drills [data-locked]</code>, <code>.tome-reference</code></li>
-        <li><code>.tome-chart</code> with <code>.line</code>, <code>.bar</code>, <code>.goal</code></li>
+        <li><code>.tome-totals</code>, <code>.tome-chart</code></li>
       </ul>
     </div>
     <div>
       <h2>Sample data</h2>
-      <p>Unit 1, its milestone, lessons 1 to 4, the listening drill and the response-time field come from the Morse example. Unit 2's lessons, the spacing lesson, the second drill, both reference sheets, the goal, the explanation and the chart numbers are invented to fill the screen.</p>
+      <p>Unit 1, its milestone, lessons 1 to 4, the listening drill and the response-time field come from the Morse example. Unit 2's lessons, the spacing lesson, the second drill, both reference sheets, the goal, the explanation, the heatmap, the totals and the chart numbers are invented to fill the screen.</p>
     </div>
   </section>
 </div>
 
 <template id="tome-subject-home">
   <div class="tome-app">
-   <div class="tome-page">
     <header class="tome-header">
       <a class="tome-back" href="#today">← Today</a>
       <p class="tome-kicker">Subject</p>
       <h2 class="tome-title"><span class="tome-mark tome-mark-morse" aria-hidden="true"><i class="dah"></i><i class="dit"></i><i class="dah"></i></span>Morse code</h2>
     </header>
 
-    <section class="tome-section tome-goal" aria-label="Goal">
-      <div class="tome-section-head"><h3>Goal</h3><span class="tome-meta">10 min a day</span></div>
-      <div class="tome-goal-num"><b>6</b><span>of 10 min today · 4 to go</span></div>
-      <div class="tome-goal-bar" role="img" aria-label="6 of 10 minutes"><span style="width: 60%"></span></div>
-      <div class="tome-goal-week" role="img" aria-label="This week: goal met Monday, Tuesday, Thursday and Friday">
-        <span><i data-met></i>M</span><span><i data-met></i>T</span><span><i data-part></i>W</span><span><i data-met></i>T</span><span><i data-met></i>F</span><span data-today><i data-part></i>S</span><span><i></i>S</span>
-      </div>
-    </section>
+    <nav class="tome-tabs" role="tablist" aria-label="Morse code">
+      <button class="tome-tab" type="button" role="tab" data-view="overview" aria-selected="true">Overview</button>
+      <button class="tome-tab" type="button" role="tab" data-view="curriculum" aria-selected="false">Curriculum</button>
+      <button class="tome-tab" type="button" role="tab" data-view="drills" aria-selected="false">Drills</button>
+      <button class="tome-tab" type="button" role="tab" data-view="reference" aria-selected="false">Reference</button>
+      <button class="tome-tab" type="button" role="tab" data-view="stats" aria-selected="false">Stats</button>
+    </nav>
 
-    <section class="tome-section tome-prompts">
-      <div class="tome-section-head"><h3>Ask your agent</h3><span class="tome-meta">2 waiting</span></div>
-      <ul>
-        <li class="tome-prompt">
-          <p>Every lesson in <strong>Copy K, M, R, S and U</strong> is done. Its exam isn't written yet.</p>
-          <div class="tome-say"><q>Prepare the first-five Morse exam.</q><button class="tome-copy" type="button">Copy</button></div>
-        </li>
-        <li class="tome-prompt">
-          <p>Your explanation from <strong>The late bump</strong> is waiting to be graded.</p>
-          <div class="tome-say"><q>Grade my Morse explanation.</q><button class="tome-copy" type="button">Copy</button></div>
-        </li>
-      </ul>
-    </section>
-
-    <section class="tome-section tome-due">
-      <div class="tome-section-head"><h3>Due here</h3><span class="tome-meta">9 items</span></div>
-      <ul>
-        <li><span class="tome-row"><span class="what">Review</span><span class="how">9 items · 6 min</span></span></li>
-        <li><a class="tome-row" href="#quiz"><span class="what">Weekly quiz<span class="tome-tag">Quiz</span></span><span class="how">5 min</span></a></li>
-      </ul>
-      <button class="tome-start" type="button">Start Morse code <small>9 items, about 6 min</small></button>
-    </section>
-
-    <section class="tome-section tome-roadmap" aria-label="Curriculum">
-      <div class="tome-section-head"><h3>Curriculum</h3><span class="tome-meta">4 of 7 lessons done</span></div>
-
-      <div class="tome-unit">
-        <h4>Unit 1 · Koch letters</h4>
-        <div class="tome-milestone">
-          <div class="tome-milestone-head"><b>Copy K, M, R, S and U</b><span class="tome-status" data-status="current">Current</span></div>
-          <ol class="tome-lessons">
-            <li data-done><a class="tome-row" href="#l1"><span class="tome-check"><svg viewBox="0 0 12 12" role="img" aria-label="Done"><path d="M2.5 6.2l2.3 2.3 4.7-4.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><span class="tome-num">1</span>K and M</span><span class="side">2 items</span></a></li>
-            <li data-done><a class="tome-row" href="#l2"><span class="tome-check"><svg viewBox="0 0 12 12" role="img" aria-label="Done"><path d="M2.5 6.2l2.3 2.3 4.7-4.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><span class="tome-num">2</span>R</span><span class="side">1 item</span></a></li>
-            <li data-done><a class="tome-row" href="#l3"><span class="tome-check"><svg viewBox="0 0 12 12" role="img" aria-label="Done"><path d="M2.5 6.2l2.3 2.3 4.7-4.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><span class="tome-num">3</span>S</span><span class="side">1 item</span></a></li>
-            <li data-done><a class="tome-row" href="#l4"><span class="tome-check"><svg viewBox="0 0 12 12" role="img" aria-label="Done"><path d="M2.5 6.2l2.3 2.3 4.7-4.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><span class="tome-num">4</span>The late bump</span><span class="side">1 item</span></a></li>
-            <li class="tome-exam"><span class="tome-row"><span class="tome-check"></span><span>Exam · first five</span><span class="side">Ask your agent</span></span></li>
-          </ol>
+    <div class="tome-view tome-overview" role="tabpanel" data-view="overview">
+      <section class="tome-section tome-goal" aria-label="Goal">
+        <div class="tome-section-head"><h3>Goal</h3><span class="tome-meta">10 min a day</span></div>
+        <div class="tome-goal-num"><b>6</b><span>of 10 min today · 4 to go</span></div>
+        <div class="tome-goal-bar" role="img" aria-label="6 of 10 minutes"><span style="width: 60%"></span></div>
+        <div class="tome-goal-week" role="img" aria-label="This week: goal met Monday, Tuesday, Thursday and Friday">
+          <span><i data-met></i>M</span><span><i data-met></i>T</span><span><i data-part></i>W</span><span><i data-met></i>T</span><span><i data-met></i>F</span><span data-today><i data-part></i>S</span><span><i></i>S</span>
         </div>
-      </div>
+      </section>
 
-      <div class="tome-unit">
-        <h4>Unit 2 · More letters</h4>
-        <div class="tome-milestone">
-          <div class="tome-milestone-head"><b>Copy the next five letters</b><span class="tome-status" data-status="upcoming">Upcoming</span></div>
-          <ol class="tome-lessons">
-            <li data-later><a class="tome-row" href="#l5"><span class="tome-check"></span><span><span class="tome-num">5</span>A, the short pair</span><span class="side">after Unit 1</span></a></li>
-            <li data-later><a class="tome-row" href="#l6"><span class="tome-check"></span><span><span class="tome-num">6</span>N, A turned round</span><span class="side">after Unit 1</span></a></li>
-          </ol>
+      <section class="tome-section tome-activity" aria-label="Activity">
+        <div class="tome-section-head"><h3>Activity</h3><span class="tome-meta"><span class="tome-meta-narrow">Last 18 weeks</span><span class="tome-meta-wide">Last 12 months</span> · 6 days in a row</span></div>
+        <div class="tome-heatmap-wrap">
+          <div class="tome-heat-days" aria-hidden="true"><span>M</span><span></span><span>W</span><span></span><span>F</span><span></span><span>S</span></div>
+          <div class="tome-heatmap" role="img" aria-label="Morse code activity heatmap"></div>
         </div>
-      </div>
+        <div class="tome-heat-legend" aria-hidden="true"><span>Less</span><i class="tome-cell"></i><i class="tome-cell" data-level="1"></i><i class="tome-cell" data-level="2"></i><i class="tome-cell" data-level="3"></i><i class="tome-cell" data-level="4"></i><span>More</span></div>
+      </section>
 
-      <div class="tome-unit">
-        <h4>Other lessons</h4>
-        <div class="tome-milestone tome-milestone-plain">
-          <ol class="tome-lessons">
-            <li><a class="tome-row" href="#spacing"><span class="tome-check"></span><span>Why the gaps are long</span><span class="side">spacing</span></a></li>
-          </ol>
+      <section class="tome-section tome-prompts">
+        <div class="tome-section-head"><h3>Ask your agent</h3><span class="tome-meta">2 waiting</span></div>
+        <ul>
+          <li class="tome-prompt">
+            <p>Every lesson in <strong>Copy K, M, R, S and U</strong> is done. Its exam isn't written yet.</p>
+            <div class="tome-say"><q>Prepare the first-five Morse exam.</q><button class="tome-copy" type="button">Copy</button></div>
+          </li>
+          <li class="tome-prompt">
+            <p>Your explanation from <strong>The late bump</strong> is waiting to be graded.</p>
+            <div class="tome-say"><q>Grade my Morse explanation.</q><button class="tome-copy" type="button">Copy</button></div>
+          </li>
+        </ul>
+      </section>
+
+      <section class="tome-section tome-due">
+        <div class="tome-section-head"><h3>Due here</h3><span class="tome-meta">9 items</span></div>
+        <ul>
+          <li><span class="tome-row"><span class="what">Review</span><span class="how">9 items · 6 min</span></span></li>
+          <li><a class="tome-row" href="#quiz"><span class="what">Weekly quiz<span class="tome-tag">Quiz</span></span><span class="how">5 min</span></a></li>
+        </ul>
+        <button class="tome-start" type="button">Start Morse code <small>9 items, about 6 min</small></button>
+      </section>
+    </div>
+
+    <div class="tome-view" role="tabpanel" data-view="curriculum" hidden>
+      <section class="tome-section tome-roadmap" aria-label="Curriculum">
+        <div class="tome-section-head"><h3>Curriculum</h3><span class="tome-meta">4 of 7 lessons done</span></div>
+
+        <div class="tome-unit">
+          <h4>Unit 1 · Koch letters</h4>
+          <div class="tome-milestone">
+            <div class="tome-milestone-head"><b>Copy K, M, R, S and U</b><span class="tome-status" data-status="current">Current</span></div>
+            <ol class="tome-lessons">
+              <li data-done><a class="tome-row" href="#l1"><span class="tome-check"><svg viewBox="0 0 12 12" role="img" aria-label="Done"><path d="M2.5 6.2l2.3 2.3 4.7-4.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><span class="tome-num">1</span>K and M</span><span class="side">2 items</span></a></li>
+              <li data-done><a class="tome-row" href="#l2"><span class="tome-check"><svg viewBox="0 0 12 12" role="img" aria-label="Done"><path d="M2.5 6.2l2.3 2.3 4.7-4.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><span class="tome-num">2</span>R</span><span class="side">1 item</span></a></li>
+              <li data-done><a class="tome-row" href="#l3"><span class="tome-check"><svg viewBox="0 0 12 12" role="img" aria-label="Done"><path d="M2.5 6.2l2.3 2.3 4.7-4.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><span class="tome-num">3</span>S</span><span class="side">1 item</span></a></li>
+              <li data-done><a class="tome-row" href="#l4"><span class="tome-check"><svg viewBox="0 0 12 12" role="img" aria-label="Done"><path d="M2.5 6.2l2.3 2.3 4.7-4.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><span class="tome-num">4</span>The late bump</span><span class="side">1 item</span></a></li>
+              <li class="tome-exam"><span class="tome-row"><span class="tome-check"></span><span>Exam · first five</span><span class="side">Ask your agent</span></span></li>
+            </ol>
+          </div>
         </div>
-      </div>
-    </section>
 
-    <section class="tome-section tome-drills">
-      <div class="tome-section-head"><h3>Drills</h3><span class="tome-meta">1 of 2 ready</span></div>
-      <ul>
-        <li><a class="tome-row" href="#listen"><span class="tome-drill-name">Listen · K M R S U<span class="tome-drill-sub">12 sounds · pick the letter · 5 s each</span></span><span class="tome-drill-go">Run</span></a></li>
-        <li data-locked><span class="tome-row" aria-disabled="true"><span class="tome-drill-name">Listen · A N<span class="tome-drill-sub">12 sounds · pick the letter</span></span><span class="tome-drill-go">After lesson 5</span></span></li>
+        <div class="tome-unit">
+          <h4>Unit 2 · More letters</h4>
+          <div class="tome-milestone">
+            <div class="tome-milestone-head"><b>Copy the next five letters</b><span class="tome-status" data-status="upcoming">Upcoming</span></div>
+            <ol class="tome-lessons">
+              <li data-later><a class="tome-row" href="#l5"><span class="tome-check"></span><span><span class="tome-num">5</span>A, the short pair</span><span class="side">after Unit 1</span></a></li>
+              <li data-later><a class="tome-row" href="#l6"><span class="tome-check"></span><span><span class="tome-num">6</span>N, A turned round</span><span class="side">after Unit 1</span></a></li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="tome-unit">
+          <h4>Other lessons</h4>
+          <div class="tome-milestone tome-milestone-plain">
+            <ol class="tome-lessons">
+              <li><a class="tome-row" href="#spacing"><span class="tome-check"></span><span>Why the gaps are long</span><span class="side">spacing</span></a></li>
+            </ol>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="tome-view" role="tabpanel" data-view="drills" hidden>
+      <section class="tome-section tome-drills">
+        <div class="tome-section-head"><h3>Drills</h3><span class="tome-meta">1 of 2 ready</span></div>
+        <ul>
+          <li><a class="tome-row" href="#listen"><span class="tome-drill-name">Listen · K M R S U<span class="tome-drill-sub">12 sounds · pick the letter · 5 s each</span></span><span class="tome-drill-go">Run</span></a></li>
+          <li data-locked><span class="tome-row" aria-disabled="true"><span class="tome-drill-name">Listen · A N<span class="tome-drill-sub">12 sounds · pick the letter</span></span><span class="tome-drill-go">After lesson 5</span></span></li>
+        </ul>
+      </section>
+    </div>
+
+    <div class="tome-view" role="tabpanel" data-view="reference" hidden>
+      <section class="tome-section tome-reference">
+        <div class="tome-section-head"><h3>Reference</h3><span class="tome-meta">3</span></div>
+        <ul>
+          <li><a class="tome-row" href="glossary.html"><span class="tome-drill-name">Glossary<span class="tome-drill-sub">5 items · hear each one · built in</span></span><span class="tome-drill-go">Open</span></a></li>
+          <li><a class="tome-row" href="#wpm"><span class="tome-drill-name">How WPM timing works<span class="tome-drill-sub">Sheet from your agent · Lesson 1</span></span><span class="tome-drill-go">Open</span></a></li>
+          <li data-later><a class="tome-row" href="#an"><span class="tome-drill-name">A and N side by side<span class="tome-drill-sub">Sheet from your agent · Lesson 6</span></span><span class="tome-drill-go">after Unit 1</span></a></li>
+        </ul>
+      </section>
+    </div>
+
+    <div class="tome-view" role="tabpanel" data-view="stats" hidden>
+      <ul class="tome-totals" aria-label="Totals">
+        <li><b>4h 12m</b><span>practised</span></li>
+        <li><b>38</b><span>sessions</span></li>
+        <li><b>91%</b><span>accuracy, 30 days</span></li>
       </ul>
-    </section>
 
-    <section class="tome-section tome-reference">
-      <div class="tome-section-head"><h3>Reference</h3><span class="tome-meta">3</span></div>
-      <ul>
-        <li><a class="tome-row" href="glossary.html"><span class="tome-drill-name">Glossary<span class="tome-drill-sub">5 items · hear each one · built in</span></span><span class="tome-drill-go">Open</span></a></li>
-        <li><a class="tome-row" href="#wpm"><span class="tome-drill-name">How WPM timing works<span class="tome-drill-sub">Sheet from your agent · Lesson 1</span></span><span class="tome-drill-go">Open</span></a></li>
-        <li data-later><a class="tome-row" href="#an"><span class="tome-drill-name">A and N side by side<span class="tome-drill-sub">Sheet from your agent · Lesson 6</span></span><span class="tome-drill-go">after Unit 1</span></a></li>
-      </ul>
-    </section>
-
-    <section class="tome-charts" aria-label="Charts">
-      <figure class="tome-chart" data-chart="line">
-        <div class="tome-section-head"><h3>Response time</h3><span class="tome-meta">median · 30 days</span></div>
-        <div class="tome-chart-plot"><div class="tome-chart-y"><span>1.6 s</span><span>1.2 s</span><span>0.8 s</span></div><div class="plot"></div><div class="tome-chart-x"><span>23 Oct</span><span>7 Nov</span><span>21 Nov</span></div></div>
-      </figure>
-      <figure class="tome-chart" data-chart="bar">
-        <div class="tome-section-head"><h3>Minutes a day</h3><span class="tome-meta">total · 14 days · goal dashed</span></div>
-        <div class="tome-chart-plot"><div class="tome-chart-y"><span>20</span><span>10</span><span>0</span></div><div class="plot"></div><div class="tome-chart-x"><span>8 Nov</span><span>14 Nov</span><span>21 Nov</span></div></div>
-      </figure>
-    </section>
-   </div>
+      <section class="tome-charts" aria-label="Charts">
+        <figure class="tome-chart" data-chart="line">
+          <div class="tome-section-head"><h3>Response time</h3><span class="tome-meta">median · 30 days</span></div>
+          <div class="tome-chart-plot"><div class="tome-chart-y"><span>1.6 s</span><span>1.2 s</span><span>0.8 s</span></div><div class="plot"></div><div class="tome-chart-x"><span>23 Oct</span><span>7 Nov</span><span>21 Nov</span></div></div>
+        </figure>
+        <figure class="tome-chart" data-chart="bar">
+          <div class="tome-section-head"><h3>Minutes a day</h3><span class="tome-meta">total · 14 days · goal dashed</span></div>
+          <div class="tome-chart-plot"><div class="tome-chart-y"><span>20</span><span>10</span><span>0</span></div><div class="plot"></div><div class="tome-chart-x"><span>8 Nov</span><span>14 Nov</span><span>21 Nov</span></div></div>
+        </figure>
+      </section>
+    </div>
   </div>
 </template>
 
@@ -486,9 +563,29 @@ body {
     el.appendChild(s);
   }
 
+  function buildHeatmap(el) {
+    var total = 52 * 7, todayIndex = total - 2, firstShown = (52 - 18) * 7;
+    for (var i = 0; i < total; i++) {
+      var c = document.createElement("i");
+      c.className = "tome-cell";
+      if (i < firstShown) c.setAttribute("data-old", "");
+      if (i > todayIndex) { c.setAttribute("data-future", ""); }
+      else {
+        var r = seeded(i + 11), level = 0;
+        if (i >= total - 9 * 7) level = r < 0.25 ? 0 : r < 0.5 ? 1 : r < 0.75 ? 2 : r < 0.92 ? 3 : 4;
+        if (i > todayIndex - 6) level = Math.max(level, 1 + (i % 3));
+        if (i === todayIndex - 6) level = 0;
+        if (level) c.setAttribute("data-level", String(level));
+        if (i === todayIndex) c.setAttribute("data-today", "");
+      }
+      el.appendChild(c);
+    }
+  }
+
   function build(theme) {
     var app = tpl.content.firstElementChild.cloneNode(true);
     app.setAttribute("data-tome-theme", theme);
+    buildHeatmap(app.querySelector(".tome-heatmap"));
     lineChart(app.querySelector('[data-chart="line"] .plot'));
     barChart(app.querySelector('[data-chart="bar"] .plot'));
     return app;
@@ -513,6 +610,16 @@ body {
   });
 
   document.addEventListener("click", function (e) {
+    var tab = e.target.closest(".tome-tab");
+    if (tab) {
+      var app = tab.closest(".tome-app"), name = tab.getAttribute("data-view");
+      Array.prototype.forEach.call(app.querySelectorAll(".tome-tab"), function (t) { t.setAttribute("aria-selected", String(t === tab)); });
+      Array.prototype.forEach.call(app.querySelectorAll(".tome-view"), function (v) { v.hidden = v.getAttribute("data-view") !== name; });
+      app.scrollTop = 0;
+      tab.scrollIntoView({ block: "nearest", inline: "nearest" });
+      if (app === wide) document.querySelector("#desktop .window-url").textContent = "homelab:4310/morse-code" + (name === "overview" ? "" : "/" + name);
+      return;
+    }
     var copy = e.target.closest(".tome-copy");
     if (copy) {
       var text = copy.parentNode.querySelector("q").textContent;
