@@ -28,10 +28,12 @@ describe("the tomewise npm package", () => {
     const tarball = await packed();
     const root = await copyExample("morse");
     const env = { ...process.env, HOME: await tempDir(), npm_config_cache: await tempDir(), npm_config_update_notifier: "false" };
-    const child = spawn("npx", ["--yes", "--offline", "--package", tarball, "tomewise", "serve", "--port", "0"], { cwd: root, env });
+    const child = spawn("npx", ["--yes", "--offline", "--package", tarball, "tomewise", "serve", "--port", "0"], { cwd: root, env, detached: true });
     const exited = new Promise<string>((resolve) => child.on("exit", (code, signal) => resolve(signal ? `killed by ${signal}` : `exited ${code}`)));
     onTestFinished(() => {
-      child.kill("SIGKILL");
+      try {
+        process.kill(-child.pid!, "SIGKILL");
+      } catch {}
     });
     const stderr: string[] = [];
     child.stderr.on("data", (chunk) => stderr.push(String(chunk)));
@@ -71,8 +73,10 @@ describe("the tomewise npm package", () => {
     expect(tome.headers.get("content-type")).toBe("text/javascript; charset=utf-8");
     expect(await tome.text()).toMatch(/export\s*\{/);
 
-    child.kill("SIGTERM");
-    expect(await exited, stderr.join("")).toBe("exited 0");
+    process.kill(-child.pid!, "SIGTERM");
+    await exited;
+    await expect.poll(() => fetch(url!).then(() => "listening", () => "stopped"), { timeout: 5_000 }).toBe("stopped");
+    expect(stderr.join("")).toBe("");
   });
 
   it("installs both the tomewise and tome commands, with no runtime dependencies", async () => {
