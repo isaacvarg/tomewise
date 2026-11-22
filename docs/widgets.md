@@ -18,13 +18,13 @@ The app injects `tome.js` and the page context into every lesson's `<head>`. A l
 
 `tome.js` reads the page from `<meta>` tags the app writes:
 
-| Meta             | Content                         |
-| ---------------- | ------------------------------- |
-| `tome-subject`   | subject id                      |
-| `tome-page-kind` | `lesson`, `quiz`, `exam`, `drill` |
-| `tome-page-id`   | page id (file name, no extension) |
+| Meta             | Content                                  |
+| ---------------- | ---------------------------------------- |
+| `tome-subject`   | subject id                               |
+| `tome-page-kind` | `lesson`, `quiz`, `exam` or `drill`; `lesson` if absent |
+| `tome-<kind>`    | page id (file name, no extension), e.g. `tome-quiz` |
 
-Without `tome-page-kind` and `tome-page-id`, `tome-lesson` (a lesson id) is used. A page with no context posts nothing.
+The session ref is `<kind>:<id>`, such as `quiz:week-1`. A page with no context posts nothing.
 
 ## Sessions
 

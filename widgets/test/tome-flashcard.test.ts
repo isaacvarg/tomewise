@@ -1,4 +1,4 @@
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { type LearningEvent, startWidgetApp } from "./browser.ts";
@@ -54,6 +54,29 @@ describe("tome.js", () => {
       data: {},
     });
     expect(start!.sessionId).toBe(start!.id);
+  });
+
+  it("refers the session to the page kind named in the page context", async () => {
+    const { open, eventsUntil } = await startWidgetApp({
+      prepare: async (root) => {
+        await mkdir(join(root, "subjects/spanish/quizzes"), { recursive: true });
+        await writeFile(
+          join(root, "subjects/spanish/quizzes/week-1.html"),
+          [
+            '<!doctype html><head><meta name="tome-subject" content="spanish">',
+            '<meta name="tome-page-kind" content="quiz"><meta name="tome-quiz" content="week-1">',
+            '<script type="module" src="/widgets/v1/tome.js"></script></head>',
+            '<tome-flashcard ref="item:hola"></tome-flashcard>',
+          ].join("\n"),
+        );
+      },
+    });
+    const page = await open("/s/spanish/quizzes/week-1.html");
+
+    await page.getByRole("button", { name: "Show answer" }).click();
+
+    const [start] = await eventsUntil(SUBJECT, (events) => events.length === 1);
+    expect(start).toMatchObject({ kind: "session.start", ref: "quiz:week-1" });
   });
 
   it("ends the session with its duration when the learner leaves", async () => {

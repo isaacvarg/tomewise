@@ -44,11 +44,10 @@ function meta(doc: Document, name: string): string | undefined {
 export function readPageContext(doc: Document): PageContext | undefined {
   const subject = meta(doc, "tome-subject");
   if (!subject) return undefined;
-  const kind = meta(doc, "tome-page-kind") as PageKind | undefined;
-  const id = meta(doc, "tome-page-id");
-  if (kind && PAGE_KINDS.includes(kind) && id) return { subject, kind, id };
-  const lesson = meta(doc, "tome-lesson");
-  return lesson ? { subject, kind: "lesson", id: lesson } : undefined;
+  const kind = (meta(doc, "tome-page-kind") ?? "lesson") as PageKind;
+  if (!PAGE_KINDS.includes(kind)) return undefined;
+  const id = meta(doc, `tome-${kind}`);
+  return id ? { subject, kind, id } : undefined;
 }
 
 interface Session {
