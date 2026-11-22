@@ -151,6 +151,13 @@ export class Tome {
     return this.#completion;
   }
 
+  async explain(text: string, ref: string, _widget?: HTMLElement): Promise<LearningEvent> {
+    const trimmed = text.trim();
+    if (!trimmed) throw new TomeError("Write your explanation first; an empty one can't be saved.");
+    const session = await this.start();
+    return this.#post({ kind: "explanation.saved", ref, sessionId: session.id, data: { text: trimmed } });
+  }
+
   end(): void {
     const session = this.#current;
     if (!session || this.#schemaVersion === undefined) return;
