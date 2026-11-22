@@ -29,7 +29,7 @@ describe("the tomewise npm package", () => {
     const root = await copyExample("morse");
     const env = { ...process.env, HOME: await tempDir(), npm_config_cache: await tempDir(), npm_config_update_notifier: "false" };
     const child = spawn("npx", ["--yes", "--offline", "--package", tarball, "tomewise", "serve", "--port", "0"], { cwd: root, env });
-    const exited = new Promise<number | null>((resolve) => child.on("exit", (code) => resolve(code)));
+    const exited = new Promise<string>((resolve) => child.on("exit", (code, signal) => resolve(signal ? `killed by ${signal}` : `exited ${code}`)));
     onTestFinished(() => {
       child.kill("SIGKILL");
     });
@@ -38,7 +38,7 @@ describe("the tomewise npm package", () => {
 
     const [line] = (await Promise.race([
       once(createInterface({ input: child.stdout }), "line"),
-      exited.then((code) => [`exited ${code}: ${stderr.join("")}`]),
+      exited.then((how) => [`${how}: ${stderr.join("")}`]),
     ])) as [string];
     const url = /^Listening on (http:\/\/\S+)$/.exec(line)?.[1];
     expect(url, line).toBeDefined();
@@ -72,7 +72,7 @@ describe("the tomewise npm package", () => {
     expect(await tome.text()).toMatch(/export\s*\{/);
 
     child.kill("SIGTERM");
-    expect(await exited).toBe(0);
+    expect(await exited, stderr.join("")).toBe("exited 0");
   });
 
   it("installs both the tomewise and tome commands, with no runtime dependencies", async () => {
