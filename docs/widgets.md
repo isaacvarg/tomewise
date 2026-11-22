@@ -32,6 +32,7 @@ The session ref is `<kind>:<id>`, such as `quiz:week-1`. A page with no context 
 - The first `pointerdown` or `keydown` on the page posts `session.start` with `ref` set to the page (`lesson:0001-greetings`). So does the first attempt, if it comes first.
 - `pagehide` posts `session.end` with the session's duration in whole ms, through `navigator.sendBeacon`. Attempts are posted as they happen, so a crash keeps them.
 - A page restored from the back/forward cache starts a new session on its next interaction.
+- Completing the lesson (`<tome-done>`, a `final` widget or `tome.complete()`) ends the session; later interaction starts no new one, so leaving posts no second `session.end`.
 
 ## The `tome` API
 
@@ -50,6 +51,7 @@ await tome.attempt({ ref: "item:letter-k", outcome: "correct", grade: 3, duratio
 | `tome.subject()`           | Resolves to the subject as `/api/subjects/:subject` returns it.                                       |
 | `tome.due()`               | Resolves to the items due today, most overdue first.                                                   |
 | `tome.unlocked()`          | Resolves to the unretired items whose lesson is completed, or that need none.                          |
+| `tome.complete()`          | Posts `lesson.completed` for the page's lesson in its session, then ends the session. Once per page: later calls resolve to the same event. Lesson pages only. |
 | `tome.start()`, `tome.end()` | Start or end the page's session by hand. Widgets rarely need these.                                   |
 | `tome.context`, `tome.page`  | The page context, and its ref (`lesson:<id>`).                                                         |
 
@@ -293,6 +295,35 @@ A question with no `id`, no `tests`, an unknown item in `tests` or no answer con
 ```
 
 These class names, `data-*` states and this structure are part of the theme contract.
+## `<tome-done>`
+
+| Attribute | Meaning                                  |
+| --------- | ---------------------------------------- |
+| `label`   | Button text; `Done` if absent            |
+
+Marks the end of a lesson. Pressing the button calls `tome.complete()`: it posts `lesson.completed` (ref = the lesson) and `session.end`, then shows "Lesson complete" and disables itself. If the post fails, it shows the notice and stays pressable.
+
+Keyboard: Tab to the button, Enter or Space. Touch: tap it.
+
+```html
+<tome-done>
+  <div class="tome-done" data-state="ready | saving | done">
+    <button class="tome-done-button">Done</button>
+    <p class="tome-verdict" role="status">Lesson complete</p>   <!-- once done -->
+    <p class="tome-notice" role="alert">…</p>                   <!-- failed save -->
+  </div>
+</tome-done>
+```
+
+### Final check
+
+Instead of a Done button, mark one widget as the lesson's final check with the `final` attribute. When the learner completes it, the lesson is completed as if Done were pressed:
+
+```html
+<tome-flashcard ref="item:adios" final></tome-flashcard>
+```
+
+Completion is sent once per page, so a lesson may have both a `final` widget and `<tome-done>`. Widgets support `final` by calling `this.completed()` (from `TomeElement`) once their last attempt is saved.
 
 ## Styling
 
