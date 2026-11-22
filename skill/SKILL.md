@@ -68,6 +68,8 @@ Reuse is the default, not the exception. Before authoring a lesson, read `./asse
 
 A shared stylesheet is the first component every workspace earns: every lesson links it, so the lessons look like one consistent course rather than a pile of one-offs. As the workspace grows, so should the component library.
 
+The app applies the learner's theme to every lesson, so style lessons and components only with theme tokens and `.tome-*` classes, never literal colours, fonts or radii. Then a lesson follows whatever theme the learner picks. The tokens are `--t-bg`, `--t-surface`, `--t-ink`, `--t-muted`, `--t-rule`, `--t-accent`, `--t-accent-ink`, `--t-good`, `--t-good-bg`, `--t-bad`, `--t-bad-bg`, `--t-heat-0` to `--t-heat-4`, `--t-display`, `--t-ui`, `--t-mono`, `--t-radius` and `--t-cell-radius`: use them as `var(--t-accent)`. Leave the page background, body font and headings to the theme.
+
 ## The Mission
 
 Every lesson should be tied into the mission - the reason that the user is interested in learning about the topic.

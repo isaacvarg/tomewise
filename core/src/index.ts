@@ -33,6 +33,8 @@ export { readStats } from "./stats.ts";
 export type { AttemptCounts, Stats, StatsOptions } from "./stats.ts";
 export type { Goal, StreakRules } from "./schemas.ts";
 export { JSON_SCHEMA_DIR, jsonSchemas } from "./json-schemas.ts";
+export { appClasses, CONTRACT_VERSION, requiredTokenNames, themeTokens, widgetClasses } from "./theme-contract.ts";
+export type { ContractToken, TokenKind } from "./theme-contract.ts";
 export type { JsonSchema, SchemaFile } from "./json-schemas.ts";
 export { checkInitSettings, DEFAULT_APP_URL, initLearningHome } from "./init.ts";
 export type { InitOptions, InitProblem, InitResult, InitSetting, InitSettings } from "./init.ts";

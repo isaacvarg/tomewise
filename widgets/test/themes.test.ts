@@ -1,4 +1,7 @@
+import { readdirSync, readFileSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
+import type { Page } from "playwright";
+import { requiredTokenNames } from "../../core/src/theme-contract.ts";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { writeFiles } from "../../core/test/helpers.ts";
@@ -58,5 +61,41 @@ describe("a lesson in the learner's theme", () => {
     const page = await open(LESSON);
 
     expect(await page.evaluate(look)).toEqual({ background: "rgb(10, 40, 10)", ink: "rgb(220, 240, 220)", h1: "oblique" });
+  });
+});
+
+const BUILT_IN_THEMES = readdirSync(new URL("../../app/themes/", import.meta.url));
+
+describe.each(BUILT_IN_THEMES)("the built-in %s theme", (theme) => {
+  const css = readFileSync(new URL(`../../app/themes/${theme}/tokens.css`, import.meta.url), "utf8");
+
+  async function tokensIn(page: Page, scheme: "light" | "dark", mode?: "light" | "dark") {
+    await page.emulateMedia({ colorScheme: scheme });
+    await page.setContent(`<html${mode ? ` data-mode="${mode}"` : ""}><head><style>${css}</style></head></html>`);
+    return page.evaluate(
+      (names) => Object.fromEntries(names.map((name) => [name, getComputedStyle(document.documentElement).getPropertyValue(name).trim()])),
+      requiredTokenNames(),
+    );
+  }
+
+  it("defines every required token in light and dark", async () => {
+    const { page } = await startWidgetApp();
+    const missing = (tokens: Record<string, string>) => Object.keys(tokens).filter((name) => tokens[name] === "");
+
+    expect(missing(await tokensIn(page, "light")), "light").toEqual([]);
+    expect(missing(await tokensIn(page, "dark")), "dark").toEqual([]);
+  });
+
+  it("gives every colour a dark value, the same whether the system or data-mode asks for dark", async () => {
+    const { page } = await startWidgetApp();
+
+    const light = await tokensIn(page, "light");
+    const systemDark = await tokensIn(page, "dark");
+    const modeDark = await tokensIn(page, "light", "dark");
+    const forcedLight = await tokensIn(page, "dark", "light");
+
+    expect(requiredTokenNames("color").filter((name) => systemDark[name] === light[name]), "unchanged in dark").toEqual([]);
+    expect(modeDark).toEqual(systemDark);
+    expect(forcedLight).toEqual(light);
   });
 });
