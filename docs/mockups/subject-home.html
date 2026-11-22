@@ -341,7 +341,7 @@ body {
       </div>
     </div>
     <div class="window">
-      <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i><span class="window-url">homelab:4310/morse-code</span></div>
+      <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i><span class="window-url">homelab:4310/s/morse-code</span></div>
       <div class="screen"></div>
     </div>
   </div>
@@ -617,7 +617,7 @@ body {
       Array.prototype.forEach.call(app.querySelectorAll(".tome-view"), function (v) { v.hidden = v.getAttribute("data-view") !== name; });
       app.scrollTop = 0;
       tab.scrollIntoView({ block: "nearest", inline: "nearest" });
-      if (app === wide) document.querySelector("#desktop .window-url").textContent = "homelab:4310/morse-code" + (name === "overview" ? "" : "/" + name);
+      if (app === wide) document.querySelector("#desktop .window-url").textContent = "homelab:4310/s/morse-code" + (name === "overview" ? "" : "/" + name);
       return;
     }
     var copy = e.target.closest(".tome-copy");
