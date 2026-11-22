@@ -16,8 +16,13 @@ import {
   InvalidLearningHomeError,
   LearningHomeNotFoundError,
   loadLearningHome,
+  QueryError,
+  queryPayload,
+  SubjectNotFoundError,
   UnsupportedFormatVersionError,
   validateLearningHome,
+  type Aggregate,
+  type QueryResult,
   type ValidationIssue,
 } from "@tomewise/core";
 
@@ -37,6 +42,8 @@ const USAGE = [
   "  tome log <event JSON>",
   "  tome log -        read the event from stdin",
   "  tome serve [--host <host>] [--port <port>]",
+  "  tome query <subject> --field <data field> --agg <count|mean|median|min|max>",
+  "             [--where <envelope field>=<value>]... [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--json]",
 ].join("\n");
 
 const DEFAULT_HOST = "127.0.0.1";
@@ -264,11 +271,92 @@ async function serve(io: Io, args: string[]): Promise<number> {
   return 0;
 }
 
+function formatNumber(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/\.?0+$/, "");
+}
+
+function describeQuery(result: QueryResult): string {
+  const shown = result.value === null ? "none" : formatNumber(result.value);
+  const unit = result.unit && result.value !== null && result.agg !== "count" ? ` ${result.unit}` : "";
+  const noun = result.kind === "attempt" ? "attempt" : "event";
+  const context = [
+    `${result.count} ${noun}${result.count === 1 ? "" : "s"}`,
+    ...Object.entries(result.where).map(([key, value]) => `${key}=${value}`),
+    ...(result.from ? [`from ${result.from}`] : []),
+    ...(result.to ? [`to ${result.to}`] : []),
+  ];
+  return `${result.agg} ${result.field}: ${shown}${unit} (${context.join(", ")})`;
+}
+
+async function query(io: Io, args: string[]): Promise<number> {
+  let parsed;
+  try {
+    parsed = parseArgs({
+      args,
+      allowPositionals: true,
+      options: {
+        field: { type: "string" },
+        agg: { type: "string" },
+        where: { type: "string", multiple: true },
+        from: { type: "string" },
+        to: { type: "string" },
+        json: { type: "boolean" },
+      },
+    });
+  } catch (error) {
+    io.stderr((error as Error).message);
+    io.stderr(USAGE);
+    return 2;
+  }
+  const { values, positionals } = parsed;
+  const [subject] = positionals;
+  if (positionals.length !== 1 || !subject || values.field === undefined || values.agg === undefined) {
+    io.stderr(USAGE);
+    return 2;
+  }
+  const where: Record<string, string> = {};
+  for (const filter of values.where ?? []) {
+    const at = filter.indexOf("=");
+    if (at <= 0) {
+      io.stderr(`--where takes field=value, such as ref=item:letter-k, not "${filter}"`);
+      return 2;
+    }
+    where[filter.slice(0, at)] = filter.slice(at + 1);
+  }
+
+  const root = await findRoot(io);
+  if (!root) return 2;
+  let result: QueryResult;
+  try {
+    const home = await loadLearningHome(root);
+    result = await queryPayload(home, subject, {
+      field: values.field,
+      agg: values.agg as Aggregate,
+      where,
+      from: values.from,
+      to: values.to,
+    });
+  } catch (error) {
+    if (error instanceof QueryError || error instanceof SubjectNotFoundError) {
+      io.stderr(error.message);
+      return 2;
+    }
+    if (error instanceof InvalidLearningHomeError || error instanceof UnsupportedFormatVersionError) {
+      io.stderr(error.message);
+      return 1;
+    }
+    throw error;
+  }
+  io.stdout(values.json ? JSON.stringify(result) : describeQuery(result));
+  return 0;
+}
+
 export async function run(args: string[], io: Io): Promise<number> {
   const [command, ...rest] = args;
   if (command === "validate") return validate(io);
   if (command === "log") return log(io, rest[0]);
   if (command === "serve") return serve(io, rest);
+  if (command === "query") return query(io, rest);
   io.stderr(USAGE);
   return 2;
 }
