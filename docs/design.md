@@ -20,7 +20,7 @@ tomewise/                        the tool (what gets published)
   .claude-plugin/
 
 ~/learning/                    a learning home (the learner's own git repo)
-  tomewise.json                   formatVersion, global defaults, timezone, week start, streak rules, git settings
+  tomewise.json                   formatVersion, global defaults, timezone, week start, streak rules, git settings, theme, Start mode, subject order
   subjects/
     morse-code/
       subject.json             payload schema, chart specs, goals, assessment settings
@@ -51,13 +51,13 @@ Finding the learning home: walk up from the current directory to `tomewise.json`
 - **Scheduler state** is never stored: it's rebuilt by replaying attempt events through FSRS on start.
 - **Items** (`items/*.json`, one file per item set, usually one per lesson, holding an array): stable `id`, `type`, type-specific fields, `unlockedBy`, tags, `retired`. Items are edited in place; a change of meaning retires the item and adds a new one with a new `id`. Retired items are never deleted. Built-in types: flashcard, multiple choice, typed answer, timed/audio, routine (guided sequence, self-rated 1–4). Routines are recorded and charted but skip the scheduler; how often they're done comes from a goal. Custom types come with a widget in `assets/`.
 - **Drills** (`drills/*.json`): which items (due / tag / all unlocked), how many, the format, time limits. "Review everything due" is a built-in drill.
-- **Chart specs** in `subject.json` are declarative and written by the agent.
-- **Settings** have defaults in `tomewise.json`, overridden per subject in `subject.json`.
+- **Chart specs** in `subject.json` (`charts`, an array) are declarative and written by the agent. Each chart has an `id`, a `title`, a `kind` (`line` or `bar`), a `measure` (`payload`, `accuracy`, `attempts` or `minutes`), a `field` (required when `measure` is `payload`; a numeric payload field), an `aggregate` (`mean`, `median` or `total`; defaults to `median` for payload and `total` for attempts and minutes), an optional `items` filter (`tag`, `type` or `drill`) and a window in `days`. The x axis is the day. Axis units come from the payload field's `unit`. Core validates chart specs with the rest of `subject.json`.
+- **Settings** have defaults in `tomewise.json`, overridden per subject in `subject.json`. The app writes three keys in `tomewise.json` from its settings page and nothing else (ADR 0014): `theme`, `start` (`sequence` or `ask`, default `sequence`) and `subjects` (an optional order of subject ids; unlisted subjects follow alphabetically).
 - **Days and weeks**: all day boundaries use the `timezone` in `tomewise.json` (defaulting to the system zone at `init`). A session counts on the day it started. Weeks run Monday to Sunday by default. Sessions shorter than a minimum length (default 60s) don't make an activity day.
 
 ## Learning model
 
-- **Lessons** teach once and are never locked. Completion is a `lesson.completed` event, sent when the final check passes or when the learner clicks Done. Completing a lesson unlocks its items, drills and reference sheets.
+- **Lessons** teach once and are never locked. Completion is a `lesson.completed` event, sent when the final check passes or when the learner clicks Done. Completing a lesson unlocks its items (`unlockedBy`). A drill is unlocked once it has an unlocked item. In the app, lessons and reference sheets in an `upcoming` milestone are marked as later (still openable); those in other milestones, in no milestone, or in a subject with no curriculum are not.
 - **Review** happens in the app with no agent: the scheduler (FSRS via `ts-fsrs`, default parameters at first, tuned to the learner's own history once there are enough reviews) picks due items. Every attempt on an item updates its schedule, whether it came from a review, a drill, a quiz or a lesson check; the algorithm handles early practice.
 - **Quizzes** are short and scored and mix items across lessons. **Exams** are longer and cumulative and use exam questions: new, never scheduled, each naming the items it tests. Quizzes and exams the agent writes are HTML pages built from widgets; each exam question is a `<tome-exam-question tests="item:letter-k item:letter-r">` widget. A quiz the app builds is a drill run in quiz mode and needs no file. Both are written by the agent ahead of time; the agent writes a quiz together with the lesson after which it comes due. If a quiz comes due (say, weekly) and none has been written, the app builds one by rule from the scheduler's state (the weakest items plus some that used to be missed), and the agent reads the results next time.
 - **Assessment settings**: assessments on/off, quiz frequency (every N lessons / weekly / on demand), quiz length, exams on/off, timed or untimed, score display (number / pass-fail / hidden). Hidden scores are still recorded. Defaults are chosen during `init` and stored in `tomewise.json`; each subject can override them in `subject.json`.
@@ -70,8 +70,8 @@ Finding the learning home: walk up from the current directory to `tomewise.json`
 
 - **Heatmap**: every activity day in every subject.
 - **Streak**: consecutive activity days, with an optional weekly allowance of rest days.
-- **Goals** per subject: proposed by the agent, approved by the learner, progress shown on the dashboard.
-- **Subject charts**: drawn from the chart specs.
+- **Goals** per subject: proposed by the agent, approved by the learner, progress (minutes today or this week) shown on the subject home.
+- **Subject charts**: drawn from the chart specs. A subject with none shows a prompt to ask the agent for charts; there are no default charts.
 
 ## App
 
@@ -79,15 +79,17 @@ Finding the learning home: walk up from the current directory to `tomewise.json`
 - Works equally on phone, tablet and desktop. The phone is one of several places to learn, not the main target, so every page is designed for each width and the drill runner works by touch and by keyboard.
 - Serves lessons from the learning home. `tome.js` posts to `/api/events` on the same origin.
 - Widgets are served under a major-version path (`/widgets/v1/tome.js`). Within a major version they only gain features; a v2 ships alongside v1 and both stay served, so old lessons keep working.
-- Watches the learning home so new content shows up live.
+- Watches the learning home so new content shows up live. One server-sent event stream tells open pages what changed (content or events) and they refetch.
 - No auth; meant for localhost or a private network. The expected setup is the app on a home server, reached from phone and laptop over Tailscale. A second learner in the same household runs their own instance with their own learning home (the docs include a two-instance compose example). Ships as an OCI image and via `npx`.
 - The app is the only writer of history: `tome log` posts to it, and falls back to a per-machine event file when it's unreachable. Content travels by git: the agent pushes, the app pulls, commits events and pushes (ADR 0011).
 - Themes are modular from day one (see below).
 - Pages:
   - home, top to bottom: activity heatmap; a visual grid of subjects (no progress shown); what's due; streak; one Start button. Wide screens keep that order but use the width: the heatmap spans a year, subjects sit four across, and due and streak sit side by side;
-  - subject home (curriculum roadmap, lessons, drills, charts, goals);
-  - review/drill runner, a centred column at every width;
-  - prompts such as "ask your agent for your quiz".
+  - Start runs what's due. In `sequence` mode it runs each subject with items due, in subject order, one session of the built-in review drill each, with a break screen between subjects (a short summary, then Continue, Skip or Done). In `ask` mode it lists the subjects with due items, with "All, one after another" on top. Due quizzes show in "what's due" and are started from there, never from Start;
+  - subject home, top to bottom: goal progress; "ask your agent" prompts; what's due here, with a Start for this subject; the curriculum roadmap with lessons under their milestones (and "Other lessons" for the rest); drills; charts. Wide screens: two columns, today's things on the left and the roadmap on the right, charts full width below, two across;
+  - review/drill runner, a centred column at every width, ending in a summary: score, time, and items to look at again (wrong, rated Again, or timed out), each linked to the lesson that unlocked it. After a sequence the summary covers every subject;
+  - prompts, derived from state: a milestone whose lessons are done, an exam that's ready, an explanation waiting to be graded. The "quiz due with none written" prompt belongs to assessments;
+  - settings: theme (previewed live, then saved or cancelled), Start mode, and subject order (drag, or up and down buttons on each row).
 
 ## CLI
 
