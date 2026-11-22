@@ -34,7 +34,7 @@ describe("the dashboard SPA", () => {
   it.each([
     ["/s/morse-code", "Morse code"],
     ["/run/due", "Due today"],
-    ["/run?drill=listen-kmrsu", "listen-kmrsu"],
+    ["/run", "No drill chosen"],
     ["/settings", "Settings"],
     ["/no/such/page", "Not found"],
   ])("renders %s in the SPA, not a server 404", async (path, heading) => {

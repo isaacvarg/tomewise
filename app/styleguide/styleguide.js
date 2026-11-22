@@ -151,7 +151,13 @@
     for (const step of steps) await step(widget);
   }
 
-  async function homeReady(mount) {
+  const APP_MOUNTS = {
+    "[data-styleguide-home]": '.tome-app[data-state="ready"]',
+    "[data-styleguide-runner]": '.tome-runner[data-state="running"] .tome-drill-item > *',
+    "[data-styleguide-summary]": ".tome-runner-summary",
+  };
+
+  async function appReady(mount, selector) {
     if (!document.querySelector("script[data-styleguide-app]")) {
       const note = document.createElement("p");
       note.className = "styleguide-unbuilt";
@@ -159,7 +165,7 @@
       mount.append(note);
       return;
     }
-    await find(mount, '.tome-app[data-state="ready"]', 10000);
+    await find(mount, selector, 10000);
   }
 
   async function ready() {
@@ -167,7 +173,9 @@
     const widgets = [...document.querySelectorAll("body :not(:defined)")].filter((element) => element.localName.startsWith("tome-"));
     await Promise.all(widgets.map(settle));
     const results = await Promise.allSettled([
-      ...[...document.querySelectorAll("[data-styleguide-home]")].map(homeReady),
+      ...Object.entries(APP_MOUNTS).flatMap(([mounts, selector]) =>
+        [...document.querySelectorAll(mounts)].map((mount) => appReady(mount, selector)),
+      ),
       ...[...document.querySelectorAll("[data-demo]")].map(run),
     ]);
     const failed = results.filter((result) => result.status === "rejected").map((result) => String(result.reason?.message ?? result.reason));
