@@ -4,11 +4,15 @@ import { join } from "node:path";
 import { onTestFinished } from "vitest";
 import { loadLearningHome } from "@tomewise/core";
 import { copyExample } from "../../core/test/helpers.ts";
-import { startServer, type ToolDirs } from "../src/index.ts";
+import { type Clock, startServer, type ToolDirs } from "../src/index.ts";
 
 export const EVENTS = "subjects/morse-code/events";
 
-export async function startTestApp(prepare?: (root: string) => Promise<void>, tool?: ToolDirs, { spa }: { spa?: string } = {}) {
+export async function startTestApp(
+  prepare?: (root: string) => Promise<void>,
+  tool?: ToolDirs,
+  { spa, clock }: { spa?: string; clock?: Clock } = {},
+) {
   const root = await copyExample("morse");
   await prepare?.(root);
   const reloadErrors: unknown[] = [];
@@ -19,6 +23,7 @@ export async function startTestApp(prepare?: (root: string) => Promise<void>, to
       port: 0,
       tool,
       spa,
+      clock,
       warn: (message) => warnings.push(message),
       watch: { onError: (error) => reloadErrors.push(error) },
     });
@@ -47,10 +52,12 @@ export async function startTestApp(prepare?: (root: string) => Promise<void>, to
     return { status: response.status, body: (await response.json()) as any };
   }
 
-  async function get(path: string) {
-    const response = await fetch(`${server.url}${path}`);
+  async function send(method: string, path: string) {
+    const response = await fetch(`${server.url}${path}`, { method });
     return { status: response.status, body: (await response.json()) as any };
   }
+
+  const get = (path: string) => send("GET", path);
 
   async function lines(name: string): Promise<any[]> {
     let text: string;
@@ -91,6 +98,7 @@ export async function startTestApp(prepare?: (root: string) => Promise<void>, to
       return server.url;
     },
     get,
+    send,
     raw,
     post,
     lines,

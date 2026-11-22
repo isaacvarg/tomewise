@@ -1,5 +1,6 @@
 import { isDeepStrictEqual } from "node:util";
 import { appendEvents, type Goal, type LearningEvent, readEvents, type StreakRules, type Subject } from "@tomewise/core";
+import type { Exclusive } from "./sync.ts";
 import type { HomeView, WatchedHome } from "./watcher.ts";
 
 type RuleKind = "goal.changed" | "streak.changed";
@@ -19,14 +20,18 @@ function change(subject: Subject, kind: RuleKind, from: unknown, to: unknown) {
   return { subject: subject.id, kind, schemaVersion, data: { from, to } };
 }
 
-export async function trackRuleChanges(watched: WatchedHome, onError: (error: unknown) => void): Promise<void> {
+export async function trackRuleChanges(
+  watched: WatchedHome,
+  exclusive: Exclusive,
+  onError: (error: unknown) => void,
+): Promise<void> {
   const startup = watched.current();
   const goalBaseline = new Map<string, Goal[]>();
   const streakBaseline: StreakRules = startup.home.config.streak;
   for (const [id, subject] of startup.subjects) goalBaseline.set(id, subject.goals);
 
   async function record(view: HomeView) {
-    const changes = [];
+    const changes: ReturnType<typeof change>[] = [];
     let lastStreak: LearningEvent | undefined;
     for (const [id, subject] of view.subjects) {
       if (!goalBaseline.has(id)) goalBaseline.set(id, subject.goals);
@@ -40,7 +45,7 @@ export async function trackRuleChanges(watched: WatchedHome, onError: (error: un
     if (first && !isDeepStrictEqual(streakFrom, view.home.config.streak)) {
       changes.push(change(first, "streak.changed", streakFrom, view.home.config.streak));
     }
-    if (changes.length > 0) await appendEvents(view.home, changes, { target: "main" });
+    if (changes.length > 0) await exclusive(() => appendEvents(view.home, changes, { target: "main" }));
   }
 
   let pending = Promise.resolve();

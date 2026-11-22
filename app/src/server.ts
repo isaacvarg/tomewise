@@ -9,6 +9,7 @@ import { readRoutes } from "./reads.ts";
 import { trackRuleChanges } from "./rule-changes.ts";
 import { spaRoutes } from "./spa.ts";
 import { styleguideRoutes } from "./styleguide.ts";
+import { type Clock, type GitSync, startSync, syncOff, syncRoutes } from "./sync.ts";
 import { themeResolver, type Warn } from "./themes.ts";
 import { BUILT_IN, themeRoutes, type ToolDirs, widgetRoutes } from "./tool-files.ts";
 import { type HomeView, watchLearningHome, type WatchOptions } from "./watcher.ts";
@@ -17,13 +18,18 @@ export interface AppOptions {
   spa?: string;
   tool?: ToolDirs;
   warn?: Warn;
+  sync?: GitSync;
 }
 
-export function createApp(view: () => HomeView, { spa, tool = BUILT_IN, warn = console.warn }: AppOptions = {}): Hono {
+export function createApp(
+  view: () => HomeView,
+  { spa, tool = BUILT_IN, warn = console.warn, sync = syncOff }: AppOptions = {},
+): Hono {
   const app = new Hono();
   const home = () => view().home;
   const resolveTheme = themeResolver(tool, warn);
-  app.route("/api/events", eventRoutes(home));
+  app.route("/api/events", eventRoutes(home, sync.exclusive));
+  app.route("/api/sync", syncRoutes(sync));
   app.route("/api", readRoutes(view));
   app.route("/s", pageRoutes(home, resolveTheme));
   app.route("/widgets", widgetRoutes(tool));
@@ -33,10 +39,11 @@ export function createApp(view: () => HomeView, { spa, tool = BUILT_IN, warn = c
   return app;
 }
 
-export interface ListenOptions extends AppOptions {
+export interface ListenOptions extends Omit<AppOptions, "sync"> {
   host: string;
   port: number;
   watch?: WatchOptions;
+  clock?: Clock;
 }
 
 export interface RunningServer {
@@ -44,11 +51,12 @@ export interface RunningServer {
   close: () => Promise<void>;
 }
 
-export async function startServer(home: LearningHome, { host, port, watch, ...options }: ListenOptions): Promise<RunningServer> {
+export async function startServer(home: LearningHome, { host, port, watch, clock, ...options }: ListenOptions): Promise<RunningServer> {
   const onError = watch?.onError ?? ((error: unknown) => console.error(`Reloading ${home.root} failed:`, error));
   const watched = await watchLearningHome(home, { ...watch, onError });
-  await trackRuleChanges(watched, onError);
-  const server = createAdaptorServer({ fetch: createApp(watched.current, options).fetch });
+  const sync = startSync(home.root, home.config.git, { clock });
+  await trackRuleChanges(watched, sync.exclusive, onError);
+  const server = createAdaptorServer({ fetch: createApp(watched.current, { ...options, sync }).fetch });
   try {
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
@@ -58,6 +66,7 @@ export async function startServer(home: LearningHome, { host, port, watch, ...op
       });
     });
   } catch (error) {
+    await sync.close();
     await watched.close();
     throw error;
   }
@@ -66,6 +75,7 @@ export async function startServer(home: LearningHome, { host, port, watch, ...op
   return {
     url: `http://${urlHost}:${address.port}`,
     async close() {
+      await sync.close();
       await watched.close();
       await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
     },
