@@ -59,6 +59,7 @@ export class TomeAudio extends TomeElement {
     ref: { type: String },
     choices: { type: String },
     payload: { type: String },
+    timeLimit: { type: Number, attribute: "time-limit" },
     state: { state: true },
     item: { state: true },
     notice: { state: true },
@@ -69,6 +70,7 @@ export class TomeAudio extends TomeElement {
   declare ref: string;
   declare choices: string | undefined;
   declare payload: string | undefined;
+  declare timeLimit: number | undefined;
   declare state: State;
   declare item: TimedAudio | undefined;
   declare notice: string | undefined;
@@ -97,6 +99,17 @@ export class TomeAudio extends TomeElement {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.#stop();
+  }
+
+  get #seconds(): number | undefined {
+    const limits = [this.timeLimit, this.item?.timeLimitSeconds].filter(
+      (seconds): seconds is number => !!seconds && seconds > 0,
+    );
+    return limits.length > 0 ? Math.min(...limits) : undefined;
+  }
+
+  play(): Promise<void> {
+    return this.#play();
   }
 
   get #options(): string[] {
@@ -180,7 +193,7 @@ export class TomeAudio extends TomeElement {
   #beginAnswering(): void {
     this.state = "answering";
     this.#heardAt = performance.now();
-    const seconds = this.item?.timeLimitSeconds;
+    const seconds = this.#seconds;
     if (seconds !== undefined) this.#limit = setTimeout(() => this.#decide(undefined), seconds * 1000);
     if (this.#options.length === 0) {
       void this.updateComplete.then(() => this.querySelector<HTMLInputElement>(".tome-input")?.focus());
@@ -216,6 +229,13 @@ export class TomeAudio extends TomeElement {
         data: await this.#data(result),
       });
       this.state = "saved";
+      this.dispatchEvent(
+        new CustomEvent("tome-answered", {
+          bubbles: true,
+          composed: true,
+          detail: { ref: `item:${this.item.id}`, outcome: result.outcome, grade: result.grade, duration: result.responseTime },
+        }),
+      );
     } catch (error) {
       this.state = "unsaved";
       this.notice = messageOf(error);
@@ -330,7 +350,7 @@ export class TomeAudio extends TomeElement {
     const answering = this.state === "answering";
     const label = item.audio ? (started ? "Play it again" : "Play the sound") : "Start";
     const hint = item.audio ? (started ? "Tap to hear it again" : "Tap to play") : started ? "" : "Tap to start";
-    const seconds = item.timeLimitSeconds;
+    const seconds = this.#seconds;
     return html`
       <div class="tome-audio" data-state=${this.state} aria-busy=${this.state === "saving" ? "true" : "false"}>
         <div class="tome-stage">

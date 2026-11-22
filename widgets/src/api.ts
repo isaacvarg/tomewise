@@ -95,6 +95,21 @@ export class Tome {
     return item;
   }
 
+  async due(): Promise<Item[]> {
+    const { due } = await this.#get<{ due: { item: Item }[] }>("due");
+    return due.map(({ item }) => item);
+  }
+
+  async unlocked(): Promise<Item[]> {
+    const [subject, { events }] = await Promise.all([this.subject(), this.#get<{ events: LearningEvent[] }>("events")]);
+    const completed = new Set(
+      events.filter((event) => event.kind === "lesson.completed").map((event) => event.ref?.replace(/^lesson:/, "")),
+    );
+    return subject.items.filter(
+      (item) => !item.retired && (item.unlockedBy === undefined || completed.has(item.unlockedBy)),
+    );
+  }
+
   start(): Promise<Session> {
     this.#session ??= this.#postStart().catch((error: unknown) => {
       this.#session = undefined;
@@ -156,6 +171,18 @@ export class Tome {
     const loaded = (await response.json()) as Subject;
     this.#schemaVersion = Math.max(...loaded.payloadSchemas.map((schema) => schema.version));
     return loaded;
+  }
+
+  async #get<T>(path: string): Promise<T> {
+    const { subject } = this.context;
+    let response: Response;
+    try {
+      response = await this.#window.fetch(`/api/subjects/${encodeURIComponent(subject)}/${path}`);
+    } catch {
+      throw new TomeError(UNREACHABLE);
+    }
+    if (!response.ok) throw new TomeError(`Couldn't load ${path} for "${subject}" (the app answered ${response.status}).`);
+    return (await response.json()) as T;
   }
 
   async #postStart(): Promise<Session> {

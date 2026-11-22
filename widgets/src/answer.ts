@@ -58,6 +58,7 @@ const CSS = `
 export abstract class AnswerElement<T extends Prompted> extends TomeElement {
   static override properties = {
     ref: { type: String },
+    timeLimit: { type: Number, attribute: "time-limit" },
     state: { state: true },
     item: { state: true },
     notice: { state: true },
@@ -65,6 +66,7 @@ export abstract class AnswerElement<T extends Prompted> extends TomeElement {
   };
 
   declare ref: string;
+  declare timeLimit: number | undefined;
   declare state: AnswerState;
   declare item: T | undefined;
   declare notice: string | undefined;
@@ -76,6 +78,7 @@ export abstract class AnswerElement<T extends Prompted> extends TomeElement {
 
   #shownAt: number | undefined;
   #observer: IntersectionObserver | undefined;
+  #limit: ReturnType<typeof setTimeout> | undefined;
 
   constructor() {
     super();
@@ -90,6 +93,7 @@ export abstract class AnswerElement<T extends Prompted> extends TomeElement {
       if (!entries.some((entry) => entry.isIntersecting)) return;
       this.#shownAt ??= performance.now();
       this.#observer?.disconnect();
+      this.#arm();
     });
     this.#observer.observe(this);
   }
@@ -97,10 +101,23 @@ export abstract class AnswerElement<T extends Prompted> extends TomeElement {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.#observer?.disconnect();
+    clearTimeout(this.#limit);
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     if (changed.has("ref")) void this.#load();
+  }
+
+  protected override updated(changed: PropertyValues<this>): void {
+    if (changed.has("state") || changed.has("timeLimit")) this.#arm();
+  }
+
+  #arm(): void {
+    clearTimeout(this.#limit);
+    this.#limit = undefined;
+    if (this.state !== "ready" || this.#shownAt === undefined || !this.timeLimit) return;
+    const left = this.timeLimit * 1000 - (performance.now() - this.#shownAt);
+    this.#limit = setTimeout(() => this.answer("skipped"), Math.max(0, left));
   }
 
   protected answer(outcome: Outcome, given?: string): void {

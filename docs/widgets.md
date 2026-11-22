@@ -48,6 +48,8 @@ await tome.attempt({ ref: "item:letter-k", outcome: "correct", grade: 3, duratio
 | `tome.attempt(input)`      | Posts one attempt in the page's session, starting it if needed. Resolves to the stored event.         |
 | `tome.item(ref)`           | Resolves to the item for `item:<id>` from the subject's item sets.                                     |
 | `tome.subject()`           | Resolves to the subject as `/api/subjects/:subject` returns it.                                       |
+| `tome.due()`               | Resolves to the items due today, most overdue first.                                                   |
+| `tome.unlocked()`          | Resolves to the unretired items whose lesson is completed, or that need none.                          |
 | `tome.start()`, `tome.end()` | Start or end the page's session by hand. Widgets rarely need these.                                   |
 | `tome.context`, `tome.page`  | The page context, and its ref (`lesson:<id>`).                                                         |
 
@@ -78,7 +80,7 @@ Keyboard: Tab to "Show answer", Enter or Space to reveal; focus moves to Good; k
     <div class="tome-grades" role="group">                <!-- after reveal -->
       <button class="tome-grade" data-grade="1..4" data-state="chosen">Again<kbd>1</kbd></button>
     </div>
-    <p class="tome-verdict" data-state="correct | wrong">Saved: Good</p>
+    <p class="tome-verdict" data-state="correct | wrong | skipped">Saved: Good</p>
     <p class="tome-notice" role="alert">…</p>             <!-- unknown item, failed save -->
   </div>
 </tome-flashcard>
@@ -180,6 +182,76 @@ Keyboard: Tab to the play button, Enter or Space to play; Space replays while fo
     <p class="tome-notice" role="alert">…</p>
   </div>
 </tome-audio>
+```
+
+These class names, `data-*` states and this structure are part of the theme contract.
+
+## Item widgets in sequence
+
+`<tome-flashcard>`, `<tome-choice>`, `<tome-typed>` and `<tome-audio>` share two features, which `<tome-drill>` relies on.
+
+- **`time-limit="<seconds>"`** gives the learner that long to answer. It counts from when the widget first scrolled into view, or for `<tome-audio>` from when the sound finished (the tighter of `time-limit` and the item's `timeLimitSeconds` applies). Running out posts a `skipped` attempt with grade 1, as `<tome-audio>` does.
+- **`tome-answered`.** Once an attempt is saved, the widget dispatches a bubbling `tome-answered` event with `detail: { ref, outcome, grade, duration }`.
+
+`<tome-audio>` also has a `play()` method, which starts the sound as the play button does.
+
+## `<tome-drill>`
+
+| Attribute | Meaning                                                                                                  |
+| --------- | -------------------------------------------------------------------------------------------------------- |
+| `drill`   | Optional. Drill id: a file in the subject's `drills/` (no extension), or `review`. Defaults to the page's id on a drill page, else `review`. |
+| `payload` | Optional. JSON object passed to each item widget as its `payload`, e.g. `payload='{"wpm":20}'`.          |
+
+```html
+<tome-drill drill="listen-kmrsu" payload='{"wpm":20}'></tome-drill>
+```
+
+Runs a drill as a sequence of the item widgets, one item at a time. `review` is the built-in "review everything due".
+
+- **Selection.** `select.from: "due"` takes the items the schedule says are due, most overdue first. `"unlocked"` takes every unretired item with no `unlockedBy` or whose lesson is completed, shuffled. With `select.tags`, an item needs at least one of them. `count` caps the run; an unlocked pool smaller than `count` is drawn again in fresh shuffled rounds, so each item comes up about equally (12 sounds from 3 letters). Due items never repeat. Routine items are left out.
+- **Format.** Each item is shown in its own widget (`flashcard` → `<tome-flashcard>`, `multiple-choice` → `<tome-choice>`, `typed-answer` → `<tome-typed>`, `timed-audio` → `<tome-audio>`). In a `multiple-choice` drill, timed-audio items get the run's distinct answers as `choices` (K M R); in other formats they are typed. A format an item can't take falls back to its own type.
+- **Time limits.** `timeLimits.perItemSeconds` is each widget's `time-limit`. `timeLimits.totalSeconds` starts at the learner's first tap or key press in the drill; when it runs out the run ends and the item on screen posts nothing.
+- **Attempts and session.** Each answer posts one attempt on its item, through the item widget, so every attempt updates that item's schedule. The session is the page's: on a drill page (`tome-page-kind` `drill`, `tome-drill` the drill id) its ref is `drill:<id>`. Finishing the run posts `session.end`; "Run again" selects afresh and starts a new session.
+- **Pace.** After an answer the drill moves on by itself (0.9 s when right, 1.6 s otherwise), or at once with Next. From the second item on, audio items play by themselves.
+- **End.** The summary shows the score, right out of answered, median answer time, how many were skipped or out of time, and the missed items. A selection with nothing in it shows an empty state instead.
+
+A failed save keeps the item on screen with its notice and "Save again"; the drill waits for it.
+
+Keyboard: focus moves into each new item (the play button, the first choice, the answer field or "Show answer"), so the item's own keys work; after answering, focus is on Next, so Enter moves on; at the end, focus is on "Run again". Touch: tap.
+
+### Markup
+
+```html
+<tome-drill drill="listen-kmrsu">
+  <div class="tome-drill" data-state="running | done | empty | loading | error">
+    <header class="tome-drill-bar">
+      <div class="tome-drill-title">
+        <span class="tome-kicker">Morse code</span>
+        <span class="tome-drill-name">Listen · K M R S U</span>
+      </div>
+      <span class="tome-clock" role="timer" data-state="low">0:42</span>   <!-- with timeLimits.totalSeconds -->
+      <span class="tome-count">3 / 12</span>
+    </header>
+    <div class="tome-progress" role="progressbar"><span style="width: 25%"></span></div>
+    <div class="tome-drill-item"><tome-audio …></tome-audio></div>        <!-- running -->
+    <div class="tome-drill-next"><button class="tome-next">Next</button></div>   <!-- once answered -->
+    <section class="tome-summary">                                          <!-- done -->
+      <div class="tome-summary-head">
+        <span class="tome-kicker">Drill done | Time's up</span>
+        <span class="tome-score">75%</span>
+        <span class="tome-score-sub">9 of 12 right</span>
+      </div>
+      <ul class="tome-stats"><li><span>Median answer time</span><span>0.84 s</span></li></ul>
+      <p class="tome-saved">…</p>
+      <div class="tome-actions"><button class="tome-again">Run again</button></div>
+    </section>
+    <div class="tome-empty" role="status">                                  <!-- empty -->
+      <p class="tome-empty-title">Nothing is due</p>
+      <p class="tome-hint">…</p>
+    </div>
+    <p class="tome-notice" role="alert">…</p>                               <!-- unknown drill, app down -->
+  </div>
+</tome-drill>
 ```
 
 These class names, `data-*` states and this structure are part of the theme contract.

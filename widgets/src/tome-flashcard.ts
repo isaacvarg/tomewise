@@ -1,6 +1,6 @@
 import { html, nothing, type PropertyValues } from "lit";
 import type { Item } from "@tomewise/core";
-import { type Grade, tome } from "./api.ts";
+import { type Grade, type Outcome, tome } from "./api.ts";
 import { adoptStyles, messageOf, TomeElement } from "./element.ts";
 
 type Flashcard = Extract<Item, { type: "flashcard" }>;
@@ -28,26 +28,33 @@ const CSS = `
 .tome-flashcard .tome-verdict { margin: 0; align-self: center; font-size: .85rem; font-weight: 600; padding: .2rem .7rem; border-radius: 99px; }
 .tome-flashcard .tome-verdict[data-state="correct"] { color: var(--t-good); background: var(--t-good-bg); }
 .tome-flashcard .tome-verdict[data-state="wrong"] { color: var(--t-bad); background: var(--t-bad-bg); }
+.tome-flashcard .tome-verdict[data-state="skipped"] { color: var(--t-muted); background: var(--t-bg); }
 .tome-flashcard .tome-hint { margin: 0; color: var(--t-muted); font-size: .85rem; }
 `;
 
 export class TomeFlashcard extends TomeElement {
   static override properties = {
     ref: { type: String },
+    timeLimit: { type: Number, attribute: "time-limit" },
     state: { state: true },
     item: { state: true },
     notice: { state: true },
     chosen: { state: true },
+    outcome: { state: true },
   };
 
   declare ref: string;
+  declare timeLimit: number | undefined;
   declare state: State;
   declare item: Flashcard | undefined;
   declare notice: string | undefined;
   declare chosen: Grade | undefined;
+  declare outcome: Outcome | undefined;
 
   #shownAt: number | undefined;
   #observer: IntersectionObserver | undefined;
+  #limit: ReturnType<typeof setTimeout> | undefined;
+  #expired = false;
 
   constructor() {
     super();
@@ -63,6 +70,7 @@ export class TomeFlashcard extends TomeElement {
       if (!entries.some((entry) => entry.isIntersecting)) return;
       this.#shownAt ??= performance.now();
       this.#observer?.disconnect();
+      this.#arm();
     });
     this.#observer.observe(this);
   }
@@ -70,10 +78,24 @@ export class TomeFlashcard extends TomeElement {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.#observer?.disconnect();
+    clearTimeout(this.#limit);
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     if (changed.has("ref")) void this.#load();
+  }
+
+  protected override updated(changed: PropertyValues<this>): void {
+    if (changed.has("state") || changed.has("timeLimit")) this.#arm();
+  }
+
+  #arm(): void {
+    clearTimeout(this.#limit);
+    this.#limit = undefined;
+    const open = this.state === "front" || this.state === "back";
+    if (!open || this.#expired || this.#shownAt === undefined || !this.timeLimit) return;
+    const left = this.timeLimit * 1000 - (performance.now() - this.#shownAt);
+    this.#limit = setTimeout(() => void this.#save(1, "skipped"), Math.max(0, left));
   }
 
   async #load(): Promise<void> {
@@ -99,18 +121,34 @@ export class TomeFlashcard extends TomeElement {
     void this.updateComplete.then(() => this.querySelector<HTMLButtonElement>('.tome-grade[data-grade="3"]')?.focus());
   }
 
-  async #rate(grade: Grade): Promise<void> {
-    if (this.state !== "back" || !this.item) return;
+  #rate(grade: Grade): Promise<void> {
+    if (this.state !== "back") return Promise.resolve();
+    return this.#save(grade, grade === 1 ? "wrong" : "correct");
+  }
+
+  async #save(grade: Grade, outcome: Outcome): Promise<void> {
+    if ((this.state !== "front" && this.state !== "back") || !this.item) return;
+    const shown = this.state;
     const duration = performance.now() - (this.#shownAt ?? performance.now());
+    if (outcome === "skipped") this.#expired = true;
     this.state = "saving";
     this.chosen = grade;
+    this.outcome = outcome;
     this.notice = undefined;
     try {
-      await tome.attempt({ ref: `item:${this.item.id}`, outcome: grade === 1 ? "wrong" : "correct", grade, duration });
+      await tome.attempt({ ref: `item:${this.item.id}`, outcome, grade, duration });
       this.state = "saved";
+      this.dispatchEvent(
+        new CustomEvent("tome-answered", {
+          bubbles: true,
+          composed: true,
+          detail: { ref: `item:${this.item.id}`, outcome, grade, duration: Math.round(duration) },
+        }),
+      );
     } catch (error) {
-      this.state = "back";
+      this.state = shown;
       this.chosen = undefined;
+      this.outcome = undefined;
       this.notice = messageOf(error);
     }
   }
@@ -156,7 +194,9 @@ export class TomeFlashcard extends TomeElement {
               )}
             </div>`
           : html`<button type="button" class="tome-reveal" @click=${() => this.#reveal()}>Show answer</button>`}
-        ${this.state === "saved"
+        ${this.state === "saved" && this.outcome === "skipped"
+          ? html`<p class="tome-verdict" role="status" data-state="skipped">Out of time · saved as Again</p>`
+          : this.state === "saved"
           ? html`<p class="tome-verdict" role="status" data-state=${this.chosen === 1 ? "wrong" : "correct"}>
               Saved: ${GRADES.find(({ grade }) => grade === this.chosen)?.label}
             </p>`
