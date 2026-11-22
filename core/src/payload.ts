@@ -33,6 +33,8 @@ export type PayloadSchemaVersion = z.output<typeof PayloadSchemaVersion>;
 
 export const PayloadSchemas = z.array(PayloadSchemaVersion).default([]);
 
+export const QUESTION_FIELD = "question";
+
 export const NO_PAYLOAD: PayloadSchemaVersion[] = [{ version: 1, kinds: {} }];
 
 const extended = "versions are only ever extended";
@@ -56,6 +58,13 @@ export function payloadSchemaIssues(versions: PayloadSchemaVersion[], file: stri
         file,
         path: at(index, "version"),
         message: `Expected version ${index + 1}; number versions 1, 2, 3 in order`,
+      });
+    }
+    if (current.kinds.attempt && QUESTION_FIELD in current.kinds.attempt.properties) {
+      issues.push({
+        file,
+        path: at(index, "kinds", "attempt", "properties", QUESTION_FIELD),
+        message: `The attempt field "${QUESTION_FIELD}" is reserved for the exam question id; rename it`,
       });
     }
     for (const [kind, schema] of Object.entries(current.kinds)) {
@@ -121,10 +130,11 @@ function fieldSchema(field: Field): z.ZodType {
 
 export function dataSchema(version: PayloadSchemaVersion, kind: EventKind): z.ZodType {
   const schema = version.kinds[kind];
-  if (!schema) return z.strictObject({});
+  const required = schema?.required ?? [];
   const shape: Record<string, z.ZodType> = {};
-  for (const [name, field] of Object.entries(schema.properties)) {
-    shape[name] = schema.required.includes(name) ? fieldSchema(field) : fieldSchema(field).optional();
+  for (const [name, field] of Object.entries(schema?.properties ?? {})) {
+    shape[name] = required.includes(name) ? fieldSchema(field) : fieldSchema(field).optional();
   }
+  if (kind === "attempt") shape[QUESTION_FIELD] = z.string().min(1).optional();
   return z.strictObject(shape);
 }
