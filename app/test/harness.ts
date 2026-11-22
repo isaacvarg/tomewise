@@ -18,12 +18,19 @@ export async function startTestApp(prepare?: (root: string) => Promise<void>) {
       watch: { onError: (error) => reloadErrors.push(error) },
     });
   let server = await start();
-  onTestFinished(() => server.close());
+  let running = true;
+  async function stop() {
+    if (!running) return;
+    running = false;
+    await server.close();
+  }
+  onTestFinished(stop);
 
   async function restart(whileDown?: () => Promise<void>) {
-    await server.close();
+    await stop();
     await whileDown?.();
     server = await start();
+    running = true;
   }
 
   async function post(body: unknown) {
@@ -69,5 +76,6 @@ export async function startTestApp(prepare?: (root: string) => Promise<void>) {
     eventFiles,
     reloadErrors,
     restart,
+    stop,
   };
 }

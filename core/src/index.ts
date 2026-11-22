@@ -1,4 +1,4 @@
-export { findLearningHome } from "./find.ts";
+export { findAppUrl, findLearningHome } from "./find.ts";
 export type { FindOptions } from "./find.ts";
 export { loadLearningHome, loadSubject } from "./load.ts";
 export type { LearningHome } from "./load.ts";
