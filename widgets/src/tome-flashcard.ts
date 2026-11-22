@@ -2,16 +2,10 @@ import { html, nothing, type PropertyValues } from "lit";
 import type { Item } from "@tomewise/core";
 import { type Grade, tome } from "./api.ts";
 import { adoptStyles, messageOf, TomeElement } from "./element.ts";
+import { GRADES } from "./rating.ts";
 
 type Flashcard = Extract<Item, { type: "flashcard" }>;
 type State = "loading" | "error" | "front" | "back" | "saving" | "saved";
-
-const GRADES: { grade: Grade; label: string }[] = [
-  { grade: 1, label: "Again" },
-  { grade: 2, label: "Hard" },
-  { grade: 3, label: "Good" },
-  { grade: 4, label: "Easy" },
-];
 
 const CSS = `
 .tome-flashcard { display: flex; flex-direction: column; gap: .8rem; padding: 1rem; background: var(--t-surface); color: var(--t-ink); border: 1px solid var(--t-rule); border-radius: var(--t-radius); font-family: var(--t-ui); }
