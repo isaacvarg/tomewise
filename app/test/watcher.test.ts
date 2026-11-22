@@ -57,6 +57,18 @@ describe("watcher", () => {
     expect((await app.get("/api/subjects/flags/events")).body).toEqual({ events: [] });
   });
 
+  it("serves pages of a subject added while the app runs", async () => {
+    const app = await startTestApp();
+    expect((await app.raw("/s/flags/reference/colours.html")).status).toBe(404);
+
+    await writeFiles(app.root, {
+      "subjects/flags/subject.json": { name: "Flags" },
+      "subjects/flags/reference/colours.html": "<!doctype html><title>Colours</title>",
+    });
+
+    await poll(async () => (await app.raw("/s/flags/reference/colours.html")).status).toBe(200);
+  });
+
   it("accepts events for a subject added while the app runs", async () => {
     const app = await startTestApp();
     await cp(join(app.root, SUBJECT), join(app.root, "subjects/morse-two"), { recursive: true });
