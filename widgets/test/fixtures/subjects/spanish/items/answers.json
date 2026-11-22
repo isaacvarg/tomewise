@@ -1,0 +1,18 @@
+[
+  {
+    "id": "rojo",
+    "type": "multiple-choice",
+    "prompt": "Which word means red?",
+    "choices": ["azul", "rojo", "verde"],
+    "answer": "rojo",
+    "unlockedBy": "answers"
+  },
+  {
+    "id": "gracias",
+    "type": "typed-answer",
+    "prompt": "Say thank you",
+    "answer": "gracias",
+    "accept": ["muchas gracias"],
+    "unlockedBy": "answers"
+  }
+]

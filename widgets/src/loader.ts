@@ -1,5 +1,7 @@
 export const widgets: Record<string, () => Promise<unknown>> = {
   "tome-flashcard": () => import("./tome-flashcard.ts"),
+  "tome-choice": () => import("./tome-choice.ts"),
+  "tome-typed": () => import("./tome-typed.ts"),
 };
 
 export function loadWidgets(root: ParentNode): void {

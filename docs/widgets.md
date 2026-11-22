@@ -86,6 +86,53 @@ Keyboard: Tab to "Show answer", Enter or Space to reveal; focus moves to Good; k
 
 These class names, `data-*` states and this structure are part of the theme contract.
 
+## `<tome-choice>` and `<tome-typed>`
+
+| Widget          | `ref` names                  | Learner                                             |
+| --------------- | ---------------------------- | --------------------------------------------------- |
+| `<tome-choice>` | a `multiple-choice` item     | picks one of `choices`                              |
+| `<tome-typed>`  | a `typed-answer` item        | types an answer; it matches `answer` or any of `accept` |
+
+Both show the item's `prompt`, grade the answer themselves and post one attempt as soon as it's given: correct is grade 3, wrong is grade 1. Skip posts a `skipped` attempt with grade 1. The verdict then shows, with the right answer when the learner missed or skipped. Typed answers match ignoring case, leading and trailing spaces and repeated spaces; accents count. Duration is timed from when the widget first scrolled into view.
+
+Keyboard: in `<tome-choice>`, keys 1–9 pick a choice while focus is in the widget; Tab and Enter work too. In `<tome-typed>`, Enter submits. Touch: tap.
+
+If the save fails, the answer and verdict stay on screen with the notice and a "Save again" button that posts the same attempt.
+
+Once saved, the widget dispatches a bubbling `tome-answered` event with `detail: { ref, outcome, grade, duration }`, for pages and widgets that run items in sequence.
+
+### Markup
+
+```html
+<tome-choice ref="item:rojo">
+  <div class="tome-choice" data-state="ready | saving | failed | saved | loading | error">
+    <div class="tome-stage"><p class="tome-prompt">Which word means red?</p></div>
+    <div class="tome-answers" role="group">
+      <button class="tome-answer" data-state="correct | wrong | faded">rojo<kbd>2</kbd></button>
+    </div>
+    <button class="tome-skip">Skip</button>                       <!-- before answering -->
+    <div class="tome-feedback" aria-live="polite">
+      <p class="tome-verdict" data-state="correct | wrong | skipped">Not quite · the answer is rojo</p>
+    </div>
+    <button class="tome-retry">Save again</button>                <!-- failed save -->
+    <p class="tome-notice" role="alert">…</p>                     <!-- wrong item, failed save -->
+  </div>
+</tome-choice>
+
+<tome-typed ref="item:gracias">
+  <div class="tome-typed" data-state="…as above">
+    <div class="tome-stage"><p class="tome-prompt">Say thank you</p></div>
+    <form class="tome-entry">
+      <input class="tome-input" data-state="correct | wrong">
+      <button class="tome-submit">Check</button>
+    </form>
+    <!-- .tome-skip, .tome-feedback, .tome-retry, .tome-notice as above -->
+  </div>
+</tome-typed>
+```
+
+`data-state` on `.tome-answer` and `.tome-input` is set only after answering. These class names, `data-*` states and this structure are part of the theme contract.
+
 ## Styling
 
 Widgets ship base styles in the `tome.widgets` cascade layer, so any theme rule wins. Base styles use only `--t-*` tokens: `--t-bg`, `--t-surface`, `--t-ink`, `--t-muted`, `--t-rule`, `--t-accent`, `--t-accent-ink`, `--t-good`, `--t-good-bg`, `--t-bad`, `--t-bad-bg`, `--t-display`, `--t-ui`, `--t-mono`, `--t-radius`.
