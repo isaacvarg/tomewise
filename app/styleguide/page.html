@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Styleguide</title>
+<script src="/styleguide/styleguide.js"></script>
+<style>
+@layer tome.base {
+  body.styleguide { max-width: 72rem; }
+  .styleguide-head { border-bottom: 1px solid var(--t-rule); padding-bottom: 1rem; margin-bottom: 1rem; }
+  .styleguide-head p { margin: .2rem 0 0; color: var(--t-muted); }
+  .styleguide-nav { display: flex; flex-wrap: wrap; gap: .3rem 1rem; padding: 0; margin: .8rem 0 0; list-style: none; font-size: .9rem; }
+  .styleguide-section { margin-top: 2.5rem; }
+  .styleguide-states { display: grid; gap: 1.2rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr)); align-items: start; }
+  .styleguide-state { margin: 0; min-width: 0; display: flex; flex-direction: column; gap: .5rem; }
+  .styleguide-state > figcaption { font-size: .8rem; color: var(--t-muted); font-family: var(--t-mono); }
+  .styleguide-lesson { border: 1px solid var(--t-rule); border-radius: var(--t-radius); padding: 0 1rem 1rem; }
+}
+</style>
+</head>
+<body class="styleguide">
+<header class="styleguide-head">
+  <h1>Styleguide</h1>
+  <p>Every page and widget state in the <strong data-styleguide-theme></strong> theme, with demo data. Nothing here touches your learning home.</p>
+  <ul class="styleguide-nav">
+    <li><a href="#lesson">Lesson</a></li>
+    <li><a href="#flashcard">Flashcard</a></li>
+    <li><a href="#choice">Choice</a></li>
+    <li><a href="#typed">Typed</a></li>
+    <li><a href="#audio">Audio</a></li>
+    <li><a href="#routine">Routine</a></li>
+    <li><a href="#timer">Timer</a></li>
+    <li><a href="#explain">Explain</a></li>
+    <li><a href="#exam-question">Exam question</a></li>
+    <li><a href="#done">Done</a></li>
+    <li><a href="#drill">Drill</a></li>
+  </ul>
+</header>
+
+<section class="styleguide-section" id="lesson">
+  <h2>Lesson</h2>
+  <div class="styleguide-lesson">
+    <h1>K and M</h1>
+    <p>K is <em>dah-di-dah</em> and M is <strong>dah-dah</strong>. Listen for the rhythm, not the dots and dashes. Read more in the <a href="#lesson">reference sheet</a>.</p>
+    <h2>Practice</h2>
+    <ul>
+      <li>Say each letter as you hear it.</li>
+      <li>Press <kbd>Space</kbd> to replay.</li>
+    </ul>
+    <h3>Timing</h3>
+    <ol>
+      <li>A dah is three dits long.</li>
+      <li>Letters are three dits apart.</li>
+    </ol>
+    <blockquote>Copy behind: let the letter finish before you name it.</blockquote>
+    <pre><code>K  -.-
+M  --</code></pre>
+    <table>
+      <thead><tr><th>Letter</th><th>Code</th><th>Sounds like</th></tr></thead>
+      <tbody><tr><td>K</td><td><code>-.-</code></td><td>dah-di-dah</td></tr><tr><td>M</td><td><code>--</code></td><td>dah-dah</td></tr></tbody>
+    </table>
+    <hr>
+    <p><small>Ask your agent if anything here is unclear.</small></p>
+  </div>
+</section>
+
+<section class="styleguide-section" id="flashcard">
+  <h2>&lt;tome-flashcard&gt;</h2>
+  <div class="styleguide-states">
+    <figure class="styleguide-state"><figcaption>front</figcaption><tome-flashcard ref="item:hola"></tome-flashcard></figure>
+    <figure class="styleguide-state"><figcaption>back</figcaption><tome-flashcard ref="item:hola" data-demo="reveal"></tome-flashcard></figure>
+    <figure class="styleguide-state"><figcaption>saved · good</figcaption><tome-flashcard ref="item:adios" data-demo="good"></tome-flashcard></figure>
+    <figure class="styleguide-state"><figcaption>saved · again</figcaption><tome-flashcard ref="item:gato" data-demo="again"></tome-flashcard></figure>
+    <figure class="styleguide-state"><figcaption>error · unknown item</figcaption><tome-flashcard ref="item:missing"></tome-flashcard></figure>
+  </div>
+</section>
+
+<section class="styleguide-section" id="choice">
+  <h2>&lt;tome-choice&gt;</h2>
+  <div class="styleguide-states">
+    <figure class="styleguide-state"><figcaption>ready</figcaption><tome-choice ref="item:rojo"></tome-choice></figure>
+    <figure class="styleguide-state"><figcaption>saved · correct</figcaption><tome-choice ref="item:rojo" data-demo="right"></tome-choice></figure>
+    <figure class="styleguide-state"><figcaption>saved · wrong</figcaption><tome-choice ref="item:rojo" data-demo="wrong"></tome-choice></figure>
+    <figure class="styleguide-state"><figcaption>saved · skipped</figcaption><tome-choice ref="item:rojo" data-demo="skip"></tome-choice></figure>
+    <figure class="styleguide-state"><figcaption>failed save</figcaption><tome-choice ref="item:offline" data-demo="unsaved"></tome-choice></figure>
+    <figure class="styleguide-state"><figcaption>error · unknown item</figcaption><tome-choice ref="item:missing"></tome-choice></figure>
+  </div>
+</section>
+
+<section class="styleguide-section" id="typed">
+  <h2>&lt;tome-typed&gt;</h2>
+  <div class="styleguide-states">
+    <figure class="styleguide-state"><figcaption>ready</figcaption><tome-typed ref="item:gracias"></tome-typed></figure>
+    <figure class="styleguide-state"><figcaption>saved · correct</figcaption><tome-typed ref="item:gracias" data-demo="right"></tome-typed></figure>
+    <figure class="styleguide-state"><figcaption>saved · wrong</figcaption><tome-typed ref="item:gracias" data-demo="wrong"></tome-typed></figure>
+    <figure class="styleguide-state"><figcaption>error · unknown item</figcaption><tome-typed ref="item:missing"></tome-typed></figure>
+  </div>
+</section>
+
+<section class="styleguide-section" id="audio">
+  <h2>&lt;tome-audio&gt;</h2>
+  <div class="styleguide-states">
+    <figure class="styleguide-state"><figcaption>ready</figcaption><tome-audio ref="item:letter-k" choices="K M R"></tome-audio></figure>
+    <figure class="styleguide-state"><figcaption>answering</figcaption><tome-audio ref="item:letter-k" choices="K M R" data-demo="start"></tome-audio></figure>
+    <figure class="styleguide-state"><figcaption>saved · correct</figcaption><tome-audio ref="item:letter-k" choices="K M R" data-demo="right"></tome-audio></figure>
+    <figure class="styleguide-state"><figcaption>saved · wrong</figcaption><tome-audio ref="item:letter-k" choices="K M R" data-demo="wrong"></tome-audio></figure>
+    <figure class="styleguide-state"><figcaption>answering · typed</figcaption><tome-audio ref="item:letter-k" data-demo="start"></tome-audio></figure>
+    <figure class="styleguide-state"><figcaption>error · unknown item</figcaption><tome-audio ref="item:missing"></tome-audio></figure>
+  </div>
+</section>
+
+<section class="styleguide-section" id="routine">
+  <h2>&lt;tome-routine&gt;</h2>
+  <div class="styleguide-states">
+    <figure class="styleguide-state"><figcaption>ready</figcaption><tome-routine ref="item:warm-up"></tome-routine></figure>
+    <figure class="styleguide-state"><figcaption>step</figcaption><tome-routine ref="item:warm-up" data-demo="start"></tome-routine></figure>
+    <figure class="styleguide-state"><figcaption>timed step</figcaption><tome-routine ref="item:warm-up" data-demo="timed"></tome-routine></figure>
+    <figure class="styleguide-state"><figcaption>rate</figcaption><tome-routine ref="item:warm-up" data-demo="finish"></tome-routine></figure>
+    <figure class="styleguide-state"><figcaption>saved</figcaption><tome-routine ref="item:warm-up" data-demo="good"></tome-routine></figure>
+  </div>
+</section>
+
+<section class="styleguide-section" id="timer">
+  <h2>&lt;tome-timer&gt;</h2>
+  <div class="styleguide-states">
+    <figure class="styleguide-state"><figcaption>idle</figcaption><tome-timer seconds="90"></tome-timer></figure>
+    <figure class="styleguide-state"><figcaption>paused</figcaption><tome-timer seconds="90" data-demo="pause"></tome-timer></figure>
+    <figure class="styleguide-state"><figcaption>done</figcaption><tome-timer seconds="0.1" autostart></tome-timer></figure>
+    <figure class="styleguide-state"><figcaption>error · no seconds</figcaption><tome-timer></tome-timer></figure>
+  </div>
+</section>
+
+<section class="styleguide-section" id="explain">
+  <h2>&lt;tome-explain&gt;</h2>
+  <div class="styleguide-states">
+    <figure class="styleguide-state"><figcaption>editing</figcaption><tome-explain ref="lesson:styleguide" prompt="Why does K sound like dah-di-dah?"></tome-explain></figure>
+    <figure class="styleguide-state"><figcaption>saved</figcaption><tome-explain ref="lesson:styleguide" data-demo="save"></tome-explain></figure>
+    <figure class="styleguide-state"><figcaption>failed save</figcaption><tome-explain ref="item:offline" data-demo="save"></tome-explain></figure>
+  </div>
+</section>
+
+<section class="styleguide-section" id="exam-question">
+  <h2>&lt;tome-exam-question&gt;</h2>
+  <div class="styleguide-states">
+    <figure class="styleguide-state"><figcaption>ready</figcaption>
+      <tome-exam-question id="q1" tests="item:letter-k"><p>Which letter is dah-di-dah?</p><tome-choice answer="K"><option>K</option><option>R</option><option>M</option></tome-choice></tome-exam-question>
+    </figure>
+    <figure class="styleguide-state"><figcaption>answered</figcaption>
+      <tome-exam-question id="q2" tests="item:gracias" data-demo="answer"><p>Thank someone warmly.</p><tome-typed answer="muchas gracias"><option>mil gracias</option></tome-typed></tome-exam-question>
+    </figure>
+    <figure class="styleguide-state"><figcaption>error · no tests</figcaption>
+      <tome-exam-question id="q3"><p>A question with nothing to test.</p><tome-choice answer="K"><option>K</option><option>M</option></tome-choice></tome-exam-question>
+    </figure>
+  </div>
+</section>
+
+<section class="styleguide-section" id="done">
+  <h2>&lt;tome-done&gt;</h2>
+  <div class="styleguide-states">
+    <figure class="styleguide-state"><figcaption>ready</figcaption><tome-done></tome-done></figure>
+    <figure class="styleguide-state"><figcaption>done</figcaption><tome-done label="Finish lesson" data-demo="done"></tome-done></figure>
+  </div>
+</section>
+
+<section class="styleguide-section" id="drill">
+  <h2>&lt;tome-drill&gt;</h2>
+  <div class="styleguide-states">
+    <figure class="styleguide-state"><figcaption>running</figcaption><tome-drill drill="cards"></tome-drill></figure>
+    <figure class="styleguide-state"><figcaption>done</figcaption><tome-drill drill="one-card" data-demo="finish"></tome-drill></figure>
+    <figure class="styleguide-state"><figcaption>empty · nothing due</figcaption><tome-drill drill="review"></tome-drill></figure>
+    <figure class="styleguide-state"><figcaption>error · unknown drill</figcaption><tome-drill drill="missing"></tome-drill></figure>
+  </div>
+</section>
+</body>
+</html>

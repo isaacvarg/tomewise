@@ -1,0 +1,1 @@
+{ "name": "One card", "select": { "from": "unlocked", "tags": ["card"] }, "count": 1, "format": "flashcard" }

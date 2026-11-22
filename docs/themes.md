@@ -125,6 +125,15 @@ The dashboard pages use these classes, taken from `docs/mockups/`. They arrive w
 
 `tome-activity` `tome-app` `tome-cell` `tome-due` `tome-header` `tome-heat-days` `tome-heat-legend` `tome-heatmap` `tome-heatmap-wrap` `tome-kicker` `tome-runner` `tome-runner-bar` `tome-section` `tome-section-head` `tome-stage` `tome-start` `tome-streak` `tome-subject` `tome-subject-name` `tome-subjects` `tome-title`
 
+## Seeing a theme
+
+Open `/styleguide` in the app. It shows a sample lesson and every widget in each of its states, using a demo subject built into the tool. Its widgets talk to a stand-in API inside the page, so nothing you do there reaches your learning home.
+
+- `/styleguide?theme=moss` shows another theme without changing `tomewise.json`.
+- `/styleguide?mode=dark` (or `light`) overrides the system setting.
+
+Once every demo has reached its state, the page sets `data-styleguide="ready"` on `<html>` (or `"failed"`, with the reasons in `data-styleguide-errors`). Dashboard pages join the styleguide as they land.
+
 ## For agents writing lessons
 
 Style lessons with `var(--t-*)` tokens and the classes above, never literal colours or fonts, so a lesson follows whatever theme the learner picks.

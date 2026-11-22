@@ -155,3 +155,17 @@ describe("the dashboard page", () => {
     }
   });
 });
+
+describe("layer order", () => {
+  it("comes before any layer the page declares itself", async () => {
+    const app = await startTestApp(async (root) => {
+      const lesson = join(root, "subjects/morse-code/lessons/0001-k-and-m.html");
+      const written = await readFile(lesson, "utf8");
+      await writeFile(lesson, written.replace("</head>", "<style>@layer theme { h1 { color: red; } }</style>\n</head>"));
+    }, await toolWith());
+
+    const head = await headOf(app);
+
+    expect(head.indexOf(LAYERS)).toBeLessThan(head.indexOf("@layer theme {"));
+  });
+});

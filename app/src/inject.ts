@@ -57,10 +57,10 @@ export function injectPage(html: string, theme: Theme | undefined, { subject, ki
 
 function injectHead(html: string, tags: string[]): string {
   const block = tags.join("\n") + "\n";
-  const close = html.search(/<\/head\s*>/i);
-  if (close !== -1) return html.slice(0, close) + block + html.slice(close);
   const open = /<head\b[^>]*>/i.exec(html);
   if (open) return insertAfter(html, open, "\n" + block);
+  const close = html.search(/<\/head\s*>/i);
+  if (close !== -1) return html.slice(0, close) + block + html.slice(close);
   const root = /<html\b[^>]*>/i.exec(html) ?? /<!doctype[^>]*>/i.exec(html);
   const head = `<head>\n${block}</head>\n`;
   return root ? insertAfter(html, root, "\n" + head) : head + html;

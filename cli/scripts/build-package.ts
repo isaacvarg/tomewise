@@ -38,6 +38,7 @@ export async function buildPackage({ out, spa }: BuildOptions): Promise<void> {
 
   await buildWidgets(join(out, "widgets"));
   await cp(join(REPO, "app/themes"), join(out, "themes"), { recursive: true });
+  await cp(join(REPO, "app/styleguide"), join(out, "styleguide"), { recursive: true });
   if (spa !== undefined) await cp(spa, join(out, "dist"), { recursive: true });
 
   const cli = JSON.parse(await readFile(join(REPO, "cli/package.json"), "utf8"));

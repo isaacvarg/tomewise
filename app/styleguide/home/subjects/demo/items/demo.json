@@ -1,0 +1,27 @@
+[
+  { "id": "hola", "type": "flashcard", "front": "hola", "back": "hello", "tags": ["card"] },
+  { "id": "adios", "type": "flashcard", "front": "adiós", "back": "goodbye", "tags": ["card"] },
+  { "id": "gato", "type": "flashcard", "front": "el gato", "back": "the cat", "tags": ["card"] },
+  {
+    "id": "rojo",
+    "type": "multiple-choice",
+    "prompt": "Which word means red?",
+    "choices": ["azul", "rojo", "verde"],
+    "answer": "rojo"
+  },
+  {
+    "id": "offline",
+    "type": "multiple-choice",
+    "prompt": "Which word means green? (This save fails on purpose.)",
+    "choices": ["azul", "rojo", "verde"],
+    "answer": "verde"
+  },
+  { "id": "gracias", "type": "typed-answer", "prompt": "Say thank you", "answer": "gracias", "accept": ["muchas gracias"] },
+  { "id": "letter-k", "type": "timed-audio", "prompt": "Which letter is dah-di-dah?", "answer": "K" },
+  {
+    "id": "warm-up",
+    "type": "routine",
+    "name": "Warm-up",
+    "steps": [{ "text": "Say the alphabet out loud" }, { "text": "Hold the rolled r", "seconds": 20 }, { "text": "Read one line aloud" }]
+  }
+]

@@ -8,6 +8,7 @@ import { pageRoutes } from "./pages.ts";
 import { readRoutes } from "./reads.ts";
 import { trackRuleChanges } from "./rule-changes.ts";
 import { spaRoutes } from "./spa.ts";
+import { styleguideRoutes } from "./styleguide.ts";
 import { themeResolver, type Warn } from "./themes.ts";
 import { BUILT_IN, themeRoutes, type ToolDirs, widgetRoutes } from "./tool-files.ts";
 import { type HomeView, watchLearningHome, type WatchOptions } from "./watcher.ts";
@@ -27,6 +28,7 @@ export function createApp(view: () => HomeView, { spa, tool = BUILT_IN, warn = c
   app.route("/s", pageRoutes(home, resolveTheme));
   app.route("/widgets", widgetRoutes(tool));
   app.route("/themes", themeRoutes(home, tool));
+  app.route("/styleguide", styleguideRoutes(home, resolveTheme));
   if (spa !== undefined && existsSync(spa)) app.route("/", spaRoutes(spa, home, resolveTheme));
   return app;
 }
