@@ -81,6 +81,63 @@ describe("widgets and themes", () => {
   });
 });
 
+const PAGES = [
+  ["lesson", "lessons", "0001-k-and-m"],
+  ["quiz", "quizzes", "week-1"],
+  ["exam", "exams", "milestone-1"],
+] as const;
+
+async function withQuizAndExam(root: string) {
+  await put(join(root, "subjects/morse-code/quizzes/week-1.html"), "<html><head><title>Quiz</title></head></html>");
+  await put(join(root, "subjects/morse-code/exams/milestone-1.html"), "<html><head><title>Exam</title></head></html>");
+}
+
+describe("page context", () => {
+  it.each(PAGES)("injects theme CSS, tome.js and page context into the %s page's head", async (kind, folder, id) => {
+    const app = await startWithTool(withQuizAndExam);
+
+    const html = (await app.raw(`/s/morse-code/${folder}/${id}.html`)).body.toString();
+    const head = html.slice(html.indexOf("<head>"), html.indexOf("</head>"));
+
+    expect(head).toContain(PAPER_CSS);
+    expect(head).toContain(TOME_JS);
+    expect(head).toContain('<meta name="tome-subject" content="morse-code">');
+    expect(head).toContain(`<meta name="tome-page-kind" content="${kind}">`);
+    expect(head).toContain(`<meta name="tome-${kind}" content="${id}">`);
+  });
+
+  it.each(PAGES)("doesn't double-inject what the %s page already includes", async (kind, folder, id) => {
+    const app = await startWithTool(async (root) => {
+      await withQuizAndExam(root);
+      const page = join(root, "subjects/morse-code", folder, `${id}.html`);
+      const written = await readFile(page, "utf8");
+      await writeFile(page, written.replace("</head>", `${PAPER_CSS}\n${TOME_JS}\n</head>`));
+    });
+
+    const html = (await app.raw(`/s/morse-code/${folder}/${id}.html`)).body.toString();
+
+    expect(html.match(/\/themes\/paper\/tokens\.css/g)).toHaveLength(1);
+    expect(html.match(/\/widgets\/v1\/tome\.js/g)).toHaveLength(1);
+    expect(html).toContain(`<meta name="tome-page-kind" content="${kind}">`);
+  });
+
+  it.each(["quizzes", "exams"])("leaves non-HTML files in %s untouched", async (folder) => {
+    const app = await startWithTool(async (root) => {
+      await put(join(root, "subjects/morse-code", folder, "notes.txt"), "<head></head>");
+    });
+
+    expect((await app.raw(`/s/morse-code/${folder}/notes.txt`)).body.toString()).toBe("<head></head>");
+  });
+
+  it("leaves HTML assets as written", async () => {
+    const app = await startWithTool(async (root) => {
+      await put(join(root, "subjects/morse-code/assets/page.html"), "<head></head>");
+    });
+
+    expect((await app.raw("/s/morse-code/assets/page.html")).body.toString()).toBe("<head></head>");
+  });
+});
+
 describe("lesson injection", () => {
   it("injects the theme CSS, tome.js and page data into a lesson's head", async () => {
     const app = await startWithTool();
