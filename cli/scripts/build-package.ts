@@ -2,6 +2,7 @@ import { chmod, cp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promise
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
+import { buildWidgets } from "../../widgets/scripts/build.ts";
 
 const REPO = fileURLToPath(new URL("../../", import.meta.url));
 
@@ -35,6 +36,7 @@ export async function buildPackage({ out, spa }: BuildOptions): Promise<void> {
   });
   await chmod(bin, 0o755);
 
+  await buildWidgets(join(out, "widgets"));
   if (spa !== undefined) await cp(spa, join(out, "dist"), { recursive: true });
 
   const cli = JSON.parse(await readFile(join(REPO, "cli/package.json"), "utf8"));

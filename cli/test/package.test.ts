@@ -61,6 +61,11 @@ describe("the tomewise npm package", () => {
     const home = await fetch(`${url}/`);
     expect(await home.text()).toBe(INDEX);
 
+    const tome = await fetch(`${url}/widgets/v1/tome.js`);
+    expect(tome.status).toBe(200);
+    expect(tome.headers.get("content-type")).toBe("text/javascript; charset=utf-8");
+    expect(await tome.text()).toMatch(/export\s*\{/);
+
     child.kill("SIGTERM");
     expect(await exited).toBe(0);
   });

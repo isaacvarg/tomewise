@@ -13,5 +13,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["core", "cli", "app", "vitest.config.ts"]
+  "include": ["core", "cli", "app", "widgets", "vitest.config.ts"]
 }

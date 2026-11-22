@@ -10,7 +10,7 @@ export interface ToolDirs {
 }
 
 export const BUILT_IN: ToolDirs = {
-  widgets: fileURLToPath(new URL("../../widgets/", import.meta.url)),
+  widgets: fileURLToPath(new URL("../widgets/", import.meta.url)),
   themes: fileURLToPath(new URL("../../themes/", import.meta.url)),
 };
 

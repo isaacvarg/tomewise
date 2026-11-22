@@ -1,0 +1,16 @@
+[
+  {
+    "id": "hola",
+    "type": "flashcard",
+    "front": "hola",
+    "back": "hello",
+    "unlockedBy": "0001-greetings"
+  },
+  {
+    "id": "adios",
+    "type": "flashcard",
+    "front": "adiós",
+    "back": "goodbye",
+    "unlockedBy": "0001-greetings"
+  }
+]

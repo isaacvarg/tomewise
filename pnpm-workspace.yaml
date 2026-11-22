@@ -2,5 +2,6 @@ packages:
   - core
   - cli
   - app
+  - widgets
 allowBuilds:
   esbuild: false
