@@ -2,7 +2,8 @@ import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { Hono } from "hono";
-import type { GitSettings } from "@tomewise/core";
+import { type LearningEvent, type LearningHome, readEvents } from "@tomewise/core";
+import { historyMessage } from "./history.ts";
 
 export interface Clock {
   now: () => Date;
@@ -22,6 +23,7 @@ export interface SyncStatus {
   enabled: boolean;
   stopped: boolean;
   lastPull: string | null;
+  lastCommit: string | null;
   lastError: { at: string; message: string } | null;
 }
 
@@ -30,18 +32,22 @@ export type Exclusive = <T>(work: () => Promise<T>) => Promise<T>;
 export interface GitSync {
   status: () => SyncStatus;
   syncNow: () => Promise<SyncStatus>;
+  recorded: (events: LearningEvent[]) => void;
   exclusive: Exclusive;
   close: () => Promise<void>;
 }
 
 const GIT_TIMEOUT_MS = 120_000;
+const GIT_MAX_BUFFER = 64 * 1024 * 1024;
+const EVENT_FILES = ":(glob)subjects/*/events/**";
+const CADENCE_MS = { hourly: 3_600_000, daily: 86_400_000 } as const;
 
 function git(cwd: string, args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
     execFile(
       "git",
       args,
-      { cwd, timeout: GIT_TIMEOUT_MS, env: { ...process.env, GIT_TERMINAL_PROMPT: "0" } },
+      { cwd, timeout: GIT_TIMEOUT_MS, maxBuffer: GIT_MAX_BUFFER, env: { ...process.env, GIT_TERMINAL_PROMPT: "0" } },
       (error, stdout, stderr) => {
         if (!error) return resolve(stdout.trim());
         if ((error as NodeJS.ErrnoException).code === "ENOENT") {
@@ -54,15 +60,18 @@ function git(cwd: string, args: string[]): Promise<string> {
 }
 
 export const syncOff: GitSync = {
-  status: () => ({ enabled: false, stopped: false, lastPull: null, lastError: null }),
+  status: () => ({ enabled: false, stopped: false, lastPull: null, lastCommit: null, lastError: null }),
   syncNow: async () => syncOff.status(),
+  recorded: () => {},
   exclusive: (work) => work(),
   close: async () => {},
 };
 
-export function startSync(root: string, settings: GitSettings, { clock = systemClock }: { clock?: Clock } = {}): GitSync {
+export function startSync(home: () => LearningHome, { clock = systemClock }: { clock?: Clock } = {}): GitSync {
+  const { root, config } = home();
+  const settings = config.git;
   if (!settings.enabled) return syncOff;
-  const state: SyncStatus = { enabled: true, stopped: false, lastPull: null, lastError: null };
+  const state: SyncStatus = { enabled: true, stopped: false, lastPull: null, lastCommit: null, lastError: null };
   let queue: Promise<unknown> = Promise.resolve();
   let closed = false;
 
@@ -87,9 +96,13 @@ export function startSync(root: string, settings: GitSettings, { clock = systemC
     return false;
   }
 
-  async function pull(remote: string) {
+  async function checkedBranch(): Promise<string> {
     if (await rebasing()) throw new Error("A rebase is in progress in the learning home; finish or abort it, then restart the app");
-    const target = await branch();
+    return branch();
+  }
+
+  async function pull(remote: string) {
+    const target = await checkedBranch();
     try {
       await git(root, ["pull", "--rebase", "--autostash", "--quiet", remote, target]);
     } catch (error) {
@@ -99,11 +112,42 @@ export function startSync(root: string, settings: GitSettings, { clock = systemC
     state.lastPull = clock.now().toISOString();
   }
 
-  function syncNow(): Promise<SyncStatus> {
+  async function addedEvents(): Promise<LearningEvent[]> {
+    const diff = await git(root, ["diff", "--cached", "--no-color", "--no-ext-diff", "--no-textconv", "--unified=0", "--", EVENT_FILES]);
+    const ids = new Map<string, Set<string>>();
+    for (const line of diff.split("\n")) {
+      if (!line.startsWith("+") || line.startsWith("+++")) continue;
+      const { id, subject } = JSON.parse(line.slice(1)) as { id: string; subject: string };
+      ids.set(subject, (ids.get(subject) ?? new Set()).add(id));
+    }
+    const added: LearningEvent[] = [];
+    for (const [subject, wanted] of ids) {
+      added.push(...(await readEvents(home(), subject)).filter((event) => wanted.has(event.id)));
+    }
+    return added;
+  }
+
+  async function commitHistory() {
+    if ((await git(root, ["status", "--porcelain", "--", EVENT_FILES])) === "") return;
+    if (settings.remote !== undefined) await pull(settings.remote);
+    else await checkedBranch();
+    await git(root, ["add", "--all", "--", EVENT_FILES]);
+    const added = await addedEvents();
+    if (added.length === 0) throw new Error("Event files changed without new events; check subjects/*/events/ with git status");
+    const message = historyMessage(added, config.timezone);
+    await git(root, ["commit", "--quiet", "--only", "--message", message, "--", EVENT_FILES]);
+    state.lastCommit = clock.now().toISOString();
+  }
+
+  async function pullContent() {
+    if (settings.remote !== undefined) await pull(settings.remote);
+  }
+
+  function step(work: () => Promise<void>): Promise<SyncStatus> {
     return exclusive(async () => {
       if (closed || state.stopped) return status();
       try {
-        if (settings.remote !== undefined) await pull(settings.remote);
+        await work();
       } catch (error) {
         state.stopped = true;
         state.lastError = { at: clock.now().toISOString(), message: (error as Error).message };
@@ -116,16 +160,26 @@ export function startSync(root: string, settings: GitSettings, { clock = systemC
     return { ...state, lastError: state.lastError && { ...state.lastError } };
   }
 
-  const stopTicking =
-    settings.remote === undefined ? () => {} : clock.every(settings.pullIntervalMinutes * 60_000, syncNow);
+  const syncNow = () => step(pullContent);
+
+  function recorded(events: LearningEvent[]) {
+    if (settings.cadence === "session" && events.some((event) => event.kind === "session.end")) void step(commitHistory);
+  }
+
+  const stopTimers = [
+    settings.remote === undefined ? () => {} : clock.every(settings.pullIntervalMinutes * 60_000, syncNow),
+    settings.cadence === "session" ? () => {} : clock.every(CADENCE_MS[settings.cadence], () => step(commitHistory)),
+  ];
 
   return {
     status,
     syncNow,
+    recorded,
     exclusive,
     async close() {
+      await step(commitHistory);
       closed = true;
-      stopTicking();
+      for (const stop of stopTimers) stop();
       await queue;
     },
   };

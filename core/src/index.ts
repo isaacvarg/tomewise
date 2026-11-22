@@ -27,7 +27,7 @@ export { dueItems } from "./due.ts";
 export type { DueItem } from "./due.ts";
 export { aggregates, queryPayload } from "./query.ts";
 export type { Aggregate, QueryOptions, QueryResult } from "./query.ts";
-export { readActivity } from "./activity.ts";
+export { isoDate, localDay, readActivity } from "./activity.ts";
 export type { Activity, ActivityDay, ActivityOptions, GoalResult, Streak } from "./activity.ts";
 export { readStats } from "./stats.ts";
 export type { AttemptCounts, Stats, StatsOptions } from "./stats.ts";

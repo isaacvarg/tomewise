@@ -14,7 +14,7 @@ const run = promisify(execFile);
 
 let realGit = "git";
 let gitLog = "";
-let originalPath: string | undefined;
+let originalEnv: Record<string, string | undefined> = {};
 
 beforeAll(async () => {
   realGit = (await run("sh", ["-c", "command -v git"])).stdout.trim();
@@ -23,12 +23,19 @@ beforeAll(async () => {
   await writeFile(gitLog, "");
   await writeFile(join(spy, "git"), `#!/bin/sh\nprintf '%s\\t%s\\n' "$PWD" "$*" >> '${gitLog}'\nexec '${realGit}' "$@"\n`);
   await chmod(join(spy, "git"), 0o755);
-  originalPath = process.env.PATH;
-  process.env.PATH = `${spy}:${originalPath}`;
+  const globalConfig = join(spy, "gitconfig");
+  await writeFile(globalConfig, "[user]\n\tuseConfigOnly = true\n[commit]\n\tgpgsign = false\n");
+  originalEnv = { PATH: process.env.PATH, GIT_CONFIG_GLOBAL: process.env.GIT_CONFIG_GLOBAL, GIT_CONFIG_NOSYSTEM: process.env.GIT_CONFIG_NOSYSTEM };
+  process.env.PATH = `${spy}:${originalEnv.PATH}`;
+  process.env.GIT_CONFIG_GLOBAL = globalConfig;
+  process.env.GIT_CONFIG_NOSYSTEM = "1";
 });
 
 afterAll(() => {
-  process.env.PATH = originalPath;
+  for (const [name, value] of Object.entries(originalEnv)) {
+    if (value === undefined) delete process.env[name];
+    else process.env[name] = value;
+  }
 });
 
 async function appGitCalls(root: string): Promise<string[]> {
@@ -76,13 +83,21 @@ function fakeClock() {
   return { clock, advanceMinutes, timers };
 }
 
-async function cloneSeam(settings: Record<string, unknown> = { remote: "origin" }, clock?: Clock) {
+async function cloneSeam(
+  settings: Record<string, unknown> = { remote: "origin" },
+  clock?: Clock,
+  { identity = true }: { identity?: boolean } = {},
+) {
   const remote = await mkdtemp(join(tmpdir(), "tomewise-remote-"));
   let agent = "";
   const app = await startTestApp(async (root) => {
     await enableGit(root, settings);
     await git(remote, "init", "--bare", "--quiet", "--initial-branch=main");
     await git(root, "init", "--quiet", "--initial-branch=main");
+    if (identity) {
+      await git(root, "config", "user.name", "Learner");
+      await git(root, "config", "user.email", "learner@example.com");
+    }
     await git(root, "add", "-A");
     await git(root, "commit", "--quiet", "-m", "chore: start");
     await git(root, "remote", "add", "origin", remote);
@@ -229,11 +244,173 @@ describe("git sync", () => {
     const { clock, advanceMinutes, timers } = fakeClock();
     const { app } = await cloneSeam({ enabled: false, remote: "origin" }, clock);
 
-    expect((await app.get("/api/sync")).body).toEqual({ enabled: false, stopped: false, lastPull: null, lastError: null });
+    expect((await app.get("/api/sync")).body).toEqual({
+      enabled: false,
+      stopped: false,
+      lastPull: null,
+      lastCommit: null,
+      lastError: null,
+    });
     expect((await app.send("POST", "/api/sync")).status).toBe(409);
     await advanceMinutes(60);
     expect(timers.size).toBe(0);
     expect(await appGitCalls(app.root)).toEqual([]);
+  });
+});
+
+function practice(n: number, { minutes = 3, attempts = 2 } = {}) {
+  const id = `01KAJ${String(n).padStart(21, "0")}`;
+  const at = (minute: number) => new Date(Date.UTC(2026, 10, 22, 8, 30 + minute, n)).toISOString();
+  const ref = "lesson:0001-k-and-m";
+  return [
+    { id, ts: at(0), subject: "morse-code", kind: "session.start", ref, sessionId: id, schemaVersion: 2, data: {} },
+    ...Array.from({ length: attempts }, () => ({
+      ts: at(1),
+      subject: "morse-code",
+      kind: "attempt",
+      ref: "item:letter-k",
+      sessionId: id,
+      duration: 600,
+      outcome: "correct",
+      grade: 3,
+      schemaVersion: 2,
+      data: { heard: "K", answer: "K", responseTime: 600, wpm: 18 },
+    })),
+    { ts: at(minutes), subject: "morse-code", kind: "session.end", ref, sessionId: id, duration: minutes * 60_000, schemaVersion: 2, data: {} },
+  ];
+}
+
+async function subjects(root: string): Promise<string[]> {
+  return (await git(root, "log", "--format=%s")).split("\n");
+}
+
+const ONE_SESSION = "chore(history): 2026-11-22 · morse-code 1 session, 3 min, 2 attempts";
+
+describe("history commits", () => {
+  it("commits the session's events after its session.end, on top of the agent's content", async () => {
+    const { clock } = fakeClock();
+    const { app, agentPushes, remote } = await cloneSeam({ remote: "origin" }, clock);
+    await agentPushes({ [`${SUBJECT}/lessons/0005-e.html`]: "<!doctype html><title>E</title>" });
+    const remoteHead = await git(remote, "rev-parse", "main");
+
+    expect((await app.post(practice(1))).status).toBe(201);
+
+    await poll(() => subjects(app.root)).toEqual([ONE_SESSION, "feat: content", "chore: start"]);
+    expect(await git(app.root, "log", "-1", "--format=%B")).toBe(ONE_SESSION);
+    expect(await git(app.root, "show", "--name-only", "--format=", "HEAD")).toBe(`${EVENTS}/2026-11.jsonl`);
+    expect(await git(app.root, "status", "--porcelain")).toBe("");
+    expect((await app.get("/api/sync")).body).toMatchObject({ stopped: false, lastCommit: "2026-11-22T09:00:00.000Z", lastError: null });
+    expect(await git(remote, "rev-parse", "main")).toBe(remoteHead);
+  });
+
+  it("waits for the session.end before committing", async () => {
+    const { app } = await cloneSeam();
+    const [start, ...rest] = practice(1);
+
+    expect((await app.post(start)).status).toBe(201);
+    await app.send("POST", "/api/sync");
+    expect(await subjects(app.root)).toEqual(["chore: start"]);
+
+    expect((await app.post(rest)).status).toBe(201);
+    await poll(() => subjects(app.root)).toEqual([ONE_SESSION, "chore: start"]);
+  });
+
+  it("stages only event files and leaves other changes alone", async () => {
+    const { app } = await cloneSeam({});
+    await writeFiles(app.root, { "draft.md": "staged by hand\n", [`${SUBJECT}/scratch.md`]: "untracked\n" });
+    await git(app.root, "add", "draft.md");
+
+    expect((await app.post(practice(1))).status).toBe(201);
+
+    await poll(() => subjects(app.root)).toEqual([ONE_SESSION, "chore: start"]);
+    expect(await git(app.root, "show", "--name-only", "--format=", "HEAD")).toBe(`${EVENTS}/2026-11.jsonl`);
+    expect((await git(app.root, "status", "--porcelain")).split("\n").sort()).toEqual([`?? ${SUBJECT}/scratch.md`, "A  draft.md"]);
+  });
+
+  it("commits hourly on the clock, and not when nothing is new", async () => {
+    const { clock, advanceMinutes } = fakeClock();
+    const { app } = await cloneSeam({ cadence: "hourly" }, clock);
+    expect((await app.post(practice(1))).status).toBe(201);
+
+    await advanceMinutes(59);
+    expect(await subjects(app.root)).toEqual(["chore: start"]);
+
+    await advanceMinutes(1);
+    expect(await subjects(app.root)).toEqual([ONE_SESSION, "chore: start"]);
+    expect((await app.get("/api/sync")).body.lastCommit).toBe("2026-11-22T10:00:00.000Z");
+
+    await advanceMinutes(60);
+    expect(await subjects(app.root)).toEqual([ONE_SESSION, "chore: start"]);
+    expect((await app.get("/api/sync")).body.lastCommit).toBe("2026-11-22T10:00:00.000Z");
+  });
+
+  it("commits what's left when the app stops, so restarts can't starve the cadence", async () => {
+    const { clock, advanceMinutes } = fakeClock();
+    const { app } = await cloneSeam({ cadence: "daily" }, clock);
+    expect((await app.post(practice(1))).status).toBe(201);
+    await advanceMinutes(60);
+
+    await app.restart(async () => {
+      expect(await subjects(app.root)).toEqual([ONE_SESSION, "chore: start"]);
+    });
+    expect(await git(app.root, "status", "--porcelain")).toBe("");
+  });
+
+  it("commits daily on the clock", async () => {
+    const { clock, advanceMinutes } = fakeClock();
+    const { app } = await cloneSeam({ cadence: "daily" }, clock);
+    expect((await app.post(practice(1))).status).toBe(201);
+    expect((await app.post(practice(2, { minutes: 10, attempts: 5 }))).status).toBe(201);
+
+    await advanceMinutes(24 * 60 - 1);
+    expect(await subjects(app.root)).toEqual(["chore: start"]);
+
+    await advanceMinutes(1);
+    expect(await subjects(app.root)).toEqual(["chore(history): 2026-11-22 · morse-code 2 sessions, 13 min, 7 attempts", "chore: start"]);
+  });
+
+  it("stops syncing and says why when git can't commit", async () => {
+    const { clock } = fakeClock();
+    const { app } = await cloneSeam({}, clock, { identity: false });
+
+    expect((await app.post(practice(1))).status).toBe(201);
+
+    await poll(async () => (await app.get("/api/sync")).body).toMatchObject({
+      stopped: true,
+      lastCommit: null,
+      lastError: { at: "2026-11-22T09:00:00.000Z", message: expect.stringContaining("git commit") },
+    });
+    expect(await subjects(app.root)).toEqual(["chore: start"]);
+    expect(await git(app.root, "status", "--porcelain")).toMatch(/^[ M]{2} subjects\/morse-code\/events\/2026-11\.jsonl$/);
+  });
+
+  it("stops rather than commit event files that lost events", async () => {
+    const { clock, advanceMinutes } = fakeClock();
+    const { app } = await cloneSeam({ cadence: "hourly" }, clock);
+    await rm(join(app.root, EVENTS, "2026-11.laptop.jsonl"));
+
+    await advanceMinutes(60);
+
+    expect((await app.get("/api/sync")).body).toMatchObject({
+      stopped: true,
+      lastCommit: null,
+      lastError: { message: expect.stringContaining("without new events") },
+    });
+    expect(await subjects(app.root)).toEqual(["chore: start"]);
+  });
+
+  it("pulls before committing, and commits nothing when the pull fails", async () => {
+    const { app, remote } = await cloneSeam();
+    await rm(remote, { recursive: true });
+
+    expect((await app.post(practice(1))).status).toBe(201);
+
+    await poll(async () => (await app.get("/api/sync")).body).toMatchObject({
+      stopped: true,
+      lastError: { message: expect.stringContaining("git pull") },
+    });
+    expect(await subjects(app.root)).toEqual(["chore: start"]);
+    expect(await appGitCalls(app.root)).not.toContainEqual(expect.stringMatching(/^commit\b/));
   });
 });
 

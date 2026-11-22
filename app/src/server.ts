@@ -28,7 +28,7 @@ export function createApp(
   const app = new Hono();
   const home = () => view().home;
   const resolveTheme = themeResolver(tool, warn);
-  app.route("/api/events", eventRoutes(home, sync.exclusive));
+  app.route("/api/events", eventRoutes(home, sync));
   app.route("/api/sync", syncRoutes(sync));
   app.route("/api", readRoutes(view));
   app.route("/s", pageRoutes(home, resolveTheme));
@@ -54,7 +54,7 @@ export interface RunningServer {
 export async function startServer(home: LearningHome, { host, port, watch, clock, ...options }: ListenOptions): Promise<RunningServer> {
   const onError = watch?.onError ?? ((error: unknown) => console.error(`Reloading ${home.root} failed:`, error));
   const watched = await watchLearningHome(home, { ...watch, onError });
-  const sync = startSync(home.root, home.config.git, { clock });
+  const sync = startSync(() => watched.current().home, { clock });
   await trackRuleChanges(watched, sync.exclusive, onError);
   const server = createAdaptorServer({ fetch: createApp(watched.current, { ...options, sync }).fetch });
   try {
