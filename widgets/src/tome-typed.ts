@@ -9,6 +9,10 @@ export class TomeTyped extends AnswerElement<TypedAnswer> {
   protected readonly itemType = "typed-answer";
   protected readonly itemLabel = "a typed answer";
 
+  protected inlineItem(answer: string, accept: string[]): TypedAnswer {
+    return { id: "", type: "typed-answer", prompt: "", answer, accept, tags: [], retired: false };
+  }
+
   check(given: string): void {
     if (!this.item || !normalizeAnswer(given)) return;
     this.answer(matchesAnswer(this.item, given) ? "correct" : "wrong", given);

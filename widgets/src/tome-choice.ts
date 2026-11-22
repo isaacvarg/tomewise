@@ -14,6 +14,10 @@ export class TomeChoice extends AnswerElement<MultipleChoice> {
     this.addEventListener("keydown", (event) => this.#onKey(event));
   }
 
+  protected inlineItem(answer: string, choices: string[]): MultipleChoice {
+    return { id: "", type: "multiple-choice", prompt: "", choices, answer, tags: [], retired: false };
+  }
+
   choose(choice: string): void {
     if (!this.item) return;
     this.answer(choice === this.item.answer ? "correct" : "wrong", choice);

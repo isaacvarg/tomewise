@@ -133,6 +133,44 @@ Once saved, the widget dispatches a bubbling `tome-answered` event with `detail:
 
 `data-state` on `.tome-answer` and `.tome-input` is set only after answering. These class names, `data-*` states and this structure are part of the theme contract.
 
+## `<tome-exam-question>`
+
+An exam question on an exam page. Write the question inside the tag, then one `<tome-choice>` or `<tome-typed>` whose answer is written in the page instead of coming from an item: `answer` holds the right answer, and `<option>` children hold the choices (`<tome-choice>`) or other accepted answers (`<tome-typed>`).
+
+```html
+<tome-exam-question id="q1" tests="item:letter-k item:letter-r">
+  <p>Which letter is dah-di-dah?</p>
+  <tome-choice answer="K"><option>K</option><option>R</option><option>M</option></tome-choice>
+</tome-exam-question>
+
+<tome-exam-question id="q2" tests="item:gracias">
+  <p>Thank someone warmly.</p>
+  <tome-typed answer="muchas gracias"><option>mil gracias</option></tome-typed>
+</tome-exam-question>
+```
+
+`id` names the question within the exam and `tests` lists the items it tests. The answer is graded as in `<tome-choice>` and `<tome-typed>`, then posted as one attempt per tested item: `ref` is the item, the outcome, grade and duration are the same for each, and `data.question` is the question's `id`. A miss is a wrong attempt on each of those items, so they come due sooner. The exam question itself is never scheduled. On an exam page the session's `ref` is the exam.
+
+`question` is reserved in attempt payloads for this id, so a subject's payload schema can't define an attempt field with that name.
+
+A question with no `id`, no `tests`, an unknown item in `tests` or no answer control shows a notice and can't be answered. If a save fails, "Save again" posts only the attempts that didn't save. Keyboard and touch work as in the answer control.
+
+### Markup
+
+```html
+<tome-exam-question id="q1" tests="…">
+  <div class="tome-exam-question" data-state="loading | error | ready | answered">
+    <div class="tome-question">
+      <p>Which letter is dah-di-dah?</p>              <!-- the page's own markup -->
+      <tome-choice answer="K">…</tome-choice>         <!-- no .tome-stage: the question is the prompt -->
+    </div>
+    <p class="tome-notice" role="alert">…</p>         <!-- missing id, tests or answer; unknown items -->
+  </div>
+</tome-exam-question>
+```
+
+These class names, `data-*` states and this structure are part of the theme contract.
+
 ## Styling
 
 Widgets ship base styles in the `tome.widgets` cascade layer, so any theme rule wins. Base styles use only `--t-*` tokens: `--t-bg`, `--t-surface`, `--t-ink`, `--t-muted`, `--t-rule`, `--t-accent`, `--t-accent-ink`, `--t-good`, `--t-good-bg`, `--t-bad`, `--t-bad-bg`, `--t-display`, `--t-ui`, `--t-mono`, `--t-radius`.
