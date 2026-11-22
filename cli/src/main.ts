@@ -20,6 +20,7 @@ import {
   validateLearningHome,
   type ValidationIssue,
 } from "@tomewise/core";
+import { defaultServiceHost, installService, serviceStatus, uninstallService, type ServiceHost } from "./service.ts";
 
 export interface Io {
   cwd: string;
@@ -29,6 +30,7 @@ export interface Io {
   machine?: string;
   readStdin?: () => Promise<string>;
   signal?: AbortSignal;
+  service?: Partial<ServiceHost>;
 }
 
 const USAGE = [
@@ -37,6 +39,9 @@ const USAGE = [
   "  tome log <event JSON>",
   "  tome log -        read the event from stdin",
   "  tome serve [--host <host>] [--port <port>]",
+  "  tome service install [--host <host>] [--port <port>]",
+  "  tome service uninstall",
+  "  tome service status [--json]",
 ].join("\n");
 
 const DEFAULT_HOST = "127.0.0.1";
@@ -264,11 +269,33 @@ async function serve(io: Io, args: string[]): Promise<number> {
   return 0;
 }
 
+async function service(io: Io, [action, ...args]: string[]): Promise<number> {
+  const serviceIo = { ...io, host: { ...defaultServiceHost(), ...io.service } };
+  if (action === "install") {
+    const listen = listenOptions(args, io.env);
+    if (typeof listen === "string") {
+      io.stderr(listen);
+      io.stderr(USAGE);
+      return 2;
+    }
+    const root = await findRoot(io);
+    if (!root) return 2;
+    return installService(serviceIo, { root, ...listen });
+  }
+  if (action === "uninstall" && args.length === 0) return uninstallService(serviceIo);
+  if (action === "status" && (args.length === 0 || (args.length === 1 && args[0] === "--json"))) {
+    return serviceStatus(serviceIo, args[0] === "--json");
+  }
+  io.stderr(USAGE);
+  return 2;
+}
+
 export async function run(args: string[], io: Io): Promise<number> {
   const [command, ...rest] = args;
   if (command === "validate") return validate(io);
   if (command === "log") return log(io, rest[0]);
   if (command === "serve") return serve(io, rest);
+  if (command === "service") return service(io, rest);
   io.stderr(USAGE);
   return 2;
 }
