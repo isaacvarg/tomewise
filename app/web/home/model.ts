@@ -54,6 +54,12 @@ export function bySubjectName(a: Subject, b: Subject): number {
   return a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
 }
 
+export function inSavedOrder(subjects: readonly Subject[], order: readonly string[]): Subject[] {
+  const rank = new Map(order.map((id, index) => [id, index]));
+  const place = (subject: Subject) => rank.get(subject.id) ?? order.length;
+  return [...subjects].sort((a, b) => place(a) - place(b) || bySubjectName(a, b));
+}
+
 export interface DueRow {
   subject: Subject;
   items: number;

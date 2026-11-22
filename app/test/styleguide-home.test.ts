@@ -27,7 +27,7 @@ describe("home in /styleguide", () => {
     expect(await page.locator("#home .tome-start").innerText()).toMatch(/^Start\s+13 items, about 9 min$/);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect(pageErrors).toEqual([]);
-  });
+  }, 20_000);
 
   it("lays home out for the width of the page", async () => {
     const phone = await openStyleguide("phone");

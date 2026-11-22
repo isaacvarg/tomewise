@@ -123,6 +123,18 @@ export const GitSettings = z
 
 export type GitSettings = z.output<typeof GitSettings>;
 
+export const START_MODES = ["sequence", "ask"] as const;
+
+export type StartMode = (typeof START_MODES)[number];
+
+export const StartMode = z.enum(START_MODES, { error: `Use ${START_MODES.map((mode) => `"${mode}"`).join(" or ")}` });
+
+const SubjectId = z.string().regex(/^[A-Za-z0-9][\w.-]*$/, {
+  error: (issue) => `${JSON.stringify(issue.input)} must be a subject folder name, such as "morse-code"`,
+});
+
+export const SubjectOrder = z.array(SubjectId);
+
 export const TomewiseConfig = z.strictObject({
   formatVersion: z.int().min(1).max(SUPPORTED_FORMAT_VERSION, {
     error: (issue) => formatVersionTooNew(issue.input as number),
@@ -132,6 +144,12 @@ export const TomewiseConfig = z.strictObject({
   minimumSessionSeconds: z.number().min(0).default(60),
   streak: z.strictObject({ restDaysPerWeek: RestDaysPerWeek.default(0) }).default({ restDaysPerWeek: 0 }),
   theme: ThemeName.default(DEFAULT_THEME),
+  start: StartMode.default("sequence").meta({
+    description: "What Start does: run what's due in sequence, or ask which subject to practise.",
+  }),
+  subjects: SubjectOrder.default([]).meta({
+    description: "Subject ids in the order the home shows them. Unlisted subjects follow alphabetically.",
+  }),
   git: GitSettings.prefault({ enabled: false }),
 });
 

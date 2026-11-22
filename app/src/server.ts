@@ -6,6 +6,7 @@ import type { LearningHome } from "@tomewise/core";
 import { eventRoutes } from "./events.ts";
 import { pageRoutes } from "./pages.ts";
 import { readRoutes } from "./reads.ts";
+import { settingsRoutes } from "./settings.ts";
 import { trackRuleChanges } from "./rule-changes.ts";
 import { spaRoutes } from "./spa.ts";
 import { styleguideRoutes } from "./styleguide.ts";
@@ -20,17 +21,19 @@ export interface AppOptions {
   warn?: Warn;
   sync?: GitSync;
   clock?: Clock;
+  reload?: () => Promise<void>;
 }
 
 export function createApp(
   view: () => HomeView,
-  { spa, tool = BUILT_IN, warn = console.warn, sync = syncOff, clock = systemClock }: AppOptions = {},
+  { spa, tool = BUILT_IN, warn = console.warn, sync = syncOff, clock = systemClock, reload = async () => {} }: AppOptions = {},
 ): Hono {
   const app = new Hono();
   const home = () => view().home;
   const resolveTheme = themeResolver(tool, warn);
   app.route("/api/events", eventRoutes(home, sync));
   app.route("/api/sync", syncRoutes(sync));
+  app.route("/api/settings", settingsRoutes(home, { tool, sync, warn, reload }));
   app.route("/api", readRoutes(view, () => clock.now()));
   app.route("/s", pageRoutes(home, resolveTheme));
   app.route("/widgets", widgetRoutes(tool));
@@ -40,7 +43,7 @@ export function createApp(
   return app;
 }
 
-export interface ListenOptions extends Omit<AppOptions, "sync" | "clock"> {
+export interface ListenOptions extends Omit<AppOptions, "sync" | "clock" | "reload"> {
   host: string;
   port: number;
   watch?: WatchOptions;
@@ -57,7 +60,7 @@ export async function startServer(home: LearningHome, { host, port, watch, clock
   const watched = await watchLearningHome(home, { ...watch, onError });
   const sync = startSync(() => watched.current().home, { clock });
   await trackRuleChanges(watched, sync.exclusive, onError);
-  const server = createAdaptorServer({ fetch: createApp(watched.current, { ...options, sync, clock }).fetch });
+  const server = createAdaptorServer({ fetch: createApp(watched.current, { ...options, sync, clock, reload: watched.reload }).fetch });
   try {
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);

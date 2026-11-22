@@ -44,3 +44,7 @@ export class InvalidEventError extends IssuesError {
     super("The event was not logged:", issues);
   }
 }
+
+export class InvalidSettingError extends Error {
+  override name = "InvalidSettingError";
+}

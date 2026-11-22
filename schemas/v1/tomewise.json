@@ -49,6 +49,24 @@
       "type": "string",
       "pattern": "^[A-Za-z0-9][\\w.-]*$"
     },
+    "start": {
+      "default": "sequence",
+      "description": "What Start does: run what's due in sequence, or ask which subject to practise.",
+      "type": "string",
+      "enum": [
+        "sequence",
+        "ask"
+      ]
+    },
+    "subjects": {
+      "default": [],
+      "description": "Subject ids in the order the home shows them. Unlisted subjects follow alphabetically.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][\\w.-]*$"
+      }
+    },
     "git": {
       "default": {
         "enabled": false

@@ -1,6 +1,7 @@
 import type { Curriculum } from "./curriculum.ts";
 import type { Drill } from "./drills.ts";
 import type { Item } from "./items.ts";
+import { CONFIG_FILE } from "./find.ts";
 import type { ValidationIssue } from "./issues.ts";
 
 export interface Located<T> {
@@ -75,4 +76,15 @@ export function curriculumReferences(
     }),
   );
   return issues;
+}
+
+export function subjectOrderIssues(order: readonly string[], subjects: readonly string[]): ValidationIssue[] {
+  const first = new Map<string, number>();
+  return order.flatMap((id, index) => {
+    const path = `subjects[${index}]`;
+    const seen = first.get(id);
+    if (seen !== undefined) return [{ file: CONFIG_FILE, path, message: `Subject "${id}" is already listed at subjects[${seen}]` }];
+    first.set(id, index);
+    return subjects.includes(id) ? [] : [{ file: CONFIG_FILE, path, message: `No subject "${id}" in subjects/` }];
+  });
 }

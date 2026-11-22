@@ -2,6 +2,7 @@ import { readConfig } from "./config.ts";
 import { checkAgainstSubject, historyOf } from "./event-checks.ts";
 import { monthOf, scanEvents } from "./event-store.ts";
 import type { ValidationIssue } from "./issues.ts";
+import { subjectOrderIssues } from "./references.ts";
 import { listSubjects, readSubject, type SubjectContent } from "./subject.ts";
 
 async function eventIssues(root: string, id: string, subject: SubjectContent | undefined): Promise<ValidationIssue[]> {
@@ -31,8 +32,9 @@ async function eventIssues(root: string, id: string, subject: SubjectContent | u
 export async function validateLearningHome(root: string): Promise<ValidationIssue[]> {
   const read = await readConfig(root);
   if (read.kind === "too-new") return [read.issue];
-  const issues = read.kind === "invalid" ? [...read.issues] : [];
-  for (const id of await listSubjects(root)) {
+  const subjects = await listSubjects(root);
+  const issues = read.kind === "invalid" ? [...read.issues] : subjectOrderIssues(read.config.subjects, subjects);
+  for (const id of subjects) {
     const subject = await readSubject(root, id);
     issues.push(...subject.issues, ...(await eventIssues(root, id, subject.content)));
   }

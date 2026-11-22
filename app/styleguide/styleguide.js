@@ -36,6 +36,18 @@
     return { today: TODAY, days, streak: { days: 6, restDaysLeft: 1 }, goals: [] };
   }
 
+  const demoThemes = [
+    { name: "meadow", label: "Meadow", description: "Playful and green, with leaves that rise when you start.", stylesheets: ["tokens.css", "theme.css"], script: "leaves.js" },
+    { name: "paper", label: "Paper", description: "Calm and bookish: warm paper, serif headings, one rust accent.", stylesheets: ["tokens.css", "theme.css"] },
+  ];
+  const settings = { theme: data.themeName || "paper", start: "sequence", subjects: [] };
+  const settingsBody = () => ({
+    ...settings,
+    themes: demoThemes.some((theme) => theme.name === settings.theme)
+      ? demoThemes
+      : [...demoThemes, { name: settings.theme, label: settings.theme, stylesheets: ["tokens.css"] }],
+  });
+
   const dueFor = (subject) =>
     Array.from({ length: subject.due }, (_, index) => ({ item: { id: `${subject.id}-${index + 1}`, type: "flashcard" }, due: null }));
 
@@ -50,7 +62,13 @@
       if (events.some((event) => event.ref === UNREACHABLE)) throw new TypeError("Failed to fetch");
       return json({ events: events.map((event) => ({ id: eventId(), ts: new Date().toISOString(), ...event })) }, 201);
     }
+    const setting = /^\/api\/settings\/(theme|start|subjects)$/.exec(url.pathname);
+    if (method === "PUT" && setting) {
+      settings[setting[1]] = JSON.parse(init.body).value;
+      return json(settingsBody());
+    }
     if (method !== "GET") return json({ error: "Not found" }, 404);
+    if (url.pathname === "/api/settings") return json(settingsBody());
     if (url.pathname === "/api/activity") return json(homeActivity());
     if (url.pathname === "/api/subjects") return json({ subjects: homeSubjects.map(({ due, ...subject }) => subject) });
     const homeSubject = homeSubjects.find((candidate) => url.pathname === `/api/subjects/${candidate.id}/due`);
@@ -151,7 +169,7 @@
     for (const step of steps) await step(widget);
   }
 
-  async function homeReady(mount) {
+  async function appReady(mount) {
     if (!document.querySelector("script[data-styleguide-app]")) {
       const note = document.createElement("p");
       note.className = "styleguide-unbuilt";
@@ -167,7 +185,7 @@
     const widgets = [...document.querySelectorAll("body :not(:defined)")].filter((element) => element.localName.startsWith("tome-"));
     await Promise.all(widgets.map(settle));
     const results = await Promise.allSettled([
-      ...[...document.querySelectorAll("[data-styleguide-home]")].map(homeReady),
+      ...[...document.querySelectorAll("[data-styleguide-home], [data-styleguide-settings]")].map(appReady),
       ...[...document.querySelectorAll("[data-demo]")].map(run),
     ]);
     const failed = results.filter((result) => result.status === "rejected").map((result) => String(result.reason?.message ?? result.reason));

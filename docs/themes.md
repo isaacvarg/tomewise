@@ -121,9 +121,9 @@ Themes reach markup through tag names, `.tome-*` classes and `data-*` states.
 
 ### Dashboard classes
 
-The dashboard pages use these classes, taken from `docs/mockups/`. `/styleguide` shows each page as it lands; home is there now. `.tome-app` carries `data-state` (`loading`, `ready` or `error`), and heatmap cells carry `data-date`, `data-level` (1 to 4; none for a day without practice), `data-today`, `data-future`, and `data-old` on weeks only wide screens show.
+The dashboard pages use these classes, taken from `docs/mockups/`. `/styleguide` shows each page as it lands; home and settings are there now. `.tome-app` carries `data-state` (`loading`, `ready` or `error`), and heatmap cells carry `data-date`, `data-level` (1 to 4; none for a day without practice), `data-today`, `data-future`, and `data-old` on weeks only wide screens show. On the settings page each `.tome-settings` section carries `data-setting` (`theme`, `start` or `subjects`), each `.tome-order-row` carries `data-subject` and, while dragged, `data-dragging`, and each `.tome-order-move` carries `data-move` (`up` or `down`).
 
-`tome-activity` `tome-app` `tome-cell` `tome-due` `tome-due-how` `tome-due-what` `tome-header` `tome-heat-days` `tome-heat-legend` `tome-heatmap` `tome-heatmap-wrap` `tome-hint` `tome-kicker` `tome-mark` `tome-mark-letter` `tome-meta` `tome-meta-narrow` `tome-meta-wide` `tome-notice` `tome-runner` `tome-runner-bar` `tome-section` `tome-section-head` `tome-stage` `tome-start` `tome-streak` `tome-streak-num` `tome-streak-text` `tome-subject` `tome-subject-name` `tome-subjects` `tome-title`
+`tome-activity` `tome-app` `tome-cell` `tome-due` `tome-due-how` `tome-due-what` `tome-header` `tome-heat-days` `tome-heat-legend` `tome-heatmap` `tome-heatmap-wrap` `tome-hint` `tome-home-link` `tome-kicker` `tome-mark` `tome-mark-letter` `tome-meta` `tome-meta-narrow` `tome-meta-wide` `tome-notice` `tome-option` `tome-option-name` `tome-option-text` `tome-options` `tome-order` `tome-order-handle` `tome-order-move` `tome-order-name` `tome-order-row` `tome-runner` `tome-runner-bar` `tome-section` `tome-section-head` `tome-settings` `tome-settings-actions` `tome-settings-cancel` `tome-settings-save` `tome-stage` `tome-start` `tome-streak` `tome-streak-num` `tome-streak-text` `tome-subject` `tome-subject-name` `tome-subjects` `tome-title`
 
 ## Seeing a theme
 
