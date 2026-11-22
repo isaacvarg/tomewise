@@ -1,8 +1,22 @@
 # Widgets
 
-Widgets are how lessons report results. The app serves them at `/widgets/v1/`: `tome.js` plus one module per widget. They are Lit components rendered in the light DOM (ADR 0005, 0013), so themes reach them. Within `v1` they only gain features.
+Widgets are how lessons report results. The app serves them at `/widgets/v1/`: `tome.js` plus one module per widget. They are Lit components rendered in the light DOM (ADR 0005, 0013), so themes reach them.
 
 Source lives in `widgets/src/`; `pnpm build:widgets` builds it into `app/widgets/v1/`, and `pnpm build` builds it into the packaged tool. Agents never build anything.
+
+| Item type         | Widget             |
+| ----------------- | ------------------ |
+| `flashcard`       | `<tome-flashcard>` |
+| `multiple-choice` | `<tome-choice>`    |
+| `typed-answer`    | `<tome-typed>`     |
+| `timed-audio`     | `<tome-audio>`     |
+| `routine`         | `<tome-routine>`   |
+
+Besides these: `<tome-timer>` (a countdown), `<tome-explain>` (an explanation saved for grading), `<tome-exam-question>` (on exam pages), `<tome-done>` (completes the lesson) and `<tome-drill>` (runs a drill or the review of everything due). A format none of them fits gets a [custom widget](#custom-widgets).
+
+## Versions
+
+Lessons load widgets from `/widgets/v1/`. Within v1, widgets only gain features: new widgets, attributes, `tome` members, classes and states may appear, but nothing a lesson or theme already relies on changes meaning or goes away. That covers tag names, attributes, the events a widget posts and their grades, the `tome` API, and the [theme contract](#theme-contract). A breaking change ships as `/widgets/v2/`, served alongside v1, so old lessons keep working.
 
 ## On a page
 
@@ -68,6 +82,52 @@ When `attempt`, `explain` or `complete` is given the widget element, a failure a
 
 The widget keeps the learner's answer on screen and lets them try again.
 
+## Custom widgets
+
+A format no built-in widget fits gets its own widget in the subject's `assets/`: a plain ES module, no build step. It reports through `tome.js`, so its events pass the same validation as the built-ins'.
+
+1. Import `tome` from `/widgets/v1/tome.js`. The app has already loaded it on the page, so the import shares the page's context and session.
+2. Define a custom element named for the subject, such as `<morse-key>`. The `tome-` prefix belongs to built-in widgets. Render into the element itself (light DOM, no shadow root), reusing built-in classes where they fit (`.tome-stage`, `.tome-prompt`, `.tome-input`, `.tome-verdict`, …) and styling the rest with `--t-*` tokens, so the theme reaches it.
+3. Post one `tome.attempt({ ref, outcome, grade, duration, data }, this)` per answer. Grade as the built-ins do: 1 wrong, 3 correct, or the learner's 1–4 rating. `data` follows the subject's newest payload schema for `attempt`; the app rejects an event that doesn't match, and the rejection's message names the field.
+4. Pass the element as the last argument of `attempt`, `explain` and `complete`, so a failed save shows the unsaved notice inside it. When the promise rejects, keep the learner's answer on screen.
+5. Call `tome.complete(this)` if the widget is the lesson's final check, and `tome.explain(text, ref, this)` to save an explanation.
+
+The lesson loads the module and uses the tag. Below it, the widget's answer handler, abridged (rendering, item loading and the verdict left out):
+
+```html
+<script type="module" src="../assets/morse-key.js"></script>
+<morse-key ref="item:letter-k" pattern="-.-" wpm="20" final></morse-key>
+```
+
+```js
+import { tome } from "/widgets/v1/tome.js";
+
+class MorseKey extends HTMLElement {
+  async #answer(given) {
+    const responseTime = Math.round(performance.now() - this.#shownAt);
+    const correct = given.trim().toUpperCase() === this.#item.answer;
+    const saved = await tome
+      .attempt(
+        {
+          ref: this.getAttribute("ref"),
+          outcome: correct ? "correct" : "wrong",
+          grade: correct ? 3 : 1,
+          duration: responseTime,
+          data: { heard: this.#item.answer, answer: given.trim(), responseTime, wpm: Number(this.getAttribute("wpm")) },
+        },
+        this,
+      )
+      .catch(() => undefined);
+    if (!saved) return;
+    if (this.hasAttribute("final")) await tome.complete(this).catch(() => undefined);
+  }
+}
+
+customElements.define("morse-key", MorseKey);
+```
+
+The full widget is `widgets/test/fixtures/subjects/morse-code/assets/morse-key.js`; `widgets/test/custom-widget.test.ts` runs it in the Morse subject.
+
 ## `<tome-flashcard>`
 
 | Attribute | Meaning                                  |
@@ -92,13 +152,12 @@ Keyboard: Tab to "Show answer", Enter or Space to reveal; focus moves to Good; k
       <button class="tome-grade" data-grade="1..4" data-state="chosen">Again<kbd>1</kbd></button>
     </div>
     <p class="tome-verdict" data-state="correct | wrong | skipped">Saved: Good</p>
+    <p class="tome-hint">Loading…</p>                      <!-- loading, alone -->
     <p class="tome-notice" role="alert">…</p>             <!-- unknown item -->
   </div>
   <p class="tome-notice" role="alert" data-state="unsaved">…</p>  <!-- failed save -->
 </tome-flashcard>
 ```
-
-These class names, `data-*` states and this structure are part of the theme contract.
 
 ## `<tome-choice>` and `<tome-typed>`
 
@@ -112,8 +171,6 @@ Both show the item's `prompt`, grade the answer themselves and post one attempt 
 Keyboard: in `<tome-choice>`, keys 1–9 pick a choice while focus is in the widget; Tab and Enter work too. In `<tome-typed>`, Enter submits. Touch: tap.
 
 If the save fails, the answer and verdict stay on screen with the notice and a "Save again" button that posts the same attempt.
-
-Once saved, the widget dispatches a bubbling `tome-answered` event with `detail: { ref, outcome, grade, duration }`, for pages and widgets that run items in sequence.
 
 ### Markup
 
@@ -130,6 +187,7 @@ Once saved, the widget dispatches a bubbling `tome-answered` event with `detail:
     </div>
     <button class="tome-retry">Save again</button>                <!-- failed save -->
     <p class="tome-notice" role="alert">…</p>                     <!-- wrong item -->
+    <p class="tome-hint">Loading…</p>                             <!-- loading, alone -->
   </div>
   <p class="tome-notice" role="alert" data-state="unsaved">…</p>  <!-- failed save -->
 </tome-choice>
@@ -147,7 +205,7 @@ Once saved, the widget dispatches a bubbling `tome-answered` event with `detail:
 </tome-typed>
 ```
 
-`data-state` on `.tome-answer` and `.tome-input` is set only after answering. These class names, `data-*` states and this structure are part of the theme contract.
+`data-state` on `.tome-answer` and `.tome-input` is set only after answering.
 
 ## `<tome-audio>`
 
@@ -199,7 +257,165 @@ Keyboard: Tab to the play button, Enter or Space to play; Space replays while fo
 </tome-audio>
 ```
 
-These class names, `data-*` states and this structure are part of the theme contract.
+## `<tome-routine>`
+
+| Attribute | Meaning                                  |
+| --------- | ---------------------------------------- |
+| `ref`     | `item:<id>` of a `routine` item          |
+
+Shows the routine's `name` and a Start button. Start shows the first step; Next moves on, and the last step's button is Finish. A step with `seconds` shows a `<tome-timer>` that starts on its own; the learner can move on before it's done. Finish asks Again / Hard / Good / Easy, as on a flashcard: the rating is the grade (1–4), Again is `wrong`, the rest `correct`. One attempt is posted, with `duration` from Start to Finish.
+
+Leaving midway posts no attempt. The session still ends with its time, but an unfinished routine has no rating to record, and routines skip the scheduler, so a `skipped` attempt would say nothing.
+
+Keyboard: Tab to Start, Enter or Space to start; focus stays on Next, and Enter or → advances; on Finish focus moves to Good and keys 1–4 rate. Touch: tap the buttons.
+
+### Markup
+
+```html
+<tome-routine ref="item:warm-up">
+  <div class="tome-routine" data-state="ready | step | rate | saving | saved | loading | error">
+    <p class="tome-routine-name">Warm-up</p>
+    <p class="tome-progress">Step 2 of 3</p>              <!-- "3 steps" before Start, "How did it go?" when rating -->
+    <button class="tome-start">Start</button>             <!-- before Start -->
+    <div class="tome-stage">                              <!-- during steps -->
+      <p class="tome-step">Hold the rolled r</p>
+      <tome-timer seconds="20" autostart>…</tome-timer>   <!-- timed steps -->
+    </div>
+    <button class="tome-next">Next | Finish</button>       <!-- during steps -->
+    <div class="tome-grades" role="group">                <!-- after Finish -->
+      <button class="tome-grade" data-grade="1..4" data-state="chosen">Again<kbd>1</kbd></button>
+    </div>
+    <p class="tome-verdict" data-state="correct | wrong">Saved: Good</p>
+    <p class="tome-hint">Loading…</p>                      <!-- loading, alone -->
+    <p class="tome-notice" role="alert">…</p>             <!-- unknown item -->
+  </div>
+  <p class="tome-notice" role="alert" data-state="unsaved">…</p>  <!-- failed save -->
+</tome-routine>
+```
+
+## `<tome-timer>`
+
+| Attribute   | Meaning                                         |
+| ----------- | ----------------------------------------------- |
+| `seconds`   | Length in seconds (may be fractional)           |
+| `autostart` | Start counting as soon as it's shown            |
+
+A countdown, usable on its own in a lesson or inside `<tome-routine>`. Start counts down; Pause and Resume hold and continue it; Reset goes back to the full time. At zero it shows "Time's up" and dispatches a bubbling `tome-timer-done` event. It posts nothing.
+
+Keyboard: Tab to the buttons, Enter or Space to press. Touch: tap them.
+
+### Markup
+
+```html
+<tome-timer seconds="90">
+  <div class="tome-timer" data-state="idle | running | paused | done | error">
+    <p class="tome-clock" role="timer">1:30</p>
+    <div class="tome-timer-controls">
+      <button class="tome-timer-toggle">Start | Pause | Resume</button>   <!-- not when done -->
+      <button class="tome-timer-reset">Reset</button>                     <!-- once started -->
+    </div>
+    <p class="tome-verdict" role="status">Time's up</p>                   <!-- when done -->
+    <p class="tome-notice" role="alert">…</p>                             <!-- missing or invalid seconds -->
+  </div>
+</tome-timer>
+```
+
+## `<tome-explain>`
+
+| Attribute | Meaning                                                        |
+| --------- | -------------------------------------------------------------- |
+| `ref`     | the concept explained: `lesson:<id>` or `item:<id>`            |
+| `prompt`  | the question above the text box; "Explain it in your own words." if absent |
+
+The learner writes a plain-language explanation and saves it for the agent to grade later. Saving posts `explanation.saved` with `data: { text }` (trimmed) through `tome.explain`. Save is disabled while the text is blank. Editing after a save allows saving again, which posts a new event. On failure the text stays and a notice shows.
+
+`data.text` is checked by the app for every subject; a subject's payload schema may add fields to `explanation.saved` but not drop `text`.
+
+Keyboard: Tab into the text box, Ctrl+Enter (⌘+Enter) saves. Touch: tap Save explanation.
+
+### Markup
+
+```html
+<tome-explain ref="lesson:0001-greetings" prompt="Why do we say hola?">
+  <div class="tome-explain" data-state="editing | saving | saved">
+    <label class="tome-prompt">Why do we say hola?</label>
+    <textarea class="tome-explain-text"></textarea>
+    <div class="tome-actions">
+      <button class="tome-save">Save explanation</button>
+      <p class="tome-hint"><kbd>Ctrl</kbd>+<kbd>Enter</kbd> saves</p>   <!-- until saved -->
+      <p class="tome-verdict" role="status">Saved for grading</p>        <!-- once saved -->
+    </div>
+  </div>
+  <p class="tome-notice" role="alert" data-state="unsaved">…</p>  <!-- failed save -->
+</tome-explain>
+```
+
+## `<tome-exam-question>`
+
+An exam question on an exam page. Write the question inside the tag, then one `<tome-choice>` or `<tome-typed>` whose answer is written in the page instead of coming from an item: `answer` holds the right answer, and `<option>` children hold the choices (`<tome-choice>`) or other accepted answers (`<tome-typed>`).
+
+```html
+<tome-exam-question id="q1" tests="item:letter-k item:letter-r">
+  <p>Which letter is dah-di-dah?</p>
+  <tome-choice answer="K"><option>K</option><option>R</option><option>M</option></tome-choice>
+</tome-exam-question>
+
+<tome-exam-question id="q2" tests="item:gracias">
+  <p>Thank someone warmly.</p>
+  <tome-typed answer="muchas gracias"><option>mil gracias</option></tome-typed>
+</tome-exam-question>
+```
+
+`id` names the question within the exam and `tests` lists the items it tests. The answer is graded as in `<tome-choice>` and `<tome-typed>`, then posted as one attempt per tested item: `ref` is the item, the outcome, grade and duration are the same for each, and `data.question` is the question's `id`. A miss is a wrong attempt on each of those items, so they come due sooner. The exam question itself is never scheduled. On an exam page the session's `ref` is the exam.
+
+`question` is reserved in attempt payloads for this id, so a subject's payload schema can't define an attempt field with that name.
+
+A question with no `id`, no `tests`, an unknown item in `tests` or no answer control shows a notice and can't be answered. If a save fails, "Save again" posts only the attempts that didn't save. Keyboard and touch work as in the answer control.
+
+### Markup
+
+```html
+<tome-exam-question id="q1" tests="…">
+  <div class="tome-exam-question" data-state="loading | error | ready | answered">
+    <div class="tome-question">
+      <p>Which letter is dah-di-dah?</p>              <!-- the page's own markup -->
+      <tome-choice answer="K">…</tome-choice>         <!-- no stage: the question is the prompt -->
+    </div>
+    <p class="tome-notice" role="alert">…</p>         <!-- missing id, tests or answer; unknown items -->
+  </div>
+  <p class="tome-notice" role="alert" data-state="unsaved">…</p>  <!-- failed save -->
+</tome-exam-question>
+```
+
+## `<tome-done>`
+
+| Attribute | Meaning                                  |
+| --------- | ---------------------------------------- |
+| `label`   | Button text; `Done` if absent            |
+
+Marks the end of a lesson. Pressing the button calls `tome.complete(this)`: it posts `lesson.completed` (ref = the lesson) and `session.end`, then shows "Lesson complete" and disables itself. If the post fails, it shows the notice and stays pressable.
+
+Keyboard: Tab to the button, Enter or Space. Touch: tap it.
+
+```html
+<tome-done>
+  <div class="tome-done" data-state="ready | saving | done">
+    <button class="tome-done-button">Done</button>
+    <p class="tome-verdict" role="status">Lesson complete</p>   <!-- once done -->
+  </div>
+  <p class="tome-notice" role="alert" data-state="unsaved">…</p>  <!-- failed save -->
+</tome-done>
+```
+
+### Final check
+
+Instead of a Done button, mark the lesson's final check with the `final` attribute. When the learner completes it, the lesson is completed as if Done were pressed. In v1, `<tome-flashcard>` takes `final`; so can a [custom widget](#custom-widgets), by calling `tome.complete(this)`.
+
+```html
+<tome-flashcard ref="item:adios" final></tome-flashcard>
+```
+
+Completion is sent once per page, so a lesson may have both a `final` widget and `<tome-done>`. A built-in widget supports `final` by calling `this.completed()` (from `TomeElement`) once its last attempt is saved; a failed completion shows the unsaved notice in that widget.
 
 ## Item widgets in sequence
 
@@ -269,173 +485,54 @@ Keyboard: focus moves into each new item (the play button, the first choice, the
 </tome-drill>
 ```
 
-These class names, `data-*` states and this structure are part of the theme contract.
+## Theme contract
 
-## `<tome-exam-question>`
+Themes reach widgets through tag names, the classes and `data-*` states each widget renders, and the `--t-*` tokens its base styles read. All three are part of the theme contract and follow the [v1 rule](#versions). Each widget's section above shows its markup and states; the tables here are the full lists.
 
-An exam question on an exam page. Write the question inside the tag, then one `<tome-choice>` or `<tome-typed>` whose answer is written in the page instead of coming from an item: `answer` holds the right answer, and `<option>` children hold the choices (`<tome-choice>`) or other accepted answers (`<tome-typed>`).
+Shared conventions:
 
-```html
-<tome-exam-question id="q1" tests="item:letter-k item:letter-r">
-  <p>Which letter is dah-di-dah?</p>
-  <tome-choice answer="K"><option>K</option><option>R</option><option>M</option></tome-choice>
-</tome-exam-question>
+- The element's first child is a block whose class is the tag name (`<tome-choice>` → `.tome-choice`). It carries `data-state`.
+- While loading, the block holds only `<p class="tome-hint">Loading…</p>`.
+- `.tome-notice` (`role="alert"`) inside the block reports a problem with the widget itself: an unknown item, a missing attribute. A failed save appends `.tome-notice[data-state="unsaved"]` as the element's last child, outside the block.
+- Shortcut keys show as `<kbd>` inside their button.
+- Base styles sit in the `tome.widgets` cascade layer, so any theme rule wins, and use only `--t-*` tokens: no literal colours, fonts or radii.
 
-<tome-exam-question id="q2" tests="item:gracias">
-  <p>Thank someone warmly.</p>
-  <tome-typed answer="muchas gracias"><option>mil gracias</option></tome-typed>
-</tome-exam-question>
-```
+### Classes and tokens per widget
 
-`id` names the question within the exam and `tests` lists the items it tests. The answer is graded as in `<tome-choice>` and `<tome-typed>`, then posted as one attempt per tested item: `ref` is the item, the outcome, grade and duration are the same for each, and `data.question` is the question's `id`. A miss is a wrong attempt on each of those items, so they come due sooner. The exam question itself is never scheduled. On an exam page the session's `ref` is the exam.
+| Widget | Classes | Tokens |
+| ------ | ------- | ------ |
+| `<tome-flashcard>` | `tome-back` `tome-flashcard` `tome-front` `tome-grade` `tome-grades` `tome-hint` `tome-notice` `tome-reveal` `tome-stage` `tome-verdict` | `--t-accent` `--t-accent-ink` `--t-bad` `--t-bad-bg` `--t-bg` `--t-display` `--t-good` `--t-good-bg` `--t-ink` `--t-mono` `--t-muted` `--t-radius` `--t-rule` `--t-surface` `--t-ui` |
+| `<tome-choice>` | `tome-answer` `tome-answers` `tome-choice` `tome-feedback` `tome-hint` `tome-notice` `tome-prompt` `tome-retry` `tome-skip` `tome-stage` `tome-verdict` | `--t-accent` `--t-accent-ink` `--t-bad` `--t-bad-bg` `--t-bg` `--t-display` `--t-good` `--t-good-bg` `--t-ink` `--t-mono` `--t-muted` `--t-radius` `--t-rule` `--t-surface` `--t-ui` |
+| `<tome-typed>` | `tome-entry` `tome-feedback` `tome-hint` `tome-input` `tome-notice` `tome-prompt` `tome-retry` `tome-skip` `tome-stage` `tome-submit` `tome-typed` `tome-verdict` | `--t-accent` `--t-accent-ink` `--t-bad` `--t-bad-bg` `--t-bg` `--t-display` `--t-good` `--t-good-bg` `--t-ink` `--t-mono` `--t-muted` `--t-radius` `--t-rule` `--t-surface` `--t-ui` |
+| `<tome-audio>` | `tome-answer` `tome-answers` `tome-audio` `tome-countdown` `tome-feedback` `tome-hint` `tome-input` `tome-notice` `tome-play` `tome-prompt` `tome-respond` `tome-retry` `tome-say` `tome-stage` `tome-submit` `tome-verdict` | `--t-accent` `--t-accent-ink` `--t-bad` `--t-bad-bg` `--t-bg` `--t-display` `--t-good` `--t-good-bg` `--t-ink` `--t-mono` `--t-muted` `--t-radius` `--t-rule` `--t-surface` `--t-ui` |
+| `<tome-routine>` | `tome-grade` `tome-grades` `tome-hint` `tome-next` `tome-notice` `tome-progress` `tome-routine` `tome-routine-name` `tome-stage` `tome-start` `tome-step` `tome-verdict` | `--t-accent` `--t-accent-ink` `--t-bad` `--t-bad-bg` `--t-bg` `--t-display` `--t-good` `--t-good-bg` `--t-ink` `--t-mono` `--t-muted` `--t-radius` `--t-rule` `--t-surface` `--t-ui` |
+| `<tome-timer>` | `tome-clock` `tome-notice` `tome-timer` `tome-timer-controls` `tome-timer-reset` `tome-timer-toggle` `tome-verdict` | `--t-accent` `--t-accent-ink` `--t-bad` `--t-bad-bg` `--t-bg` `--t-good` `--t-good-bg` `--t-ink` `--t-mono` `--t-muted` `--t-radius` `--t-rule` `--t-ui` |
+| `<tome-explain>` | `tome-actions` `tome-explain` `tome-explain-text` `tome-hint` `tome-notice` `tome-prompt` `tome-save` `tome-verdict` | `--t-accent` `--t-accent-ink` `--t-bad` `--t-bad-bg` `--t-bg` `--t-display` `--t-good` `--t-good-bg` `--t-ink` `--t-mono` `--t-muted` `--t-radius` `--t-rule` `--t-surface` `--t-ui` |
+| `<tome-exam-question>` | `tome-exam-question` `tome-notice` `tome-question` | `--t-bad` `--t-bad-bg` `--t-ink` `--t-radius` `--t-rule` `--t-surface` `--t-ui` |
+| `<tome-done>` | `tome-done` `tome-done-button` `tome-notice` `tome-verdict` | `--t-accent` `--t-accent-ink` `--t-bad` `--t-bad-bg` `--t-good` `--t-good-bg` `--t-ink` `--t-muted` `--t-radius` `--t-rule` `--t-surface` `--t-ui` |
+| `<tome-drill>` | `tome-actions` `tome-again` `tome-clock` `tome-count` `tome-drill` `tome-drill-bar` `tome-drill-item` `tome-drill-name` `tome-drill-next` `tome-drill-title` `tome-empty` `tome-empty-title` `tome-hint` `tome-kicker` `tome-next` `tome-notice` `tome-progress` `tome-saved` `tome-score` `tome-score-sub` `tome-stats` `tome-summary` `tome-summary-head` | `--t-accent` `--t-accent-ink` `--t-bad` `--t-bad-bg` `--t-bg` `--t-display` `--t-ink` `--t-muted` `--t-radius` `--t-rule` `--t-surface` `--t-ui` |
 
-`question` is reserved in attempt payloads for this id, so a subject's payload schema can't define an attempt field with that name.
+### Tokens
 
-A question with no `id`, no `tests`, an unknown item in `tests` or no answer control shows a notice and can't be answered. If a save fails, "Save again" posts only the attempts that didn't save. Keyboard and touch work as in the answer control.
+| Token            | Used for                                   |
+| ---------------- | ------------------------------------------ |
+| `--t-bg`         | page background; buttons and inputs        |
+| `--t-surface`    | widget background                          |
+| `--t-ink`        | text                                       |
+| `--t-muted`      | secondary text: hints, kickers, skip       |
+| `--t-rule`       | borders and dividers                       |
+| `--t-accent`     | primary buttons, focus rings, progress     |
+| `--t-accent-ink` | text on `--t-accent`                       |
+| `--t-good`       | correct: text and borders                  |
+| `--t-good-bg`    | correct: background                        |
+| `--t-bad`        | wrong, errors and notices: text and borders |
+| `--t-bad-bg`     | wrong, errors and notices: background      |
+| `--t-display`    | display font: prompts, fronts, scores      |
+| `--t-ui`         | interface font                             |
+| `--t-mono`       | monospace: `<kbd>`, clocks                 |
+| `--t-radius`     | corner radius                              |
 
-### Markup
-
-```html
-<tome-exam-question id="q1" tests="…">
-  <div class="tome-exam-question" data-state="loading | error | ready | answered">
-    <div class="tome-question">
-      <p>Which letter is dah-di-dah?</p>              <!-- the page's own markup -->
-      <tome-choice answer="K">…</tome-choice>         <!-- no .tome-stage: the question is the prompt -->
-    </div>
-    <p class="tome-notice" role="alert">…</p>         <!-- missing id, tests or answer; unknown items -->
-  </div>
-  <p class="tome-notice" role="alert" data-state="unsaved">…</p>  <!-- failed save -->
-</tome-exam-question>
-```
-
-These class names, `data-*` states and this structure are part of the theme contract.
-
-## `<tome-done>`
-
-| Attribute | Meaning                                  |
-| --------- | ---------------------------------------- |
-| `label`   | Button text; `Done` if absent            |
-
-Marks the end of a lesson. Pressing the button calls `tome.complete(this)`: it posts `lesson.completed` (ref = the lesson) and `session.end`, then shows "Lesson complete" and disables itself. If the post fails, it shows the notice and stays pressable.
-
-Keyboard: Tab to the button, Enter or Space. Touch: tap it.
-
-```html
-<tome-done>
-  <div class="tome-done" data-state="ready | saving | done">
-    <button class="tome-done-button">Done</button>
-    <p class="tome-verdict" role="status">Lesson complete</p>   <!-- once done -->
-  </div>
-  <p class="tome-notice" role="alert" data-state="unsaved">…</p>  <!-- failed save -->
-</tome-done>
-```
-
-### Final check
-
-Instead of a Done button, mark one widget as the lesson's final check with the `final` attribute. When the learner completes it, the lesson is completed as if Done were pressed:
-
-```html
-<tome-flashcard ref="item:adios" final></tome-flashcard>
-```
-
-Completion is sent once per page, so a lesson may have both a `final` widget and `<tome-done>`. Widgets support `final` by calling `this.completed()` (from `TomeElement`) once their last attempt is saved; a failed completion shows the unsaved notice in that widget.
-
-## `<tome-routine>`
-
-| Attribute | Meaning                                  |
-| --------- | ---------------------------------------- |
-| `ref`     | `item:<id>` of a `routine` item          |
-
-Shows the routine's `name` and a Start button. Start shows the first step; Next moves on, and the last step's button is Finish. A step with `seconds` shows a `<tome-timer>` that starts on its own; the learner can move on before it's done. Finish asks Again / Hard / Good / Easy, as on a flashcard: the rating is the grade (1–4), Again is `wrong`, the rest `correct`. One attempt is posted, with `duration` from Start to Finish.
-
-Leaving midway posts no attempt. The session still ends with its time, but an unfinished routine has no rating to record, and routines skip the scheduler, so a `skipped` attempt would say nothing.
-
-Keyboard: Tab to Start, Enter or Space to start; focus stays on Next, and Enter or → advances; on Finish focus moves to Good and keys 1–4 rate. Touch: tap the buttons.
-
-### Markup
-
-```html
-<tome-routine ref="item:warm-up">
-  <div class="tome-routine" data-state="ready | step | rate | saving | saved | loading | error">
-    <p class="tome-routine-name">Warm-up</p>
-    <p class="tome-progress">Step 2 of 3</p>              <!-- "3 steps" before Start, "How did it go?" when rating -->
-    <button class="tome-start">Start</button>             <!-- before Start -->
-    <div class="tome-stage">                              <!-- during steps -->
-      <p class="tome-step">Hold the rolled r</p>
-      <tome-timer seconds="20" autostart>…</tome-timer>   <!-- timed steps -->
-    </div>
-    <button class="tome-next">Next | Finish</button>       <!-- during steps -->
-    <div class="tome-grades" role="group">                <!-- after Finish -->
-      <button class="tome-grade" data-grade="1..4" data-state="chosen">Again<kbd>1</kbd></button>
-    </div>
-    <p class="tome-verdict" data-state="correct | wrong">Saved: Good</p>
-    <p class="tome-notice" role="alert">…</p>             <!-- unknown item -->
-  </div>
-  <p class="tome-notice" role="alert" data-state="unsaved">…</p>  <!-- failed save -->
-</tome-routine>
-```
-
-## `<tome-timer>`
-
-| Attribute   | Meaning                                         |
-| ----------- | ----------------------------------------------- |
-| `seconds`   | Length in seconds (may be fractional)           |
-| `autostart` | Start counting as soon as it's shown            |
-
-A countdown, usable on its own in a lesson or inside `<tome-routine>`. Start counts down; Pause and Resume hold and continue it; Reset goes back to the full time. At zero it shows "Time's up" and dispatches a bubbling `tome-timer-done` event. It posts nothing.
-
-Keyboard: Tab to the buttons, Enter or Space to press. Touch: tap them.
-
-### Markup
-
-```html
-<tome-timer seconds="90">
-  <div class="tome-timer" data-state="idle | running | paused | done | error">
-    <p class="tome-clock" role="timer">1:30</p>
-    <div class="tome-timer-controls">
-      <button class="tome-timer-toggle">Start | Pause | Resume</button>   <!-- not when done -->
-      <button class="tome-timer-reset">Reset</button>                     <!-- once started -->
-    </div>
-    <p class="tome-verdict" role="status">Time's up</p>                   <!-- when done -->
-    <p class="tome-notice" role="alert">…</p>                             <!-- missing or invalid seconds -->
-  </div>
-</tome-timer>
-```
-
-## `<tome-explain>`
-
-| Attribute | Meaning                                                        |
-| --------- | -------------------------------------------------------------- |
-| `ref`     | the concept explained: `lesson:<id>` or `item:<id>`            |
-| `prompt`  | the question above the text box; "Explain it in your own words." if absent |
-
-The learner writes a plain-language explanation and saves it for the agent to grade later. Saving posts `explanation.saved` with `data: { text }` (trimmed) through `tome.explain`. Save is disabled while the text is blank. Editing after a save allows saving again, which posts a new event. On failure the text stays and a notice shows.
-
-`data.text` is checked by the app for every subject; a subject's payload schema may add fields to `explanation.saved` but not drop `text`.
-
-Keyboard: Tab into the text box, Ctrl+Enter (⌘+Enter) saves. Touch: tap Save explanation.
-
-### Markup
-
-```html
-<tome-explain ref="lesson:0001-greetings" prompt="Why do we say hola?">
-  <div class="tome-explain" data-state="editing | saving | saved">
-    <label class="tome-prompt">Why do we say hola?</label>
-    <textarea class="tome-explain-text"></textarea>
-    <div class="tome-actions">
-      <button class="tome-save">Save explanation</button>
-      <p class="tome-hint"><kbd>Ctrl</kbd>+<kbd>Enter</kbd> saves</p>   <!-- until saved -->
-      <p class="tome-verdict" role="status">Saved for grading</p>        <!-- once saved -->
-    </div>
-  </div>
-  <p class="tome-notice" role="alert" data-state="unsaved">…</p>  <!-- failed save -->
-</tome-explain>
-```
-
-## Styling
-
-Widgets ship base styles in the `tome.widgets` cascade layer, so any theme rule wins. Base styles use only `--t-*` tokens: `--t-bg`, `--t-surface`, `--t-ink`, `--t-muted`, `--t-rule`, `--t-accent`, `--t-accent-ink`, `--t-good`, `--t-good-bg`, `--t-bad`, `--t-bad-bg`, `--t-display`, `--t-ui`, `--t-mono`, `--t-radius`.
-
+`widgets/test/theme-contract.test.ts` checks these tables and the markup blocks above against the widget source.
 ## Browser tests
 
 `widgets/test/` runs widgets in a real page: `startWidgetApp()` (`widgets/test/browser.ts`) builds the widgets, starts the app on a copy of the Morse example plus the fixture subjects in `widgets/test/fixtures/`, and opens a Playwright Chromium page. Tests interact as a learner and assert on the events written to disk. They run with `pnpm test`.

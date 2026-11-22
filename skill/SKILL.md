@@ -9,7 +9,7 @@ The user has asked you to teach them something. This is a stateful request - the
 
 ## Teaching Workspace
 
-Treat the current directory as a teaching workspace. Workspace paths (`./lessons/` and the rest) resolve from the directory `/teach` was run in; only the `*-FORMAT.md` links resolve from this skill's folder. The state of their learning is captured in this directory in several files:
+Treat the current directory as a teaching workspace. Workspace paths (`./lessons/` and the rest) resolve from the directory `/teach` was run in; only the links to this skill's own files (`*-FORMAT.md`, `WIDGETS.md`) resolve from this skill's folder. The state of their learning is captured in this directory in several files:
 
 - `MISSION.md`: A document capturing the _reason_ the user is interested in the topic. This should be used to ground all teaching. Use the format in [MISSION-FORMAT.md](./MISSION-FORMAT.md).
 - `./reference/*.html`: A directory of reference materials. These are the compressed learnings from the lessons - cheat sheets, reference algorithms, syntax, yoga poses, glossaries. They are the raw units of learning. They should be beautiful documents which print out well, and are designed for quick reference.
@@ -62,7 +62,7 @@ Each lesson should contain a reminder to ask followup questions to the agent. Th
 
 ## Assets
 
-Lessons are built from reusable **components**, stored in `./assets/`: stylesheets, quiz widgets, simulators, diagram helpers, and anything else a second lesson could reuse.
+Lessons are built from reusable **components**, stored in `./assets/`: stylesheets, custom widgets, simulators, diagram helpers, and anything else a second lesson could reuse.
 
 Reuse is the default, not the exception. Before authoring a lesson, read `./assets/` and build from the components already there. When a lesson needs something new and reusable, write it as a component in `./assets/` and link to it; never inline code a future lesson would duplicate.
 
@@ -106,6 +106,8 @@ For skill acquisition, difficulty is the tool. Effortful retrieval is what build
 - Lessons which guide the user through a list of real-world steps to take (for instance, yoga poses)
 
 Each of these should be based on a **feedback loop**, where the user receives feedback on their performance. This feedback loop should be as tight as possible, giving feedback immediately - and ideally automatically.
+
+Build every practice and check from **widgets**: `<tome-flashcard>`, `<tome-choice>`, `<tome-typed>`, `<tome-audio>` and `<tome-routine>`, one per item type, plus `<tome-done>`, `<tome-explain>`, `<tome-exam-question>`, `<tome-timer>` and `<tome-drill>`. Widgets record each answer in the learner's history, which drives the review schedule; a format none fits gets a custom widget in `./assets/`. Read [WIDGETS.md](./WIDGETS.md) before writing a lesson, quiz or exam.
 
 For quizzes, each answer should be exactly the same number of words (and characters, if possible). Vary which position holds the correct answer across questions. Don't give the user any clues about the answer through formatting or order.
 
