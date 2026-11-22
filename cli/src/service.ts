@@ -32,7 +32,7 @@ export interface ServeTarget {
   port: number;
 }
 
-export function defaultServiceHost(): ServiceHost {
+function defaultServiceHost(): ServiceHost {
   return {
     platform: process.platform,
     program: [process.execPath, process.argv[1]!],
@@ -48,6 +48,10 @@ export function defaultServiceHost(): ServiceHost {
         child.on("close", (code) => resolve({ code: code ?? 1, stdout, stderr }));
       }),
   };
+}
+
+export function serviceHost(overrides: Partial<ServiceHost> = {}): ServiceHost {
+  return { ...defaultServiceHost(), ...overrides };
 }
 
 function serveArgs(program: string[], target: ServeTarget): string[] {

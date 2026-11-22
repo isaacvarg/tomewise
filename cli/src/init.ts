@@ -11,12 +11,13 @@ import {
   type InitSettings,
 } from "@tomewise/core";
 import { setUpGit } from "./git.ts";
+import { APP_CHOICES, handOff, isAppChoice, listenFor, type AppChoice, type Launch } from "./handoff.ts";
 import type { Io } from "./main.ts";
 import { createPrompter, PromptCancelled, type Prompter } from "./prompt.ts";
 
 export const INIT_USAGE = [
   "  tome init [<dir>] [--timezone <IANA zone>] [--week-start <weekday>] [--rest-days <0-6>] [--app-url <url>]",
-  "            [--git [--remote <url>] | --no-git]",
+  "            [--git [--remote <url>] | --no-git] [--app <now|service|docker|none>] [--subject <topic> | --no-subject]",
 ].join("\n");
 
 const flagFor: Record<InitSetting, string> = {
@@ -31,6 +32,8 @@ interface Answers {
   settings: InitSettings;
   git?: boolean;
   remote?: string;
+  app?: AppChoice;
+  subject?: string | false;
 }
 
 type Parsed = { answers: Answers; problems: InitProblem[] };
@@ -50,6 +53,8 @@ function parseInitArgs(args: string[]): Parsed | string {
         "app-url": { type: "string" },
         git: { type: "boolean" },
         remote: { type: "string" },
+        app: { type: "string" },
+        subject: { type: "string" },
       },
     }));
   } catch (error) {
@@ -57,6 +62,9 @@ function parseInitArgs(args: string[]): Parsed | string {
   }
   if (positionals.length > 1) return `Expected one folder, got ${positionals.length}`;
   if (values.git === false && values.remote !== undefined) return "--remote needs git; drop --no-git or --remote";
+  const app = values.app as string | undefined;
+  if (app !== undefined && !isAppChoice(app)) return `--app takes ${APP_CHOICES.join(", ")}, not "${app}"`;
+  const subject = values.subject as string | false | undefined;
 
   const problems: InitProblem[] = [];
   const rawRestDays = values["rest-days"] as string | undefined;
@@ -79,6 +87,8 @@ function parseInitArgs(args: string[]): Parsed | string {
       },
       git: remote !== undefined ? true : (values.git as boolean | undefined),
       remote,
+      app,
+      subject: subject === "" ? undefined : subject,
     },
     problems,
   };
@@ -122,6 +132,14 @@ async function askYesNo(prompter: Prompter, question: string, fallback: boolean)
   }
 }
 
+async function askApp(prompter: Prompter): Promise<AppChoice> {
+  for (;;) {
+    const answer = (await prompter.ask(`Run the app now, install it as a service, or print the Docker command? (${APP_CHOICES.join("/")})`, "now")).toLowerCase();
+    if (isAppChoice(answer)) return answer;
+    prompter.say(`Answer ${APP_CHOICES.slice(0, -1).map((choice) => `"${choice}"`).join(", ")} or "${APP_CHOICES.at(-1)}".`);
+  }
+}
+
 async function exists(path: string): Promise<boolean> {
   try {
     await access(path);
@@ -148,7 +166,14 @@ async function ask(io: Io, prompter: Prompter, answers: Answers): Promise<Answer
     const answer = await prompter.ask("Git remote URL (blank for none)");
     remote = answer === "" ? undefined : answer;
   }
-  return { dir, settings, git, remote };
+
+  const app = answers.app ?? (await askApp(prompter));
+  let subject = answers.subject;
+  if (subject === undefined) {
+    const answer = await prompter.ask("What do you want to learn first? (blank to skip)");
+    subject = answer === "" ? false : answer;
+  }
+  return { dir, settings, git, remote, app, subject };
 }
 
 function report(io: Io, problems: InitProblem[]): void {
@@ -188,19 +213,32 @@ export async function init(io: Io, args: string[], usage: string): Promise<numbe
     }
   }
 
+  const app = answers.app ?? "none";
+  let launch: Launch | undefined;
+  if (app !== "none") {
+    const listen = listenFor(io, answers.settings.appUrl);
+    if (typeof listen === "string") {
+      io.stderr(listen);
+      io.stderr("Nothing was written.");
+      return 2;
+    }
+    launch = { app, listen };
+  }
+
   const result = await initLearningHome(answers.dir ?? ".", answers.settings, { cwd: io.cwd, env: io.env });
   switch (result.kind) {
     case "created": {
       io.stdout(`Created a learning home in ${result.root}.`);
       io.stdout(`Saved it as your learning home in ${result.globalConfig}.`);
-      if (!answers.git) return 0;
-      const git = await setUpGit(result.root, answers.remote);
-      if (!git.ok) {
-        io.stderr(`Git setup failed: ${git.message}`);
-        return 1;
+      if (answers.git) {
+        const git = await setUpGit(result.root, answers.remote);
+        if (!git.ok) {
+          io.stderr(`Git setup failed: ${git.message}`);
+          return 1;
+        }
+        io.stdout(answers.remote ? `Initialised git with remote origin ${answers.remote}.` : "Initialised git.");
       }
-      io.stdout(answers.remote ? `Initialised git with remote origin ${answers.remote}.` : "Initialised git.");
-      return 0;
+      return handOff(io, { root: result.root, subject: answers.subject, launch });
     }
     case "exists":
       io.stderr(`${result.root} is already a learning home; nothing was changed.`);
