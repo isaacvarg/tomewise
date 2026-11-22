@@ -30,6 +30,26 @@ Flags win over env vars. To serve your tailnet, pass the Tailscale address, e.g.
 
 The app refuses to start against a learning home it can't read or that fails `tome validate`, and says why.
 
+## As a background service
+
+To keep the app running whenever you're logged in, install it globally and then install the service:
+
+```sh
+npm install -g tomewise
+cd ~/learning
+tome service install
+```
+
+`install` takes the same `--host` and `--port` as `serve`, and records the learning home, the host and the port it finds when you run it. Run it again to change them.
+
+- **Linux:** writes a systemd user unit to `~/.config/systemd/user/tomewise.service`, enables it and starts it. It starts when you log in. To start it at boot, run `loginctl enable-linger`.
+- **macOS:** writes a launchd agent to `~/Library/LaunchAgents/tomewise.plist` and loads it. Logs go to `~/Library/Logs/tomewise.log`.
+- **Windows:** installs nothing. It prints the steps to run `tome serve` at log on with Task Scheduler.
+
+`tome service status` says whether it's installed and running (`--json` for scripts). `tome service uninstall` stops it and removes the file.
+
+The service runs the `tome` you installed it with. Installing it from `npx` points it at npx's cache, which can be cleared, so install globally first.
+
 ## As a container
 
 The image runs `tome serve` against the learning home mounted at `/learning-home`. Inside the container it listens on all interfaces (`0.0.0.0:4777`), so what reaches it is decided by how you publish the port.
