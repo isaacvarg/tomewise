@@ -111,6 +111,8 @@ Each of these should be based on a **feedback loop**, where the user receives fe
 
 Build every practice and check from **widgets**: `<tome-flashcard>`, `<tome-choice>`, `<tome-typed>`, `<tome-audio>` and `<tome-routine>`, one per item type, plus `<tome-done>`, `<tome-explain>`, `<tome-exam-question>`, `<tome-timer>` and `<tome-drill>`. Widgets record each answer in the learner's history, which drives the review schedule; a format none fits gets a custom widget in `./assets/`. Read [WIDGETS.md](./WIDGETS.md) before writing a lesson, quiz or exam.
 
+The subject home charts only what you ask for: write **chart specs** in `subject.json` when the learner wants to see progress over time, such as speed, accuracy or practice minutes. Read [CHARTS-FORMAT.md](./CHARTS-FORMAT.md) before adding or changing one.
+
 For quizzes, each answer should be exactly the same number of words (and characters, if possible). Vary which position holds the correct answer across questions. Don't give the user any clues about the answer through formatting or order.
 
 ## Acquiring Wisdom

@@ -25,6 +25,16 @@
           }
         }
       ]
+    },
+    "charts of every measure": {
+      "name": "Morse",
+      "charts": [
+        { "id": "speed", "title": "Response time", "kind": "line", "measure": "payload", "field": "responseTime", "days": 30 },
+        { "id": "wpm", "title": "Response time", "kind": "line", "measure": "payload", "field": "responseTime", "days": 30, "aggregate": "total", "items": { "type": "timed-audio" } },
+        { "id": "accuracy", "title": "Accuracy", "kind": "line", "measure": "accuracy", "items": { "tag": "letter" }, "days": 14 },
+        { "id": "attempts", "title": "Attempts", "kind": "bar", "measure": "attempts", "aggregate": "median", "days": 7 },
+        { "id": "minutes", "title": "Minutes", "kind": "bar", "measure": "minutes", "items": { "drill": "review" }, "days": 7 }
+      ]
     }
   },
   "invalid": {
@@ -76,7 +86,22 @@
     "required not an array": {
       "name": "Spanish",
       "payloadSchemas": [{ "version": 1, "kinds": { "attempt": { "properties": {}, "required": "hold" } } }]
-    }
+    },
+    "charts not an array": { "name": "Morse", "charts": {} },
+    "chart unknown measure": { "name": "Morse", "charts": [{ "id": "speed", "title": "Response time", "kind": "line", "measure": "hours", "field": "responseTime", "days": 30 }] },
+    "chart unknown kind": { "name": "Morse", "charts": [{ "id": "speed", "title": "Response time", "kind": "pie", "measure": "payload", "field": "responseTime", "days": 30 }] },
+    "chart bad id": { "name": "Morse", "charts": [{ "id": "Speed Chart", "title": "Response time", "kind": "line", "measure": "payload", "field": "responseTime", "days": 30 }] },
+    "chart zero days": { "name": "Morse", "charts": [{ "id": "speed", "title": "Response time", "kind": "line", "measure": "payload", "field": "responseTime", "days": 0 }] },
+    "chart over ten years": { "name": "Morse", "charts": [{ "id": "speed", "title": "Response time", "kind": "line", "measure": "payload", "field": "responseTime", "days": 3651 }] },
+    "chart fractional days": { "name": "Morse", "charts": [{ "id": "speed", "title": "Response time", "kind": "line", "measure": "payload", "field": "responseTime", "days": 1.5 }] },
+    "chart without days": { "name": "Morse", "charts": [{ "id": "speed", "title": "Response time", "kind": "line", "measure": "payload", "field": "responseTime" }] },
+    "payload chart without field": { "name": "Morse", "charts": [{ "id": "speed", "title": "Response time", "kind": "line", "measure": "payload", "days": 30 }] },
+    "field on attempts chart": { "name": "Morse", "charts": [{ "id": "speed", "title": "Response time", "kind": "line", "measure": "attempts", "field": "responseTime", "days": 30 }] },
+    "aggregate on accuracy chart": { "name": "Morse", "charts": [{ "id": "a", "title": "A", "kind": "line", "measure": "accuracy", "aggregate": "mean", "days": 7 }] },
+    "chart unknown aggregate": { "name": "Morse", "charts": [{ "id": "speed", "title": "Response time", "kind": "line", "measure": "payload", "field": "responseTime", "days": 30, "aggregate": "max" }] },
+    "chart two item filters": { "name": "Morse", "charts": [{ "id": "speed", "title": "Response time", "kind": "line", "measure": "payload", "field": "responseTime", "days": 30, "items": { "tag": "letter", "drill": "review" } }] },
+    "chart unknown item type": { "name": "Morse", "charts": [{ "id": "speed", "title": "Response time", "kind": "line", "measure": "payload", "field": "responseTime", "days": 30, "items": { "type": "essay" } }] },
+    "chart unknown field": { "name": "Morse", "charts": [{ "id": "speed", "title": "Response time", "kind": "line", "measure": "payload", "field": "responseTime", "days": 30, "colour": "red" }] }
   },
   "zodOnly": {}
 }

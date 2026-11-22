@@ -16,7 +16,8 @@ const Field = z.union([Scalar, z.strictObject({ type: z.literal("array"), items:
 });
 
 type Scalar = z.output<typeof Scalar>;
-type Field = z.output<typeof Field>;
+export type PayloadField = z.output<typeof Field>;
+type Field = PayloadField;
 
 const KindSchema = z.strictObject({
   type: z.literal("object").optional(),
@@ -137,4 +138,21 @@ export function dataSchema(version: PayloadSchemaVersion, kind: EventKind): z.Zo
   }
   if (kind === "attempt") shape[QUESTION_FIELD] = z.string().min(1).optional();
   return z.strictObject(shape);
+}
+
+export function knownFields(versions: readonly PayloadSchemaVersion[], kind: EventKind): Map<string, PayloadField> {
+  const fields = new Map<string, PayloadField>();
+  for (const version of versions) {
+    for (const [name, field] of Object.entries(version.kinds[kind]?.properties ?? {})) fields.set(name, field);
+  }
+  return fields;
+}
+
+export function isNumeric(field: PayloadField): boolean {
+  const scalar = "items" in field ? field.items : field;
+  return "enum" in scalar ? scalar.enum.every((value) => typeof value === "number") : scalar.type === "number" || scalar.type === "integer";
+}
+
+export function unitOf(field: PayloadField): string | null {
+  return ("items" in field ? field.items.unit : field.unit) ?? null;
 }

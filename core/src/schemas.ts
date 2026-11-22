@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { Chart } from "./charts.ts";
 import { PayloadSchemas } from "./payload.ts";
 
 export const SUPPORTED_FORMAT_VERSION = 1;
@@ -151,6 +152,7 @@ export const SubjectFile = z.strictObject({
   settings: SubjectSettings.default({}),
   goals: z.array(Goal).default([]),
   payloadSchemas: PayloadSchemas,
+  charts: z.array(Chart).default([]),
 });
 
 export type SubjectFile = z.output<typeof SubjectFile>;

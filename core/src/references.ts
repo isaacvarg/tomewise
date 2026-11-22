@@ -1,7 +1,9 @@
+import type { Chart } from "./charts.ts";
 import type { Curriculum } from "./curriculum.ts";
 import type { Drill } from "./drills.ts";
 import type { Item } from "./items.ts";
-import type { ValidationIssue } from "./issues.ts";
+import { formatPath, type ValidationIssue } from "./issues.ts";
+import { isNumeric, knownFields, type PayloadSchemaVersion } from "./payload.ts";
 
 export interface Located<T> {
   value: T;
@@ -74,5 +76,44 @@ export function curriculumReferences(
       });
     }),
   );
+  return issues;
+}
+
+export function chartReferences(
+  charts: readonly Chart[],
+  file: string,
+  payloadSchemas: readonly PayloadSchemaVersion[],
+  items: readonly Item[],
+  drills: readonly Drill[],
+): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  const fields = knownFields(payloadSchemas, "attempt");
+  const tags = new Set(items.flatMap((item) => item.tags));
+  const drillIds = drills.map((drill) => drill.id);
+  const firstPath = new Map<string, string>();
+  charts.forEach((chart, index) => {
+    const path = formatPath(["charts", index]);
+    const issue = (key: string, message: string) => issues.push({ file, path: `${path}.${key}`, message });
+    const seen = firstPath.get(chart.id);
+    if (seen) issue("id", `Duplicate chart id "${chart.id}"; first used at ${seen}.id`);
+    else firstPath.set(chart.id, path);
+    if (chart.measure === "payload") {
+      const field = fields.get(chart.field);
+      if (!field) {
+        const known = fields.size > 0 ? `known fields: ${[...fields.keys()].join(", ")}` : "the payload schema has no attempt fields";
+        issue("field", `No field "${chart.field}" in attempt payloads; ${known}`);
+      } else if (!isNumeric(field)) {
+        issue("field", `"${chart.field}" is not a number, so it can't be charted`);
+      }
+    }
+    const filter = chart.items;
+    if (filter && chart.measure === "minutes" && !("drill" in filter)) {
+      issues.push({ file, path: `${path}.items`, message: "Minutes come from whole sessions, so filter them by drill only" });
+    }
+    if (filter && "tag" in filter && !tags.has(filter.tag)) issue("items.tag", `No item has tag "${filter.tag}"`);
+    if (filter && "drill" in filter && !drillIds.includes(filter.drill)) {
+      issue("items.drill", `No drill "${filter.drill}"; drills: ${drillIds.join(", ")}`);
+    }
+  });
   return issues;
 }

@@ -3,6 +3,7 @@ import { QueryError } from "./errors.ts";
 import { readEvents } from "./event-store.ts";
 import { type EventKind, eventKinds, type LearningEvent } from "./events.ts";
 import { loadSubject, type LearningHome } from "./load.ts";
+import { isNumeric, knownFields, unitOf } from "./payload.ts";
 import type { Subject } from "./subject.ts";
 
 export const aggregates = ["count", "mean", "median", "min", "max"] as const;
@@ -34,8 +35,6 @@ export interface QueryResult {
   to: string | null;
 }
 
-type FieldSchema = NonNullable<Subject["payloadSchemas"][number]["kinds"][EventKind]>["properties"][string];
-
 const DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
 const DATA_PREFIX = "data.";
 
@@ -49,23 +48,6 @@ function startOfDay(date: string, timezone: string, flag: string, plusDays = 0):
   return midnight - offsetAt(instant, timezone);
 }
 
-function knownFields(subject: Subject, kind: EventKind): Map<string, FieldSchema> {
-  const fields = new Map<string, FieldSchema>();
-  for (const version of subject.payloadSchemas) {
-    for (const [name, field] of Object.entries(version.kinds[kind]?.properties ?? {})) fields.set(name, field);
-  }
-  return fields;
-}
-
-function isNumeric(field: FieldSchema): boolean {
-  const scalar = "items" in field ? field.items : field;
-  return "enum" in scalar ? scalar.enum.every((value) => typeof value === "number") : scalar.type === "number" || scalar.type === "integer";
-}
-
-function unitOf(field: FieldSchema): string | null {
-  return ("items" in field ? field.items.unit : field.unit) ?? null;
-}
-
 function fieldIn(subject: Subject, event: LearningEvent, kind: EventKind, name: string): boolean {
   return subject.payloadSchemas[event.schemaVersion - 1]?.kinds[kind]?.properties[name] !== undefined;
 }
@@ -77,7 +59,7 @@ function matches(event: LearningEvent, where: Partial<Record<FilterField, string
   });
 }
 
-function aggregate(agg: Aggregate, values: number[]): number | null {
+export function aggregate(agg: Aggregate, values: number[]): number | null {
   if (agg === "count") return values.length;
   if (values.length === 0) return null;
   const sorted = [...values].sort((a, b) => a - b);
@@ -110,7 +92,7 @@ export async function queryPayload(home: LearningHome, subjectId: string, option
   }
 
   const name = options.field.startsWith(DATA_PREFIX) ? options.field.slice(DATA_PREFIX.length) : options.field;
-  const fields = knownFields(subject, kind);
+  const fields = knownFields(subject.payloadSchemas, kind);
   const field = fields.get(name);
   if (!field) {
     const known = fields.size > 0 ? `known fields: ${[...fields.keys()].join(", ")}` : "its payload schema has no fields";

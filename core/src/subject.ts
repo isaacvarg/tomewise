@@ -7,7 +7,9 @@ import { type Drill, DrillFile, REVIEW_DRILL_ID, reviewDrill } from "./drills.ts
 import { Item } from "./items.ts";
 import { formatPath, issuesFrom, type ValidationIssue } from "./issues.ts";
 import { readJson } from "./json.ts";
+import type { Chart } from "./charts.ts";
 import {
+  chartReferences,
   curriculumReferences,
   duplicateItemIds,
   type Located,
@@ -44,6 +46,7 @@ export interface Subject {
   curriculum?: Curriculum;
   payloadSchemas: PayloadSchemaVersion[];
   goals: Goal[];
+  charts: Chart[];
 }
 
 export type SubjectContent = Omit<Subject, "settings"> & { file: SubjectFile };
@@ -171,6 +174,10 @@ export async function readSubject(root: string, id: string): Promise<SubjectRead
     ...missingUnlockingLessons(located, lessons, lessonsDir),
     ...unknownDrillTags(drills, located),
   );
+  if (subjectFile) {
+    const allDrills = [reviewDrill, ...drills.map((drill) => drill.value)];
+    issues.push(...chartReferences(subjectFile.charts, subjectFileName, subjectFile.payloadSchemas, located.map((item) => item.value), allDrills));
+  }
   if (curriculum) {
     issues.push(...curriculumReferences(curriculum, curriculumFile, lessons, lessonsDir));
   }
@@ -190,6 +197,7 @@ export async function readSubject(root: string, id: string): Promise<SubjectRead
       ...(curriculum && { curriculum }),
       payloadSchemas: subjectFile.payloadSchemas.length > 0 ? subjectFile.payloadSchemas : NO_PAYLOAD,
       goals: subjectFile.goals,
+      charts: subjectFile.charts,
     },
     issues,
   };
