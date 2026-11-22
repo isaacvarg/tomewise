@@ -39,18 +39,18 @@ export interface ActivityOptions {
 
 const DAY_MS = 86_400_000;
 
-function localDay(time: number, timezone: string): number {
+export function localDay(time: number, timezone: string): number {
   const parts = new Intl.DateTimeFormat("en-US", { timeZone: timezone, year: "numeric", month: "numeric", day: "numeric" })
     .formatToParts(time);
   const part = (type: string) => Number(parts.find((p) => p.type === type)!.value);
   return Date.UTC(part("year"), part("month") - 1, part("day")) / DAY_MS;
 }
 
-function isoDate(day: number): string {
+export function isoDate(day: number): string {
   return new Date(day * DAY_MS).toISOString().slice(0, 10);
 }
 
-function parseDay(date: string): number {
+export function parseDay(date: string): number {
   const time = /^\d{4}-\d{2}-\d{2}$/.test(date) ? Date.parse(date) : NaN;
   if (Number.isNaN(time) || isoDate(time / DAY_MS) !== date) throw new RangeError(`Not a date: ${date}; use YYYY-MM-DD`);
   return time / DAY_MS;
@@ -61,12 +61,12 @@ function weekOf(day: number, weekStart: (typeof weekdays)[number]): number {
   return day - ((weekday - weekdays.indexOf(weekStart) + 7) % 7);
 }
 
-interface Session {
+export interface Session {
   day: number;
   ms: number;
 }
 
-function sessionsIn(lines: EventLine[], timezone: string): Session[] {
+export function sessionsIn(lines: EventLine[], timezone: string): Session[] {
   const events = lines.map((line) => line.event);
   const bySession = Map.groupBy(events, (event) => event.sessionId);
   return events

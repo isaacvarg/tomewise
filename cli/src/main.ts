@@ -16,6 +16,9 @@ import {
   InvalidLearningHomeError,
   LearningHomeNotFoundError,
   loadLearningHome,
+  readStats,
+  type Stats,
+  SubjectNotFoundError,
   UnsupportedFormatVersionError,
   validateLearningHome,
   type ValidationIssue,
@@ -39,6 +42,7 @@ export const USAGE = [
   "  tome log -        read the event from stdin",
   "  tome due [<subject>] [--date YYYY-MM-DD] [--json]",
   "  tome serve [--host <host>] [--port <port>]",
+  "  tome stats [subject] [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--json]",
 ].join("\n");
 
 const DEFAULT_HOST = "127.0.0.1";
@@ -266,12 +270,82 @@ async function serve(io: Io, args: string[]): Promise<number> {
   return 0;
 }
 
+function duration(ms: number): string {
+  const seconds = Math.round(ms / 1000);
+  const [h, m, s] = [Math.floor(seconds / 3600), Math.floor(seconds / 60) % 60, seconds % 60];
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
+function plural(count: number, word: string): string {
+  return `${count} ${word}${count === 1 ? "" : "s"}`;
+}
+
+function statsLines(result: Stats, subject: string | undefined): string[] {
+  const range = result.from === null ? `up to ${result.to}` : `${result.from} to ${result.to}`;
+  const { total, correct, wrong, skipped } = result.attempts;
+  const { days, restDaysLeft } = result.streak;
+  const row = (label: string, value: string) => `${label.padEnd(15)}${value}`;
+  return [
+    `${subject ?? "All subjects"}, ${range} (${result.timezone})`,
+    row("Sessions", String(result.sessions)),
+    row("Time", duration(result.durationMs)),
+    row("Attempts", `${total}: ${correct} correct, ${wrong} wrong, ${skipped} skipped`),
+    row("Accuracy", result.accuracy === null ? "none" : `${Math.round(result.accuracy * 100)}%`),
+    row("Activity days", String(result.activityDays)),
+    row("Streak", plural(days, "day") + (restDaysLeft > 0 ? `, ${plural(restDaysLeft, "rest day")} left this week` : "")),
+  ];
+}
+
+async function stats(io: Io, args: string[]): Promise<number> {
+  let parsed;
+  try {
+    parsed = parseArgs({
+      args,
+      allowPositionals: true,
+      options: { from: { type: "string" }, to: { type: "string" }, json: { type: "boolean" } },
+    });
+  } catch (error) {
+    io.stderr((error as Error).message);
+    io.stderr(USAGE);
+    return 2;
+  }
+  const { values, positionals } = parsed;
+  if (positionals.length > 1) {
+    io.stderr(USAGE);
+    return 2;
+  }
+  const subject = positionals[0];
+  const root = await findRoot(io);
+  if (!root) return 2;
+
+  let result: Stats;
+  try {
+    result = await readStats(await loadLearningHome(root), { subject, from: values.from, to: values.to });
+  } catch (error) {
+    if (error instanceof SubjectNotFoundError || error instanceof RangeError) {
+      io.stderr(error.message);
+      return 2;
+    }
+    if (error instanceof InvalidLearningHomeError || error instanceof UnsupportedFormatVersionError) {
+      io.stderr(error.message);
+      return 1;
+    }
+    throw error;
+  }
+  if (values.json) io.stdout(JSON.stringify(result, null, 2));
+  else for (const line of statsLines(result, subject)) io.stdout(line);
+  return 0;
+}
+
 export async function run(args: string[], io: Io): Promise<number> {
   const [command, ...rest] = args;
   if (command === "validate") return validate(io);
   if (command === "log") return log(io, rest[0]);
   if (command === "serve") return serve(io, rest);
   if (command === "due") return due(io, rest);
+  if (command === "stats") return stats(io, rest);
   io.stderr(USAGE);
   return 2;
 }
