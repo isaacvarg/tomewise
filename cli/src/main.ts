@@ -31,6 +31,7 @@ import { due } from "./due.ts";
 import { INIT_USAGE, init } from "./init.ts";
 import { defaultServiceHost, installService, serviceStatus, uninstallService, type ServiceHost } from "./service.ts";
 import { importWorkspace } from "./import.ts";
+import type { PromptStreams } from "./prompt.ts";
 
 export interface Io {
   cwd: string;
@@ -41,6 +42,7 @@ export interface Io {
   readStdin?: () => Promise<string>;
   signal?: AbortSignal;
   service?: Partial<ServiceHost>;
+  prompt?: PromptStreams;
 }
 
 export const USAGE = [
@@ -479,5 +481,6 @@ if (import.meta.main) {
     env: process.env,
     stdout: (line) => console.log(line),
     stderr: (line) => console.error(line),
+    prompt: process.stdin.isTTY ? { input: process.stdin, output: process.stdout, terminal: true } : undefined,
   });
 }
