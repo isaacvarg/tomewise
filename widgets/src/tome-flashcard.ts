@@ -134,9 +134,8 @@ export class TomeFlashcard extends TomeElement {
     this.state = "saving";
     this.chosen = grade;
     this.outcome = outcome;
-    this.notice = undefined;
     try {
-      await tome.attempt({ ref: `item:${this.item.id}`, outcome, grade, duration });
+      await tome.attempt({ ref: `item:${this.item.id}`, outcome, grade, duration }, this);
       this.state = "saved";
       this.dispatchEvent(
         new CustomEvent("tome-answered", {
@@ -145,11 +144,10 @@ export class TomeFlashcard extends TomeElement {
           detail: { ref: `item:${this.item.id}`, outcome, grade, duration: Math.round(duration) },
         }),
       );
-    } catch (error) {
+    } catch {
       this.state = shown;
       this.chosen = undefined;
       this.outcome = undefined;
-      this.notice = messageOf(error);
       return;
     }
     await this.completed().catch((error: unknown) => (this.notice = messageOf(error)));
