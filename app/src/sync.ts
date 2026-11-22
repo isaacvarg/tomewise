@@ -24,6 +24,7 @@ export interface SyncStatus {
   stopped: boolean;
   lastPull: string | null;
   lastCommit: string | null;
+  lastPush: string | null;
   lastError: { at: string; message: string } | null;
 }
 
@@ -41,6 +42,8 @@ const GIT_TIMEOUT_MS = 120_000;
 const GIT_MAX_BUFFER = 64 * 1024 * 1024;
 const EVENT_FILES = ":(glob)subjects/*/events/**";
 const CADENCE_MS = { hourly: 3_600_000, daily: 86_400_000 } as const;
+const REJECTED = /\[rejected\]|non-fast-forward|fetch first/;
+const AUTH_FAILED = /Permission denied \(|Permission to \S+ denied|Host key verification failed|Authentication failed|could not read (Username|Password)|terminal prompts disabled|returned error: 40[13]/i;
 
 function git(cwd: string, args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -60,7 +63,7 @@ function git(cwd: string, args: string[]): Promise<string> {
 }
 
 export const syncOff: GitSync = {
-  status: () => ({ enabled: false, stopped: false, lastPull: null, lastCommit: null, lastError: null }),
+  status: () => ({ enabled: false, stopped: false, lastPull: null, lastCommit: null, lastPush: null, lastError: null }),
   syncNow: async () => syncOff.status(),
   recorded: () => {},
   exclusive: (work) => work(),
@@ -71,7 +74,7 @@ export function startSync(home: () => LearningHome, { clock = systemClock }: { c
   const { root, config } = home();
   const settings = config.git;
   if (!settings.enabled) return syncOff;
-  const state: SyncStatus = { enabled: true, stopped: false, lastPull: null, lastCommit: null, lastError: null };
+  const state: SyncStatus = { enabled: true, stopped: false, lastPull: null, lastCommit: null, lastPush: null, lastError: null };
   let queue: Promise<unknown> = Promise.resolve();
   let closed = false;
 
@@ -101,7 +104,30 @@ export function startSync(home: () => LearningHome, { clock = systemClock }: { c
     return branch();
   }
 
-  async function pull(remote: string) {
+  async function push(remote: string, target: string) {
+    try {
+      await git(root, ["push", "--quiet", remote, `HEAD:refs/heads/${target}`]);
+    } catch (error) {
+      const message = (error as Error).message;
+      if (REJECTED.test(message)) {
+        throw new Error(
+          `"${remote}/${target}" has diverged from the learning home, so git rejected the push; the app never force-pushes. Pull and push by hand, then restart the app. ${message}`,
+        );
+      }
+      if (AUTH_FAILED.test(message)) {
+        throw new Error(`Git couldn't sign in to "${remote}"; check the app's git credentials, then restart the app. ${message}`);
+      }
+      throw error;
+    }
+    state.lastPush = clock.now().toISOString();
+  }
+
+  async function pushPending(remote: string, target: string) {
+    if (!settings.push) return;
+    if ((await git(root, ["rev-list", "--count", "FETCH_HEAD..HEAD"])) !== "0") await push(remote, target);
+  }
+
+  async function pull(remote: string): Promise<string> {
     const target = await checkedBranch();
     try {
       await git(root, ["pull", "--rebase", "--autostash", "--quiet", remote, target]);
@@ -110,6 +136,7 @@ export function startSync(home: () => LearningHome, { clock = systemClock }: { c
       throw error;
     }
     state.lastPull = clock.now().toISOString();
+    return target;
   }
 
   async function addedEvents(): Promise<LearningEvent[]> {
@@ -129,18 +156,21 @@ export function startSync(home: () => LearningHome, { clock = systemClock }: { c
 
   async function commitHistory() {
     if ((await git(root, ["status", "--porcelain", "--", EVENT_FILES])) === "") return;
-    if (settings.remote !== undefined) await pull(settings.remote);
-    else await checkedBranch();
+    const remote = settings.remote;
+    const target = remote === undefined ? await checkedBranch() : await pull(remote);
     await git(root, ["add", "--all", "--", EVENT_FILES]);
     const added = await addedEvents();
     if (added.length === 0) throw new Error("Event files changed without new events; check subjects/*/events/ with git status");
     const message = historyMessage(added, config.timezone);
     await git(root, ["commit", "--quiet", "--only", "--message", message, "--", EVENT_FILES]);
     state.lastCommit = clock.now().toISOString();
+    if (remote !== undefined) await pushPending(remote, target);
   }
 
   async function pullContent() {
-    if (settings.remote !== undefined) await pull(settings.remote);
+    const remote = settings.remote;
+    if (remote === undefined) return;
+    await pushPending(remote, await pull(remote));
   }
 
   function step(work: () => Promise<void>): Promise<SyncStatus> {

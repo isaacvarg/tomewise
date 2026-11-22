@@ -82,7 +82,7 @@
         },
         "push": {
           "default": false,
-          "description": "Whether the app pushes after committing. Needs a remote.",
+          "description": "Whether the app pushes its history commits, after each commit and after each pull. Needs a remote.",
           "type": "boolean"
         },
         "pullIntervalMinutes": {

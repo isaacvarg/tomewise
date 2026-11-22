@@ -103,7 +103,7 @@ services:
 
 ## Git credentials
 
-Git sync (pull content, commit and push events) runs the `git` binary inside the app, so your git config and credentials apply. The app stores no credentials. With npx it uses the credentials of the user running it. In a container, give git what it needs to reach your remote in one of these ways.
+Git sync (pull content, commit and push events) runs the `git` binary inside the app, so your git config and credentials apply. The app stores no credentials. With npx it uses the credentials of the user running it. Git can't ask for a password from inside the app, so those credentials must work without typing anything: an SSH agent or a key without a passphrase, or a credential helper that has the token stored. In a container, give git what it needs to reach your remote in one of these ways.
 
 **SSH key.** Mount a deploy key and a `known_hosts` file read-only into the `node` user's home:
 

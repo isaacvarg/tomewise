@@ -103,7 +103,7 @@ export const GitSettings = z
         "Name of the git remote to pull from and push to, such as \"origin\". The remote itself is set up in each clone with git remote add. Without one the app only commits.",
     }),
     branch: GitBranch.optional().meta({ description: "Branch to pull and push. Defaults to the checked-out branch." }),
-    push: z.boolean().default(false).meta({ description: "Whether the app pushes after committing. Needs a remote." }),
+    push: z.boolean().default(false).meta({ description: "Whether the app pushes its history commits, after each commit and after each pull. Needs a remote." }),
     pullIntervalMinutes: z
       .int()
       .min(1)

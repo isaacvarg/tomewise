@@ -15,6 +15,7 @@ const run = promisify(execFile);
 let realGit = "git";
 let gitLog = "";
 let originalEnv: Record<string, string | undefined> = {};
+const ISOLATED_ENV = ["PATH", "GIT_CONFIG_GLOBAL", "GIT_CONFIG_NOSYSTEM", "GIT_SSH", "GIT_SSH_COMMAND"];
 
 beforeAll(async () => {
   realGit = (await run("sh", ["-c", "command -v git"])).stdout.trim();
@@ -25,10 +26,12 @@ beforeAll(async () => {
   await chmod(join(spy, "git"), 0o755);
   const globalConfig = join(spy, "gitconfig");
   await writeFile(globalConfig, "[user]\n\tuseConfigOnly = true\n[commit]\n\tgpgsign = false\n");
-  originalEnv = { PATH: process.env.PATH, GIT_CONFIG_GLOBAL: process.env.GIT_CONFIG_GLOBAL, GIT_CONFIG_NOSYSTEM: process.env.GIT_CONFIG_NOSYSTEM };
+  originalEnv = Object.fromEntries(ISOLATED_ENV.map((name) => [name, process.env[name]]));
   process.env.PATH = `${spy}:${originalEnv.PATH}`;
   process.env.GIT_CONFIG_GLOBAL = globalConfig;
   process.env.GIT_CONFIG_NOSYSTEM = "1";
+  delete process.env.GIT_SSH;
+  delete process.env.GIT_SSH_COMMAND;
 });
 
 afterAll(() => {
@@ -249,6 +252,7 @@ describe("git sync", () => {
       stopped: false,
       lastPull: null,
       lastCommit: null,
+      lastPush: null,
       lastError: null,
     });
     expect((await app.send("POST", "/api/sync")).status).toBe(409);
@@ -418,4 +422,162 @@ async function snapshotEvents(root: string): Promise<Record<string, string>> {
   const files: Record<string, string> = {};
   for (const [path, content] of Object.entries(await snapshot(root))) if (path.startsWith(EVENTS)) files[path] = content;
   return files;
+}
+
+describe("pushing history", () => {
+  it("pushes each history commit and reports the last push", async () => {
+    const { clock } = fakeClock();
+    const { app, remote } = await cloneSeam({ remote: "origin", push: true }, clock);
+
+    expect((await app.post(practice(1))).status).toBe(201);
+
+    await poll(() => subjects(remote)).toEqual([ONE_SESSION, "chore: start"]);
+    expect(await git(remote, "rev-parse", "main")).toBe(await git(app.root, "rev-parse", "HEAD"));
+    expect((await app.get("/api/sync")).body).toMatchObject({
+      stopped: false,
+      lastCommit: "2026-11-22T09:00:00.000Z",
+      lastPush: "2026-11-22T09:00:00.000Z",
+      lastError: null,
+    });
+  });
+
+  it("round-trips: the agent's lesson reaches the app and the learner's events reach the agent", async () => {
+    const { app, agent, agentPushes } = await cloneSeam({ remote: "origin", push: true });
+    await agentPushes({ [`${SUBJECT}/lessons/0005-e.html`]: "<!doctype html><title>E</title>" });
+
+    await app.send("POST", "/api/sync");
+    await poll(() => lessons(app)).toContain("0005-e");
+    expect((await app.post(practice(1))).status).toBe(201);
+    await poll(async () => (await app.get("/api/sync")).body.lastPush).not.toBeNull();
+
+    await git(agent, "pull", "--quiet", "--ff-only");
+    expect(await subjects(agent)).toEqual([ONE_SESSION, "feat: content", "chore: start"]);
+    expect(await snapshotEvents(agent)).toEqual(await snapshotEvents(app.root));
+    expect(await git(agent, "status", "--porcelain")).toBe("");
+  });
+
+  it("interleaves the agent's and the app's commits without conflicts on either side", async () => {
+    const { app, agent, remote } = await cloneSeam({ remote: "origin", push: true });
+    const agentCommits = async (name: string) => {
+      await writeFiles(agent, { [`${SUBJECT}/lessons/${name}.html`]: `<!doctype html><title>${name}</title>` });
+      await git(agent, "add", "-A");
+      await git(agent, "commit", "--quiet", "-m", `feat: ${name}`);
+    };
+    const agentSyncs = async () => {
+      await git(agent, "pull", "--quiet", "--rebase");
+      await git(agent, "push", "--quiet", "origin", "main");
+    };
+    const appPractises = async (n: number) => {
+      expect((await app.post(practice(n))).status).toBe(201);
+      await poll(async () => (await subjects(remote))[0]).toBe(ONE_SESSION);
+    };
+
+    await agentCommits("0005-e");
+    await appPractises(1);
+    await agentSyncs();
+    await appPractises(2);
+    await agentCommits("0006-t");
+    await agentSyncs();
+    await app.send("POST", "/api/sync");
+
+    expect((await app.get("/api/sync")).body).toMatchObject({ stopped: false, lastError: null });
+    expect(await subjects(remote)).toEqual(["feat: 0006-t", ONE_SESSION, "feat: 0005-e", ONE_SESSION, "chore: start"]);
+    const head = await git(remote, "rev-parse", "main");
+    expect(await git(app.root, "rev-parse", "HEAD")).toBe(head);
+    expect(await git(agent, "rev-parse", "HEAD")).toBe(head);
+    expect(await git(app.root, "status", "--porcelain")).toBe("");
+    expect(await git(agent, "status", "--porcelain")).toBe("");
+    await poll(() => lessons(app)).toEqual(expect.arrayContaining(["0005-e", "0006-t"]));
+  });
+
+  it("pulls and pushes through a remote that keeps no tracking branch", async () => {
+    const { app, remote, agentPushes } = await cloneSeam({ remote: "origin", push: true });
+    await git(app.root, "config", "--unset-all", "remote.origin.fetch");
+    await git(app.root, "update-ref", "-d", "refs/remotes/origin/main");
+    await agentPushes({ [`${SUBJECT}/lessons/0005-e.html`]: "<!doctype html><title>E</title>" });
+
+    expect((await app.send("POST", "/api/sync")).body).toMatchObject({ stopped: false, lastPush: null, lastError: null });
+    expect((await app.post(practice(1))).status).toBe(201);
+
+    await poll(() => subjects(remote)).toEqual([ONE_SESSION, "feat: content", "chore: start"]);
+    expect((await app.get("/api/sync")).body).toMatchObject({ stopped: false, lastPush: expect.any(String), lastError: null });
+  });
+
+  it("pushes nothing with push off", async () => {
+    const { app, remote } = await cloneSeam({ remote: "origin", push: false });
+    const remoteHead = await git(remote, "rev-parse", "main");
+
+    expect((await app.post(practice(1))).status).toBe(201);
+
+    await poll(() => subjects(app.root)).toEqual([ONE_SESSION, "chore: start"]);
+    expect(await git(remote, "rev-parse", "main")).toBe(remoteHead);
+    expect((await app.get("/api/sync")).body).toMatchObject({ lastCommit: expect.any(String), lastPush: null });
+    expect(await appGitCalls(app.root)).not.toContainEqual(expect.stringMatching(/^push\b/));
+  });
+
+  it("stops and says to check credentials when the remote refuses them", async () => {
+    const { clock } = fakeClock();
+    const { app, remote } = await cloneSeam({ remote: "origin", push: true }, clock);
+    await refuseSshPush(app.root);
+
+    expect((await app.post(practice(1))).status).toBe(201);
+
+    await poll(async () => (await app.get("/api/sync")).body).toMatchObject({
+      stopped: true,
+      lastPush: null,
+      lastError: { at: "2026-11-22T09:00:00.000Z", message: expect.stringMatching(/credentials[\s\S]*Permission denied \(publickey\)/) },
+    });
+    expect(await subjects(app.root)).toEqual([ONE_SESSION, "chore: start"]);
+    expect(await subjects(remote)).toEqual(["chore: start"]);
+  });
+
+  it("stops without forcing when the remote branch has diverged", async () => {
+    const { app } = await cloneSeam({ remote: "origin", push: true });
+    const diverged = await divergedPushTarget(app.root);
+    const divergedHead = await git(diverged, "rev-parse", "main");
+
+    expect((await app.post(practice(1))).status).toBe(201);
+
+    await poll(async () => (await app.get("/api/sync")).body).toMatchObject({
+      stopped: true,
+      lastPush: null,
+      lastError: { message: expect.stringMatching(/diverged[\s\S]*never force-pushes[\s\S]*rejected/) },
+    });
+    expect(await git(diverged, "rev-parse", "main")).toBe(divergedHead);
+    for (const call of await appGitCalls(app.root)) expect(call).not.toMatch(/--force|\s\+\S/);
+  });
+
+  it("pushes history left behind by a failed push once sync runs again", async () => {
+    const { app, remote } = await cloneSeam({ remote: "origin", push: true });
+    await refuseSshPush(app.root);
+    expect((await app.post(practice(1))).status).toBe(201);
+    await poll(async () => (await app.get("/api/sync")).body.stopped).toBe(true);
+
+    await app.restart(async () => {
+      await git(app.root, "config", "--unset", "remote.origin.pushurl");
+    });
+    const response = await app.send("POST", "/api/sync");
+
+    expect(response.body).toMatchObject({ stopped: false, lastPush: expect.any(String), lastError: null });
+    expect(await subjects(remote)).toEqual([ONE_SESSION, "chore: start"]);
+  });
+});
+
+async function refuseSshPush(root: string) {
+  const ssh = join(await tempDir(), "ssh");
+  await writeFile(ssh, "#!/bin/sh\necho 'git@example.invalid: Permission denied (publickey).' >&2\nexit 255\n");
+  await chmod(ssh, 0o755);
+  await git(root, "config", "remote.origin.pushurl", "git@example.invalid:learner/learning.git");
+  await git(root, "config", "core.sshCommand", ssh);
+}
+
+async function divergedPushTarget(root: string): Promise<string> {
+  const diverged = await mkdtemp(join(tmpdir(), "tomewise-diverged-"));
+  await git(diverged, "clone", "--quiet", "--bare", await git(root, "remote", "get-url", "origin"), ".");
+  const other = await mkdtemp(join(tmpdir(), "tomewise-other-"));
+  await git(other, "clone", "--quiet", diverged, ".");
+  await git(other, "commit", "--quiet", "--allow-empty", "-m", "elsewhere");
+  await git(other, "push", "--quiet", "origin", "main");
+  await git(root, "config", "remote.origin.pushurl", diverged);
+  return diverged;
 }
