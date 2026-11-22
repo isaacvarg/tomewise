@@ -119,7 +119,7 @@ function fieldSchema(field: Field): z.ZodType {
   return "items" in field ? z.array(scalarSchema(field.items)) : scalarSchema(field);
 }
 
-export function dataSchema(version: PayloadSchemaVersion, kind: EventKind): z.ZodType {
+export function dataSchema(version: PayloadSchemaVersion, kind: EventKind): z.ZodObject {
   const schema = version.kinds[kind];
   if (!schema) return z.strictObject({});
   const shape: Record<string, z.ZodType> = {};

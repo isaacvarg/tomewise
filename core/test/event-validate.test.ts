@@ -84,6 +84,33 @@ describe("validating events", () => {
     ]);
   });
 
+  it("checks an explanation's text, whatever the subject's payload schema", async () => {
+    const explanation = (id: string, data: Record<string, unknown>) => ({
+      id,
+      ts: "2026-11-03T18:02:00.000Z",
+      subject: "morse-code",
+      kind: "explanation.saved",
+      ref: "lesson:0001-k-and-m",
+      schemaVersion: 1,
+      data,
+    });
+    const home = await buildHome({
+      ...base,
+      [FILE]: jsonl(
+        explanation("01KAJ0000000000000000000E1", { text: "K is dah-dit-dah" }),
+        explanation("01KAJ0000000000000000000E2", {}),
+        explanation("01KAJ0000000000000000000E3", { text: "  " }),
+        explanation("01KAJ0000000000000000000E4", { text: "ok", mood: "fine" }),
+      ),
+    });
+
+    expect(await validateLearningHome(home)).toEqual([
+      { file: FILE, line: 2, path: "data.text", message: expect.any(String) },
+      { file: FILE, line: 3, path: "data.text", message: expect.any(String) },
+      { file: FILE, line: 4, path: "data.mood", message: expect.any(String) },
+    ]);
+  });
+
   it("reports a file in events that isn't an event file", async () => {
     const home = await buildHome({ ...base, "subjects/morse-code/events/notes.txt": "hello" });
 
