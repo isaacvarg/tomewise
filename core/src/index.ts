@@ -9,11 +9,14 @@ export type { Curriculum } from "./curriculum.ts";
 export { validateLearningHome } from "./validate.ts";
 export { formatIssue } from "./issues.ts";
 export type { ValidationIssue } from "./issues.ts";
-export { DEFAULT_GIT_CADENCE, DEFAULT_THEME, GIT_CADENCES, GitSettings, ThemeManifest, ThemeName, TomewiseConfig, SUPPORTED_FORMAT_VERSION } from "./schemas.ts";
+export { DEFAULT_GIT_CADENCE, DEFAULT_THEME, GIT_CADENCES, GitSettings, START_MODES, ThemeManifest, ThemeName, TomewiseConfig, SUPPORTED_FORMAT_VERSION } from "./schemas.ts";
+export { APP_SETTINGS, isAppSetting, writeSetting } from "./settings.ts";
+export type { AppSetting } from "./settings.ts";
 export {
   GlobalConfigError,
   InvalidEventError,
   InvalidLearningHomeError,
+  InvalidSettingError,
   LearningHomeNotFoundError,
   QueryError,
   SubjectNotFoundError,
@@ -34,7 +37,7 @@ export type { ChartOptions, ChartPoint, ChartSeries } from "./chart-series.ts";
 export type { Chart, ChartAggregate } from "./charts.ts";
 export { readStats } from "./stats.ts";
 export type { AttemptCounts, Stats, StatsOptions } from "./stats.ts";
-export type { GitCadence, Goal, StreakRules } from "./schemas.ts";
+export type { GitCadence, Goal, StartMode, StreakRules } from "./schemas.ts";
 export { JSON_SCHEMA_DIR, jsonSchemas } from "./json-schemas.ts";
 export { appClasses, requiredTokenNames, themeTokens, widgetClasses } from "./theme-contract.ts";
 export type { ContractToken, TokenKind } from "./theme-contract.ts";

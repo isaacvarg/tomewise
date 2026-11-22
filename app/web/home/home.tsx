@@ -3,11 +3,11 @@ import { type Activity, api, type Subject } from "../api.ts";
 import { useLoad } from "../load.ts";
 import { Failed, Screen } from "../screen.tsx";
 import {
-  bySubjectName,
   count,
   type DueToday,
   dueToday,
   heatmapCells,
+  inSavedOrder,
   longDate,
   NARROW_WEEKS,
   type WeekStart,
@@ -21,8 +21,8 @@ interface HomeData {
 }
 
 async function loadHome(): Promise<HomeData> {
-  const [subjects, activity] = await Promise.all([api.subjects(), api.activity()]);
-  subjects.sort(bySubjectName);
+  const [all, activity, settings] = await Promise.all([api.subjects(), api.activity(), api.settings()]);
+  const subjects = inSavedOrder(all, settings.subjects);
   const due = await Promise.all(subjects.map(async (subject) => ({ subject, due: await api.due(subject.id, activity.today) })));
   return { subjects, activity, due: dueToday(due) };
 }

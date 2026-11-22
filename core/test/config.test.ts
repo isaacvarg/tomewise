@@ -15,6 +15,8 @@ describe("loading tomewise.json", () => {
       minimumSessionSeconds: 60,
       streak: { restDaysPerWeek: 0 },
       theme: "paper",
+      start: "sequence",
+      subjects: [],
       git: { enabled: false, cadence: "session", push: false, pullIntervalMinutes: 5 },
     });
   });
@@ -36,6 +38,8 @@ describe("loading tomewise.json", () => {
         minimumSessionSeconds: 120,
         streak: { restDaysPerWeek: 2 },
         theme: "meadow",
+        start: "ask",
+        subjects: ["yoga", "spanish"],
         git: { enabled: true, cadence: "daily", remote: "origin", branch: "main", push: true, pullIntervalMinutes: 15 },
       },
     });
@@ -49,6 +53,8 @@ describe("loading tomewise.json", () => {
       minimumSessionSeconds: 120,
       streak: { restDaysPerWeek: 2 },
       theme: "meadow",
+      start: "ask",
+      subjects: ["yoga", "spanish"],
       git: { enabled: true, cadence: "daily", remote: "origin", branch: "main", push: true, pullIntervalMinutes: 15 },
     });
   });

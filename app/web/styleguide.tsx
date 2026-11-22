@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { MemoryRouter } from "react-router";
 import type { Subject } from "./api.ts";
 import { Home } from "./home/home.tsx";
+import { Settings } from "./pages/settings.tsx";
 import { RunSummary, Runner } from "./run/runner.tsx";
 import { summarize } from "./run/summary.ts";
 import "./styles/app.css";
@@ -37,6 +38,7 @@ function mount(selector: string, page: ReactNode) {
 }
 
 mount("[data-styleguide-home]", <Home />);
+mount("[data-styleguide-settings]", <Settings reloadForThemeScripts={false} />);
 mount("[data-styleguide-runner]", <Runner subject={subject} drill="vocab" ownsPage={false} />);
 mount(
   "[data-styleguide-summary]",

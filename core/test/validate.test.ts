@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateLearningHome } from "@tomewise/core";
+import { loadLearningHome, validateLearningHome } from "@tomewise/core";
 import { buildHome } from "./helpers.ts";
 
 describe("validating a learning home", () => {
@@ -61,5 +61,45 @@ describe("validating a learning home", () => {
     expect(await validateLearningHome(home)).toEqual([
       { file: "tomewise.json", path: "formatVersion", message: expect.stringContaining("supports up to 1") },
     ]);
+  });
+
+  it("reports a Start mode other than sequence or ask", async () => {
+    const home = await buildHome({ "tomewise.json": { formatVersion: 1, start: "random" } });
+
+    expect(await validateLearningHome(home)).toEqual([
+      { file: "tomewise.json", path: "start", message: 'Use "sequence" or "ask"' },
+    ]);
+  });
+
+  it("reports subject ids in the subject order that have no subject folder", async () => {
+    const home = await buildHome({
+      "tomewise.json": { formatVersion: 1, subjects: ["yoga", "chess", "spanish", "go"] },
+      "subjects/spanish/subject.json": { name: "Spanish" },
+      "subjects/yoga/subject.json": { name: "Yoga" },
+    });
+
+    expect(await validateLearningHome(home)).toEqual([
+      { file: "tomewise.json", path: "subjects[1]", message: 'No subject "chess" in subjects/' },
+      { file: "tomewise.json", path: "subjects[3]", message: 'No subject "go" in subjects/' },
+    ]);
+  });
+
+  it("reports a subject listed twice in the subject order", async () => {
+    const home = await buildHome({
+      "tomewise.json": { formatVersion: 1, subjects: ["yoga", "yoga"] },
+      "subjects/yoga/subject.json": { name: "Yoga" },
+    });
+
+    expect(await validateLearningHome(home)).toEqual([
+      { file: "tomewise.json", path: "subjects[1]", message: 'Subject "yoga" is already listed at subjects[0]' },
+    ]);
+  });
+
+  it("still loads a learning home whose subject order names a missing subject", async () => {
+    const home = await buildHome({
+      "tomewise.json": { formatVersion: 1, subjects: ["chess"] },
+    });
+
+    expect((await loadLearningHome(home)).config.subjects).toEqual(["chess"]);
   });
 });

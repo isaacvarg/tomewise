@@ -7,6 +7,7 @@ import { changeBus, changeRoutes, type Changes } from "./changes.ts";
 import { eventRoutes } from "./events.ts";
 import { pageRoutes } from "./pages.ts";
 import { readRoutes } from "./reads.ts";
+import { settingsRoutes } from "./settings.ts";
 import { trackRuleChanges } from "./rule-changes.ts";
 import { spaRoutes } from "./spa.ts";
 import { styleguideRoutes } from "./styleguide.ts";
@@ -22,11 +23,12 @@ export interface AppOptions {
   sync?: GitSync;
   clock?: Clock;
   changes?: Changes;
+  reload?: () => Promise<void>;
 }
 
 export function createApp(
   view: () => HomeView,
-  { spa, tool = BUILT_IN, warn = console.warn, sync = syncOff, clock = systemClock, changes = changeBus() }: AppOptions = {},
+  { spa, tool = BUILT_IN, warn = console.warn, sync = syncOff, clock = systemClock, changes = changeBus(), reload = async () => {} }: AppOptions = {},
 ): Hono {
   const app = new Hono();
   const home = () => view().home;
@@ -34,6 +36,7 @@ export function createApp(
   app.route("/api/events", eventRoutes(home, sync, changes));
   app.route("/api/changes", changeRoutes(changes));
   app.route("/api/sync", syncRoutes(sync));
+  app.route("/api/settings", settingsRoutes(home, { tool, sync, warn, reload }));
   app.route("/api", readRoutes(view, () => clock.now()));
   app.route("/s", pageRoutes(home, resolveTheme));
   app.route("/widgets", widgetRoutes(tool));
@@ -43,7 +46,7 @@ export function createApp(
   return app;
 }
 
-export interface ListenOptions extends Omit<AppOptions, "sync" | "clock" | "changes"> {
+export interface ListenOptions extends Omit<AppOptions, "sync" | "clock" | "changes" | "reload"> {
   host: string;
   port: number;
   watch?: WatchOptions;
@@ -65,7 +68,7 @@ export async function startServer(home: LearningHome, { host, port, watch, clock
   });
   await trackRuleChanges(watched, sync.exclusive, onError);
   watched.onReload(() => changes.announce({ kind: "content" }));
-  const server = createAdaptorServer({ fetch: createApp(watched.current, { ...options, sync, clock, changes }).fetch });
+  const server = createAdaptorServer({ fetch: createApp(watched.current, { ...options, sync, clock, changes, reload: watched.reload }).fetch });
   try {
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);

@@ -1,9 +1,24 @@
-import type { Activity, DueItem, Subject } from "@tomewise/core";
+import type { Activity, AppSetting, DueItem, StartMode, Subject } from "@tomewise/core";
 
-export type { Activity, DueItem, Subject };
+export type { Activity, DueItem, StartMode, Subject };
 
-async function getJson<T>(path: string): Promise<T> {
-  const response = await fetch(path, { headers: { accept: "application/json" } });
+export interface ThemeChoice {
+  name: string;
+  label: string;
+  description?: string;
+  stylesheets: string[];
+  script?: string;
+}
+
+export interface Settings {
+  theme: string;
+  start: StartMode;
+  subjects: string[];
+  themes: ThemeChoice[];
+}
+
+async function getJson<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const response = await fetch(path, { ...init, headers: { accept: "application/json", ...init.headers } });
   const body = await response.json().catch(() => undefined);
   if (!response.ok) throw new Error(body?.error ?? `${path} answered ${response.status}`);
   return body as T;
@@ -17,4 +32,11 @@ export const api = {
   due: (id: string, date: string) =>
     getJson<{ due: DueItem[] }>(`${subjectPath(id)}/due?date=${encodeURIComponent(date)}`).then((body) => body.due),
   activity: () => getJson<Activity>("/api/activity"),
+  settings: () => getJson<Settings>("/api/settings"),
+  saveSetting: (key: AppSetting, value: unknown) =>
+    getJson<Settings>(`/api/settings/${key}`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ value }),
+    }),
 };

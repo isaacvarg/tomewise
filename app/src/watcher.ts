@@ -12,6 +12,7 @@ export type ReloadListener = (next: HomeView, previous: HomeView) => void | Prom
 export interface WatchedHome {
   current: () => HomeView;
   onReload: (listener: ReloadListener) => () => void;
+  reload: () => Promise<void>;
   close: () => Promise<void>;
 }
 
@@ -72,6 +73,12 @@ export async function watchLearningHome(home: LearningHome, options: WatchOption
     onReload(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);
+    },
+    reload() {
+      clearTimeout(timer);
+      timer = undefined;
+      running = running.then(reload);
+      return running;
     },
     async close() {
       closed = true;

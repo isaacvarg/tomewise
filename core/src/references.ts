@@ -4,6 +4,7 @@ import type { Drill } from "./drills.ts";
 import type { Item } from "./items.ts";
 import { formatPath, type ValidationIssue } from "./issues.ts";
 import { isNumeric, knownFields, type PayloadSchemaVersion } from "./payload.ts";
+import { CONFIG_FILE } from "./find.ts";
 
 export interface Located<T> {
   value: T;
@@ -116,4 +117,15 @@ export function chartReferences(
     }
   });
   return issues;
+}
+
+export function subjectOrderIssues(order: readonly string[], subjects: readonly string[]): ValidationIssue[] {
+  const first = new Map<string, number>();
+  return order.flatMap((id, index) => {
+    const path = `subjects[${index}]`;
+    const seen = first.get(id);
+    if (seen !== undefined) return [{ file: CONFIG_FILE, path, message: `Subject "${id}" is already listed at subjects[${seen}]` }];
+    first.set(id, index);
+    return subjects.includes(id) ? [] : [{ file: CONFIG_FILE, path, message: `No subject "${id}" in subjects/` }];
+  });
 }
