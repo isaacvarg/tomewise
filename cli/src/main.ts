@@ -5,7 +5,7 @@ import { hostname } from "node:os";
 import { join } from "node:path";
 import { text } from "node:stream/consumers";
 import { parseArgs } from "node:util";
-import { startServer } from "@tomewise/app";
+import { BUILT_SPA, startServer } from "@tomewise/app";
 import {
   appendEvent,
   findAppUrl,
@@ -245,6 +245,7 @@ async function serve(io: Io, args: string[]): Promise<number> {
   try {
     server = await startServer(home, {
       ...listen,
+      spa: BUILT_SPA,
       watch: { onError: (error) => io.stderr(`Not reloading ${root}: ${(error as Error).message}`) },
     });
   } catch (error) {

@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import type { AddressInfo } from "node:net";
 import { createAdaptorServer } from "@hono/node-server";
 import { Hono } from "hono";
@@ -5,16 +6,22 @@ import type { LearningHome } from "@tomewise/core";
 import { eventRoutes } from "./events.ts";
 import { readRoutes } from "./reads.ts";
 import { trackRuleChanges } from "./rule-changes.ts";
+import { spaRoutes } from "./spa.ts";
 import { type HomeView, watchLearningHome, type WatchOptions } from "./watcher.ts";
 
-export function createApp(view: () => HomeView): Hono {
+export interface AppOptions {
+  spa?: string;
+}
+
+export function createApp(view: () => HomeView, { spa }: AppOptions = {}): Hono {
   const app = new Hono();
   app.route("/api/events", eventRoutes(() => view().home));
   app.route("/api", readRoutes(view));
+  if (spa !== undefined && existsSync(spa)) app.route("/", spaRoutes(spa));
   return app;
 }
 
-export interface ListenOptions {
+export interface ListenOptions extends AppOptions {
   host: string;
   port: number;
   watch?: WatchOptions;
@@ -25,11 +32,11 @@ export interface RunningServer {
   close: () => Promise<void>;
 }
 
-export async function startServer(home: LearningHome, { host, port, watch }: ListenOptions): Promise<RunningServer> {
+export async function startServer(home: LearningHome, { host, port, watch, ...options }: ListenOptions): Promise<RunningServer> {
   const onError = watch?.onError ?? ((error: unknown) => console.error(`Reloading ${home.root} failed:`, error));
   const watched = await watchLearningHome(home, { ...watch, onError });
   await trackRuleChanges(watched, onError);
-  const server = createAdaptorServer({ fetch: createApp(watched.current).fetch });
+  const server = createAdaptorServer({ fetch: createApp(watched.current, options).fetch });
   try {
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
