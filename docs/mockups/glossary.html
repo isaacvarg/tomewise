@@ -1,0 +1,343 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>body{margin:0}[hidden]{display:none!important}</style>
+<title>Tomewise Glossary</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;1,6..72,400&family=Nunito:wght@500;700;800&display=swap">
+<style>
+:root {
+  --bg: #f1f1ee;
+  --fg: #22221f;
+  --muted: #6c6c66;
+  --line: #dcdcd6;
+  --frame: #2a2a27;
+  --chrome-ink: #d6d6cf;
+  --chrome-field: #3a3a36;
+  --page-font: "IBM Plex Sans", system-ui, sans-serif;
+  --page-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121211; --fg: #e9e9e4; --muted: #9b9b94; --line: #2e2e2b; --frame: #3a3a36; --chrome-ink: #c9c9c2; --chrome-field: #2a2a27;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121211; --fg: #e9e9e4; --muted: #9b9b94; --line: #2e2e2b; --frame: #3a3a36; --chrome-ink: #c9c9c2; --chrome-field: #2a2a27;
+  color-scheme: dark;
+}
+
+[data-tome-theme="paper"] {
+  --t-bg: #fffff8; --t-surface: #f6f4ea; --t-ink: #1d1d1b; --t-muted: #6b6b66; --t-rule: #e2e0d6;
+  --t-accent: #9a3b1e; --t-accent-ink: #fffff8;
+  --t-heat-0: #efece0; --t-heat-1: #ebcdbd; --t-heat-2: #d39a7f; --t-heat-3: #b8623f; --t-heat-4: #9a3b1e;
+  --t-display: "Newsreader", "Iowan Old Style", Palatino, Georgia, serif;
+  --t-ui: "IBM Plex Sans", system-ui, sans-serif;
+  --t-good: #2f6b3a; --t-good-bg: #e3efe1;
+  --t-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --t-radius: 4px; --t-cell-radius: 2px;
+}
+[data-tome-theme="meadow"] {
+  --t-bg: #f3f7ee; --t-surface: #ffffff; --t-ink: #2f3a2a; --t-muted: #66755d; --t-rule: #dbe5d0;
+  --t-accent: #4f8a2f; --t-accent-ink: #ffffff; --t-sun: #f2c94c; --t-petal: #f3a6b5;
+  --t-heat-0: #e4ecdb; --t-heat-1: #c4dea6; --t-heat-2: #9bc977; --t-heat-3: #74ae4f; --t-heat-4: #4f8a2f;
+  --t-display: "Fredoka", "Nunito", system-ui, sans-serif;
+  --t-ui: "Nunito", system-ui, sans-serif;
+  --t-good: #3d7a22; --t-good-bg: #e2f0d4;
+  --t-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --t-radius: 20px; --t-cell-radius: 2px 70% 2px 70%;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) [data-tome-theme="paper"] {
+    --t-bg: #161614; --t-surface: #1f1e1b; --t-ink: #e8e6dc; --t-muted: #9a988e; --t-rule: #33322d;
+    --t-accent: #e0835f; --t-accent-ink: #161614;
+    --t-heat-0: #252420; --t-heat-1: #4a2e22; --t-heat-2: #7a4330; --t-heat-3: #b0603f; --t-heat-4: #e0835f;
+    --t-good: #8fcf98; --t-good-bg: #1f3323;
+  }
+  :root:not([data-theme="light"]) [data-tome-theme="meadow"] {
+    --t-bg: #1a2219; --t-surface: #222d20; --t-ink: #e6eedd; --t-muted: #a3b296; --t-rule: #34432f;
+    --t-accent: #9fd27a; --t-accent-ink: #172015; --t-sun: #e8c25a; --t-petal: #e89aab;
+    --t-heat-0: #26311f; --t-heat-1: #35502a; --t-heat-2: #4f7a36; --t-heat-3: #72a84b; --t-heat-4: #9fd27a;
+    --t-good: #a8dc84; --t-good-bg: #2a3d22;
+  }
+}
+:root[data-theme="dark"] [data-tome-theme="paper"] {
+  --t-bg: #161614; --t-surface: #1f1e1b; --t-ink: #e8e6dc; --t-muted: #9a988e; --t-rule: #33322d;
+  --t-accent: #e0835f; --t-accent-ink: #161614;
+  --t-heat-0: #252420; --t-heat-1: #4a2e22; --t-heat-2: #7a4330; --t-heat-3: #b0603f; --t-heat-4: #e0835f;
+    --t-good: #8fcf98; --t-good-bg: #1f3323;
+}
+:root[data-theme="dark"] [data-tome-theme="meadow"] {
+  --t-bg: #1a2219; --t-surface: #222d20; --t-ink: #e6eedd; --t-muted: #a3b296; --t-rule: #34432f;
+  --t-accent: #9fd27a; --t-accent-ink: #172015; --t-sun: #e8c25a; --t-petal: #e89aab;
+  --t-heat-0: #26311f; --t-heat-1: #35502a; --t-heat-2: #4f7a36; --t-heat-3: #72a84b; --t-heat-4: #9fd27a;
+    --t-good: #a8dc84; --t-good-bg: #2a3d22;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--page-font); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.page { max-width: 64rem; margin: 0 auto; padding-block: 2.5rem 4rem; display: flex; flex-direction: column; gap: 2rem; }
+.intro h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 .4rem; text-wrap: balance; }
+.intro p { margin: 0; color: var(--muted); max-width: 40rem; }
+.sample { font-family: var(--page-mono); font-size: .75rem; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.frames { display: flex; flex-wrap: wrap; gap: 2rem; justify-content: center; }
+.frame { display: flex; flex-direction: column; gap: .6rem; width: 360px; max-width: 100%; }
+.frame-label { display: flex; justify-content: space-between; align-items: baseline; font-size: .85rem; }
+.frame-label strong { font-weight: 600; }
+.frame-label span { color: var(--muted); }
+.phone { border: 8px solid var(--frame); border-radius: 34px; overflow: hidden; height: 740px; max-height: 92vh; container-type: inline-size; }
+.desktop { display: flex; flex-direction: column; gap: .6rem; }
+.desktop-head { display: flex; justify-content: space-between; align-items: center; gap: .6rem 1rem; flex-wrap: wrap; font-size: .85rem; }
+.desktop-head strong { font-weight: 600; }
+.desktop-head span { color: var(--muted); }
+.theme-switch { display: inline-flex; border: 1px solid var(--line); border-radius: 99px; padding: 2px; }
+.theme-switch button { border: 0; background: transparent; color: var(--muted); font: inherit; padding: .25rem .8rem; border-radius: 99px; cursor: pointer; }
+.theme-switch button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+.theme-switch button:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+.window { border-radius: 12px; overflow: hidden; background: var(--frame); }
+.window-bar { display: flex; align-items: center; gap: .45rem; padding: .55rem .8rem; }
+.window-bar i { width: 10px; height: 10px; border-radius: 50%; background: var(--chrome-field); flex: none; }
+.window-url { margin-left: .5rem; font: .75rem var(--page-mono); color: var(--chrome-ink); background: var(--chrome-field); padding: .15rem .6rem; border-radius: 6px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.screen { height: 640px; max-height: 85vh; container-type: inline-size; }
+.contract { border-top: 1px solid var(--line); padding-top: 1.5rem; display: grid; gap: 1.5rem; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
+.contract h2 { font-size: 1rem; font-weight: 600; margin: 0 0 .5rem; }
+.contract p, .contract li { color: var(--muted); margin: 0; }
+.contract ul { margin: 0; padding-left: 1.1rem; display: grid; gap: .2rem; }
+.contract code { font-family: var(--page-mono); font-size: .82em; color: var(--fg); }
+
+
+.tome-app {
+  height: 100%; overflow-y: auto; background: var(--t-bg); color: var(--t-ink); font-family: var(--t-ui);
+  padding: 1.1rem 1.1rem 1.6rem; display: flex; flex-direction: column; gap: 1.35rem; position: relative;
+}
+.tome-header { display: flex; flex-direction: column; gap: .1rem; position: relative; }
+.tome-back { align-self: flex-start; font-size: .82rem; color: var(--t-muted); text-decoration: none; margin-bottom: .5rem; }
+.tome-back:hover { color: var(--t-ink); }
+.tome-kicker { margin: 0; font-size: .78rem; color: var(--t-muted); letter-spacing: .05em; text-transform: uppercase; }
+.tome-title { margin: 0; font-family: var(--t-display); font-weight: 400; font-size: 2rem; line-height: 1.1; }
+.tome-lede { margin: .4rem 0 0; font-size: .85rem; color: var(--t-muted); }
+.tome-section { display: flex; flex-direction: column; gap: .55rem; margin: 0; }
+.tome-section-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
+.tome-section-head h3 { margin: 0; font-size: .95rem; font-weight: 600; }
+.tome-section-head a { color: inherit; text-decoration: none; }
+.tome-section-head a:hover { text-decoration: underline; }
+.tome-num { font-family: var(--t-mono); font-size: .75rem; color: var(--t-muted); margin-right: .45rem; font-weight: 400; }
+.tome-meta { font-size: .78rem; color: var(--t-muted); text-align: right; }
+
+.tome-glossary { display: flex; flex-direction: column; gap: 1.3rem; }
+.tome-terms { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
+.tome-term {
+  display: grid; grid-template-columns: 1fr auto; grid-template-areas: "word play" "when play"; align-items: center; gap: .1rem .6rem;
+  padding: .7rem .75rem .7rem .9rem; border-radius: var(--t-radius); background: var(--t-surface); border: 1px solid var(--t-rule);
+}
+.tome-term-word { grid-area: word; font-family: var(--t-display); font-size: 2rem; line-height: 1.1; }
+.tome-term-when { grid-area: when; font-size: .72rem; color: var(--t-muted); font-variant-numeric: tabular-nums; }
+.tome-term-when[data-due] { color: var(--t-accent); font-weight: 600; }
+.tome-hear {
+  grid-area: play; width: 2.6rem; height: 2.6rem; border-radius: 50%; border: 1.5px solid var(--t-ink); background: transparent; color: var(--t-ink);
+  display: grid; place-items: center; cursor: pointer; position: relative;
+}
+.tome-hear svg { width: 1rem; height: 1rem; margin-left: .15rem; }
+.tome-hear[data-playing] { border-color: var(--t-accent); color: var(--t-accent); }
+.tome-hear[data-playing]::after {
+  content: ""; position: absolute; inset: -5px; border-radius: 50%; border: 2px solid var(--t-accent);
+  animation: pulse 700ms ease-out infinite;
+}
+@keyframes pulse { from { transform: scale(.92); opacity: 1; } to { transform: scale(1.15); opacity: 0; } }
+.tome-hear:focus-visible, .tome-back:focus-visible { outline: 2px solid var(--t-accent); outline-offset: 2px; }
+
+[data-tome-theme="paper"] .tome-header { border-bottom: 1px solid var(--t-rule); padding-bottom: .9rem; }
+[data-tome-theme="paper"] .tome-kicker { font-variant: small-caps; text-transform: none; letter-spacing: .08em; font-size: .85rem; }
+[data-tome-theme="paper"] .tome-title { font-style: italic; }
+[data-tome-theme="paper"] .tome-term { background: transparent; }
+
+[data-tome-theme="meadow"] .tome-app {
+  background:
+    radial-gradient(120% 40% at 15% 104%, color-mix(in srgb, var(--t-heat-1) 70%, transparent) 0 40%, transparent 41%),
+    radial-gradient(110% 35% at 95% 106%, color-mix(in srgb, var(--t-heat-2) 45%, transparent) 0 40%, transparent 41%),
+    var(--t-bg);
+  background-attachment: local;
+}
+[data-tome-theme="meadow"] .tome-kicker { text-transform: none; letter-spacing: 0; font-weight: 700; }
+[data-tome-theme="meadow"] .tome-title { font-weight: 600; }
+[data-tome-theme="meadow"] .tome-section-head h3 { font-family: var(--t-display); font-weight: 500; font-size: 1.05rem; }
+[data-tome-theme="meadow"] .tome-term { border: 0; box-shadow: 0 2px 0 var(--t-rule); }
+[data-tome-theme="meadow"] .tome-term-word { font-weight: 500; }
+[data-tome-theme="meadow"] .tome-hear { border: 0; background: var(--t-accent); color: var(--t-accent-ink); box-shadow: 0 3px 0 color-mix(in srgb, var(--t-accent) 60%, #000); }
+[data-tome-theme="meadow"] .tome-hear:active { transform: translateY(2px); box-shadow: 0 1px 0 color-mix(in srgb, var(--t-accent) 60%, #000); }
+[data-tome-theme="meadow"] .tome-hear[data-playing] { color: var(--t-accent-ink); }
+[data-tome-theme="meadow"] .tome-hear[data-playing]::after { border-color: var(--t-petal); }
+@media (prefers-reduced-motion: reduce) { .tome-hear[data-playing]::after { animation: none; } }
+
+@container (min-width: 720px) {
+  .tome-app { padding: 1.6rem max(2.5rem, calc((100% - 52rem) / 2)) 2.5rem; }
+  .tome-glossary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.8rem 2.4rem; align-items: start; }
+  .tome-terms { gap: .7rem; }
+}
+</style>
+
+<div class="page">
+  <header class="intro">
+    <h1>Tomewise glossary</h1>
+    <p>Every item you have unlocked in a subject, grouped by the lesson that unlocked it, with a button to hear audio items. The app builds this page from the subject's items, so every subject gets one without the agent writing it. Your agent's own reference sheets, such as how WPM timing works, sit next to it in the subject's Reference list. Tap a play button to hear the letter at 20 WPM.</p>
+  </header>
+
+  <div class="frames" id="frames"></div>
+
+  <div class="desktop" id="desktop">
+    <div class="desktop-head">
+      <div><strong>Desktop</strong> <span>· same markup, lessons two across</span></div>
+      <div class="theme-switch" role="group" aria-label="Theme">
+        <button type="button" id="sw-paper" data-theme-id="paper" aria-pressed="true">Paper</button>
+        <button type="button" id="sw-meadow" data-theme-id="meadow" aria-pressed="false">Meadow</button>
+      </div>
+    </div>
+    <div class="window">
+      <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i><span class="window-url">homelab:4310/s/morse-code/glossary</span></div>
+      <div class="screen"></div>
+    </div>
+  </div>
+
+  <section class="contract">
+    <div>
+      <h2>Glossary page</h2>
+      <ul>
+        <li>Built by the app from items, for every subject</li>
+        <li>Unlocked items only, grouped by lesson in curriculum order</li>
+        <li>Each lesson heading links to the lesson</li>
+        <li>Play for audio items, and when each is next due</li>
+      </ul>
+    </div>
+    <div>
+      <h2>What a theme targets</h2>
+      <ul>
+        <li><code>.tome-glossary</code>, <code>.tome-terms</code></li>
+        <li><code>.tome-term</code>, <code>.tome-term-word</code></li>
+        <li><code>.tome-term-when[data-due]</code></li>
+        <li><code>.tome-hear</code>, <code>[data-playing]</code></li>
+      </ul>
+    </div>
+    <div>
+      <h2>Sample data</h2>
+      <p>The five letters and their lessons come from the Morse example. The review dates are invented. The tones are made in the browser; the app plays each item's own audio file.</p>
+    </div>
+  </section>
+</div>
+
+<template id="tome-glossary">
+  <div class="tome-app">
+    <header class="tome-header">
+      <a class="tome-back" href="subject-home.html">← Morse code</a>
+      <p class="tome-kicker">Morse code</p>
+      <h2 class="tome-title">Glossary</h2>
+      <p class="tome-lede">5 items from 4 lessons</p>
+    </header>
+
+    <div class="tome-glossary">
+      <section class="tome-section">
+        <div class="tome-section-head"><h3><a href="#l1"><span class="tome-num">1</span>K and M</a></h3><span class="tome-meta">2 items</span></div>
+        <ul class="tome-terms">
+          <li class="tome-term" data-char="K"><span class="tome-term-word">K</span><span class="tome-term-when" data-due>due today</span><button class="tome-hear" type="button" aria-label="Hear K"></button></li>
+          <li class="tome-term" data-char="M"><span class="tome-term-word">M</span><span class="tome-term-when">in 6 days</span><button class="tome-hear" type="button" aria-label="Hear M"></button></li>
+        </ul>
+      </section>
+      <section class="tome-section">
+        <div class="tome-section-head"><h3><a href="#l2"><span class="tome-num">2</span>R</a></h3><span class="tome-meta">1 item</span></div>
+        <ul class="tome-terms">
+          <li class="tome-term" data-char="R"><span class="tome-term-word">R</span><span class="tome-term-when" data-due>due today</span><button class="tome-hear" type="button" aria-label="Hear R"></button></li>
+        </ul>
+      </section>
+      <section class="tome-section">
+        <div class="tome-section-head"><h3><a href="#l3"><span class="tome-num">3</span>S</a></h3><span class="tome-meta">1 item</span></div>
+        <ul class="tome-terms">
+          <li class="tome-term" data-char="S"><span class="tome-term-word">S</span><span class="tome-term-when">in 3 days</span><button class="tome-hear" type="button" aria-label="Hear S"></button></li>
+        </ul>
+      </section>
+      <section class="tome-section">
+        <div class="tome-section-head"><h3><a href="#l4"><span class="tome-num">4</span>The late bump</a></h3><span class="tome-meta">1 item</span></div>
+        <ul class="tome-terms">
+          <li class="tome-term" data-char="U"><span class="tome-term-word">U</span><span class="tome-term-when" data-due>due today</span><button class="tome-hear" type="button" aria-label="Hear U"></button></li>
+        </ul>
+      </section>
+    </div>
+  </div>
+</template>
+
+<script>
+(function () {
+  var themes = [
+    { id: "paper", name: "Paper", note: "built-in · from your Morse stylesheet" },
+    { id: "meadow", name: "Meadow", note: "built-in · nature" }
+  ];
+  var CODES = { K: "-.-", M: "--", R: ".-.", S: "...", U: "..-" };
+  var UNIT = 1.2 / 20;
+  var PLAY = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z" fill="currentColor"/></svg>';
+  var frames = document.getElementById("frames");
+  var tpl = document.getElementById("tome-glossary");
+  var audio = null;
+
+  function ctx() {
+    if (!audio) { var AC = window.AudioContext || window.webkitAudioContext; if (AC) audio = new AC(); }
+    if (audio && audio.state === "suspended") audio.resume();
+    return audio;
+  }
+  function playChar(ch) {
+    var a = ctx(), code = CODES[ch], t, total = 0, i;
+    for (i = 0; i < code.length; i++) total += (code[i] === "-" ? 3 : 1) * UNIT + (i < code.length - 1 ? UNIT : 0);
+    if (!a) return total;
+    t = a.currentTime + 0.05;
+    var osc = a.createOscillator(), gain = a.createGain();
+    osc.frequency.value = 620; osc.type = "sine";
+    gain.gain.setValueAtTime(0, t);
+    osc.connect(gain); gain.connect(a.destination);
+    for (i = 0; i < code.length; i++) {
+      var len = (code[i] === "-" ? 3 : 1) * UNIT;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.35, t + 0.005);
+      gain.gain.setValueAtTime(0.35, t + len - 0.005);
+      gain.gain.linearRampToValueAtTime(0, t + len);
+      t += len + UNIT;
+    }
+    osc.start(a.currentTime); osc.stop(t + 0.05);
+    return total + 0.05;
+  }
+
+  function build(theme) {
+    var app = tpl.content.firstElementChild.cloneNode(true);
+    app.setAttribute("data-tome-theme", theme);
+    Array.prototype.forEach.call(app.querySelectorAll(".tome-hear"), function (b) { b.innerHTML = PLAY; });
+    return app;
+  }
+
+  themes.forEach(function (t) {
+    var f = document.createElement("div");
+    f.className = "frame";
+    f.innerHTML = '<div class="frame-label"><strong>' + t.name + '</strong><span>' + t.note + '</span></div><div class="phone"></div>';
+    f.querySelector(".phone").appendChild(build(t.id));
+    frames.appendChild(f);
+  });
+
+  var wide = build("paper");
+  document.querySelector("#desktop .screen").appendChild(wide);
+  var switches = document.querySelectorAll("#desktop .theme-switch button");
+  Array.prototype.forEach.call(switches, function (b) {
+    b.addEventListener("click", function () {
+      wide.setAttribute("data-tome-theme", b.getAttribute("data-theme-id"));
+      Array.prototype.forEach.call(switches, function (o) { o.setAttribute("aria-pressed", String(o === b)); });
+    });
+  });
+
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest(".tome-hear");
+    if (!btn || btn.hasAttribute("data-playing")) return;
+    var secs = playChar(btn.closest(".tome-term").getAttribute("data-char"));
+    btn.setAttribute("data-playing", "");
+    setTimeout(function () { btn.removeAttribute("data-playing"); }, secs * 1000 + 100);
+  });
+})();
+</script>
