@@ -15,6 +15,7 @@ export {
   InvalidEventError,
   InvalidLearningHomeError,
   LearningHomeNotFoundError,
+  QueryError,
   SubjectNotFoundError,
   UnsupportedFormatVersionError,
 } from "./errors.ts";
@@ -24,6 +25,8 @@ export type { LearningEvent, EventKind } from "./events.ts";
 export type { PayloadSchemaVersion } from "./payload.ts";
 export { dueItems } from "./due.ts";
 export type { DueItem } from "./due.ts";
+export { aggregates, queryPayload } from "./query.ts";
+export type { Aggregate, QueryOptions, QueryResult } from "./query.ts";
 export { readActivity } from "./activity.ts";
 export type { Activity, ActivityDay, ActivityOptions, GoalResult, Streak } from "./activity.ts";
 export { readStats } from "./stats.ts";

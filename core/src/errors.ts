@@ -12,6 +12,10 @@ export class SubjectNotFoundError extends Error {
   override name = "SubjectNotFoundError";
 }
 
+export class QueryError extends Error {
+  override name = "QueryError";
+}
+
 export class UnsupportedFormatVersionError extends Error {
   override name = "UnsupportedFormatVersionError";
 }
