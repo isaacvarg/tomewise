@@ -8,7 +8,7 @@ export const CONFIG_FILE = "tomewise.json";
 const HOME_ENV_VAR = "TOMEWISE_HOME";
 const URL_ENV_VAR = "TOMEWISE_URL";
 
-const AppUrl = z.url({ protocol: /^https?$/, error: "Use an http:// or https:// URL" });
+export const AppUrl = z.url({ protocol: /^https?$/, error: "Use an http:// or https:// URL" });
 
 const GlobalConfig = z.object({
   learningHome: z.string().optional(),
@@ -40,7 +40,7 @@ async function walkUp(start: string): Promise<string | undefined> {
   }
 }
 
-function globalConfigPath(env: NodeJS.ProcessEnv): string | undefined {
+export function globalConfigPath(env: NodeJS.ProcessEnv): string | undefined {
   return env.HOME ? join(env.HOME, ".config", "tomewise", "config.json") : undefined;
 }
 

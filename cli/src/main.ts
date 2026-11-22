@@ -20,6 +20,7 @@ import {
   validateLearningHome,
   type ValidationIssue,
 } from "@tomewise/core";
+import { INIT_USAGE, init } from "./init.ts";
 
 export interface Io {
   cwd: string;
@@ -33,6 +34,7 @@ export interface Io {
 
 const USAGE = [
   "Usage:",
+  INIT_USAGE,
   "  tome validate",
   "  tome log <event JSON>",
   "  tome log -        read the event from stdin",
@@ -266,6 +268,7 @@ async function serve(io: Io, args: string[]): Promise<number> {
 
 export async function run(args: string[], io: Io): Promise<number> {
   const [command, ...rest] = args;
+  if (command === "init") return init(io, rest, USAGE);
   if (command === "validate") return validate(io);
   if (command === "log") return log(io, rest[0]);
   if (command === "serve") return serve(io, rest);

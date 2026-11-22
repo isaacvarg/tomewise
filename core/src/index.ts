@@ -29,3 +29,5 @@ export type { Activity, ActivityDay, ActivityOptions, GoalResult, Streak } from 
 export type { Goal, StreakRules } from "./schemas.ts";
 export { JSON_SCHEMA_DIR, jsonSchemas } from "./json-schemas.ts";
 export type { JsonSchema, SchemaFile } from "./json-schemas.ts";
+export { checkInitSettings, DEFAULT_APP_URL, initLearningHome } from "./init.ts";
+export type { InitOptions, InitProblem, InitResult, InitSetting, InitSettings } from "./init.ts";
