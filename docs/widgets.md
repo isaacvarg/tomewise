@@ -46,6 +46,7 @@ await tome.attempt({ ref: "item:letter-k", outcome: "correct", grade: 3, duratio
 | Member                     | Does                                                                                                   |
 | -------------------------- | ------------------------------------------------------------------------------------------------------ |
 | `tome.attempt(input)`      | Posts one attempt in the page's session, starting it if needed. Resolves to the stored event.         |
+| `tome.explain(text, ref)`  | Posts `explanation.saved` for `ref` (`lesson:<id>` or `item:<id>`) with the trimmed text as `data.text`, ungraded. Rejects empty text. |
 | `tome.item(ref)`           | Resolves to the item for `item:<id>` from the subject's item sets.                                     |
 | `tome.subject()`           | Resolves to the subject as `/api/subjects/:subject` returns it.                                       |
 | `tome.start()`, `tome.end()` | Start or end the page's session by hand. Widgets rarely need these.                                   |
@@ -85,6 +86,36 @@ Keyboard: Tab to "Show answer", Enter or Space to reveal; focus moves to Good; k
 ```
 
 These class names, `data-*` states and this structure are part of the theme contract.
+
+## `<tome-explain>`
+
+| Attribute | Meaning                                                        |
+| --------- | -------------------------------------------------------------- |
+| `ref`     | the concept explained: `lesson:<id>` or `item:<id>`            |
+| `prompt`  | the question above the text box; "Explain it in your own words." if absent |
+
+The learner writes a plain-language explanation and saves it for the agent to grade later. Saving posts `explanation.saved` with `data: { text }` (trimmed) through `tome.explain`. Save is disabled while the text is blank. Editing after a save allows saving again, which posts a new event. On failure the text stays and a notice shows.
+
+`data.text` is checked by the app for every subject; a subject's payload schema may add fields to `explanation.saved` but not drop `text`.
+
+Keyboard: Tab into the text box, Ctrl+Enter (⌘+Enter) saves. Touch: tap Save explanation.
+
+### Markup
+
+```html
+<tome-explain ref="lesson:0001-greetings" prompt="Why do we say hola?">
+  <div class="tome-explain" data-state="editing | saving | saved">
+    <label class="tome-prompt">Why do we say hola?</label>
+    <textarea class="tome-explain-text"></textarea>
+    <div class="tome-actions">
+      <button class="tome-save">Save explanation</button>
+      <p class="tome-hint"><kbd>Ctrl</kbd>+<kbd>Enter</kbd> saves</p>   <!-- until saved -->
+      <p class="tome-verdict" role="status">Saved for grading</p>        <!-- once saved -->
+    </div>
+    <p class="tome-notice" role="alert">…</p>                           <!-- failed save -->
+  </div>
+</tome-explain>
+```
 
 ## Styling
 
