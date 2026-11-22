@@ -62,6 +62,13 @@ describe("/styleguide", () => {
     expect(await stateOf(page, caption, selector)).toBe(state);
   });
 
+  it("uses the width of a desktop window", async () => {
+    const { page } = await openStyleguide();
+    await page.setViewportSize({ width: 1280, height: 800 });
+
+    expect(await page.evaluate(() => document.body.getBoundingClientRect().width)).toBe(1152);
+  });
+
   it("writes nothing to the learning home", async () => {
     const app = await startWidgetApp();
     const before = await snapshot(app.app.root);

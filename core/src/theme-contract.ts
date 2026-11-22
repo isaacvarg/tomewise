@@ -6,8 +6,6 @@ export interface ContractToken {
   usedFor: string;
 }
 
-export const CONTRACT_VERSION = 1;
-
 export const themeTokens: readonly ContractToken[] = [
   { name: "--t-bg", kind: "color", usedFor: "page background; buttons and inputs" },
   { name: "--t-surface", kind: "color", usedFor: "widget and card background" },

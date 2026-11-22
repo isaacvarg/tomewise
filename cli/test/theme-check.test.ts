@@ -77,6 +77,38 @@ describe("tome theme check", { timeout: 120_000 }, () => {
     expect(stdout).toContain("✗ light: missing token --t-cell-radius");
   });
 
+  it("fails a theme that ignores the data-mode override", async () => {
+    const { code, stdout } = await check("stubborn", async (home) => {
+      await cp(new URL("../../app/themes/paper/", import.meta.url), join(home, "themes/stubborn"), { recursive: true });
+      const tokens = join(home, "themes/stubborn/tokens.css");
+      const css = await readFile(tokens, "utf8");
+      await writeFile(tokens, css.slice(0, css.indexOf(":root[data-mode=\"dark\"]")));
+    });
+
+    expect(code).toBe(1);
+    expect(stdout).toContain("✗ dark: data-mode=\"dark\" doesn't switch --t-bg to its dark value");
+    expect(stdout).not.toContain("data-mode=\"light\"");
+  });
+
+  it("checks the text that shows a result, even on a disabled answer", async () => {
+    const { code, stdout } = await check("faint-results", async (home) => {
+      await cp(new URL("../../app/themes/paper/", import.meta.url), join(home, "themes/faint-results"), { recursive: true });
+      const tokens = join(home, "themes/faint-results/tokens.css");
+      await writeFile(tokens, (await readFile(tokens, "utf8")).replace("--t-good: #2f6b3a;", "--t-good: #cfe3cc;"));
+    });
+
+    expect(code).toBe(1);
+    expect(stdout).toMatch(/light: contrast [\d.]+:1, needs 4\.5:1 · button\.tome-answer "rojo2" in <tome-choice> · saved · correct/);
+  });
+
+  it("exits 2 on a usage mistake", async () => {
+    const stderr: string[] = [];
+    const code = await run(["theme", "chekc", "paper"], { cwd: await tempDir(), env: {}, stdout: () => {}, stderr: (line) => stderr.push(line) });
+
+    expect(code).toBe(2);
+    expect(stderr.join("\n")).toContain("tome theme check <name>");
+  });
+
   it("refuses a theme that doesn't exist", async () => {
     const { code, stderr } = await check("nope");
 

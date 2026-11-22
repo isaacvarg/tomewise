@@ -7,7 +7,7 @@
 <script src="/styleguide/styleguide.js"></script>
 <style>
 @layer tome.base {
-  body.styleguide { max-width: 72rem; }
+  :root:has(meta[name="tome-page-kind"]) body.styleguide { max-width: 72rem; }
   .styleguide-head { border-bottom: 1px solid var(--t-rule); padding-bottom: 1rem; margin-bottom: 1rem; }
   .styleguide-head p { margin: .2rem 0 0; color: var(--t-muted); }
   .styleguide-nav { display: flex; flex-wrap: wrap; gap: .3rem 1rem; padding: 0; margin: .8rem 0 0; list-style: none; font-size: .9rem; }
@@ -166,8 +166,8 @@ M  --</code></pre>
 <section class="styleguide-section" id="drill">
   <h2>&lt;tome-drill&gt;</h2>
   <div class="styleguide-states">
-    <figure class="styleguide-state"><figcaption>running</figcaption><tome-drill drill="cards"></tome-drill></figure>
-    <figure class="styleguide-state"><figcaption>done</figcaption><tome-drill drill="one-card" data-demo="finish"></tome-drill></figure>
+    <figure class="styleguide-state"><figcaption>running</figcaption><tome-drill drill="vocab"></tome-drill></figure>
+    <figure class="styleguide-state"><figcaption>done</figcaption><tome-drill drill="one-word" data-demo="finish"></tome-drill></figure>
     <figure class="styleguide-state"><figcaption>empty · nothing due</figcaption><tome-drill drill="review"></tome-drill></figure>
     <figure class="styleguide-state"><figcaption>error · unknown drill</figcaption><tome-drill drill="missing"></tome-drill></figure>
   </div>

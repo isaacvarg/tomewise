@@ -75,7 +75,7 @@ export const ThemeManifest = z.strictObject({
 
 export type ThemeManifest = z.output<typeof ThemeManifest>;
 
-export const explanationText =z.string().trim().min(1, { error: "An explanation needs some text" });
+export const explanationText = z.string().trim().min(1, { error: "An explanation needs some text" });
 
 export const TomewiseConfig = z.strictObject({
   formatVersion: z.int().min(1).max(SUPPORTED_FORMAT_VERSION, {

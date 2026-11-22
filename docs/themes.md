@@ -143,7 +143,8 @@ tome theme check meadow [--out <dir>]
 The check serves your learning home (or, outside one, the built-in demo home), loads `/styleguide` in the theme at 375, 768 and 1280 px wide, in light and dark, with reduced motion, and reports:
 
 - required tokens the theme doesn't define, in each mode;
-- text below WCAG AA contrast against the colour behind it: 4.5:1, or 3:1 for large text (24px, or 18.66px bold). Disabled and inert controls, and the inactive parts of a widget in its error state, are exempt, as WCAG allows;
+- colour tokens that `data-mode="light"` or `data-mode="dark"` doesn't switch to the same value the system setting gives;
+- text below WCAG AA contrast against the colour behind it: 4.5:1, or 3:1 for large text (24px, or 18.66px bold). Disabled and inert controls, and the inactive parts of a widget in its error state, are exempt, as WCAG allows, but an answer that shows a result (`data-state="correct"` or `"wrong"`) is checked even when disabled. Text over a gradient or image is measured against the nearest background colour only;
 - any element that sticks out past the edge of the window, which would make the page scroll sideways.
 
 It writes a full-page screenshot for each width and mode to `--out` (default: a new temporary folder), prints the folder, and exits with 1 if it found any problem.

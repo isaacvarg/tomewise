@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Hono } from "hono";
 import type { LearningHome } from "@tomewise/core";
-import { isDirectory, isSafeSegment, resolveUnder, sendFile } from "./files.ts";
+import { isSafeSegment, resolveUnder, sendFile } from "./files.ts";
 
 export interface ToolDirs {
   widgets: string;
@@ -17,7 +17,7 @@ export const BUILT_IN: ToolDirs = {
 export async function themeDir(home: LearningHome, tool: ToolDirs, name: string): Promise<string | undefined> {
   if (!isSafeSegment(name)) return undefined;
   const own = join(home.root, "themes", name);
-  return (await isDirectory(own)) ? own : join(tool.themes, name);
+  return (await resolveUnder(own, "tokens.css")) ? own : join(tool.themes, name);
 }
 
 export async function resolveThemeFile(

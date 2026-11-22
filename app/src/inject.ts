@@ -28,7 +28,7 @@ function themeTags(html: string, theme: Theme | undefined): string[] {
   const imports = [LAYER_ORDER];
   if (!references(html, "href", BASE_CSS)) imports.push(`@import url("${BASE_CSS}");`);
   if (theme) {
-    const files = ["tokens.css", ...(theme.themeCss ? ["theme.css"] : [])].map((file) => `/themes/${theme.name}/${file}`);
+    const files = ["tokens.css", ...(theme.hasThemeCss ? ["theme.css"] : [])].map((file) => `/themes/${theme.name}/${file}`);
     for (const url of files) if (!references(html, "href", url)) imports.push(`@import url("${url}") layer(theme);`);
   }
   const tags = [`<style>\n${imports.join("\n")}\n</style>`];

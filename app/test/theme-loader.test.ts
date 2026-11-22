@@ -169,3 +169,14 @@ describe("layer order", () => {
     expect(head.indexOf(LAYERS)).toBeLessThan(head.indexOf("@layer theme {"));
   });
 });
+
+describe("a half-built theme folder in the learning home", () => {
+  it("doesn't hide the built-in theme of the same name", async () => {
+    const app = await startTestApp(async (root) => {
+      await writeFiles(root, { "themes/paper/notes.txt": "work in progress" });
+    }, await toolWith());
+
+    expect(await headOf(app)).toContain(tokens("paper"));
+    expect((await app.raw("/themes/paper/tokens.css")).body.toString()).toBe(":root { --t-ink: black; }");
+  });
+});

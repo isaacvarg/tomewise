@@ -1,7 +1,7 @@
 [
-  { "id": "hola", "type": "flashcard", "front": "hola", "back": "hello", "tags": ["card"] },
-  { "id": "adios", "type": "flashcard", "front": "adiós", "back": "goodbye", "tags": ["card"] },
-  { "id": "gato", "type": "flashcard", "front": "el gato", "back": "the cat", "tags": ["card"] },
+  { "id": "hola", "type": "flashcard", "front": "hola", "back": "hello", "tags": ["vocab"] },
+  { "id": "adios", "type": "flashcard", "front": "adiós", "back": "goodbye", "tags": ["vocab"] },
+  { "id": "gato", "type": "flashcard", "front": "el gato", "back": "the cat", "tags": ["vocab"] },
   {
     "id": "rojo",
     "type": "multiple-choice",

@@ -7,14 +7,14 @@ export type Warn = (message: string) => void;
 
 export interface Theme {
   name: string;
-  themeCss: boolean;
+  hasThemeCss: boolean;
   script?: string;
 }
 
 async function readTheme(home: LearningHome, tool: ToolDirs, name: string, warn: Warn): Promise<Theme | undefined> {
   const dir = await themeDir(home, tool, name);
   if (!dir || !(await resolveUnder(dir, "tokens.css"))) return undefined;
-  const theme: Theme = { name, themeCss: (await resolveUnder(dir, "theme.css")) !== undefined };
+  const theme: Theme = { name, hasThemeCss: (await resolveUnder(dir, "theme.css")) !== undefined };
   const manifestFile = await resolveUnder(dir, "theme.json");
   if (!manifestFile) return theme;
   let manifest: ThemeManifest;

@@ -145,3 +145,18 @@ describe("Meadow", () => {
     expect(await leafCount(page)).toBe(0);
   });
 });
+
+describe("base styles", () => {
+  it("set a reading column on lessons but leave the dashboard page's width alone", async () => {
+    const { app, page } = await startWidgetApp();
+    const width = () => page.evaluate(() => document.body.getBoundingClientRect().width);
+    await page.setViewportSize({ width: 1280, height: 800 });
+
+    await page.goto(`${app.url}${LESSON}`);
+    expect(await width()).toBeLessThan(700);
+
+    await page.setContent("<html><head></head><body></body></html>");
+    await page.addStyleTag({ url: `${app.url}/widgets/v1/base.css` });
+    expect(await width()).toBe(1280);
+  });
+});

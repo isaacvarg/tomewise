@@ -34,7 +34,7 @@ export function styleguideRoutes(home: () => LearningHome, resolveTheme: Resolve
     const page = MODES.has(mode ?? "") ? template.replace(/<html\b/i, `<html data-mode="${mode}"`) : template;
     const html = injectPage(page, theme, { subject: DEMO_SUBJECT, kind: "lesson", id: "styleguide" }).replace(
       /<head\b[^>]*>/i,
-      (open) => `${open}\n${jsonScript("styleguide-data", { subject, themeName: theme?.name ?? "no" })}`,
+      (open) => `${open}\n${jsonScript("styleguide-data", { subject, themeName: theme?.name ?? "" })}`,
     );
     return c.html(html);
   });

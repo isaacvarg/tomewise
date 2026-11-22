@@ -1,1 +1,0 @@
-{ "name": "Flashcards", "select": { "from": "unlocked", "tags": ["card"] }, "count": 3, "format": "flashcard" }

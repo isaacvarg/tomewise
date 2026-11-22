@@ -13,7 +13,6 @@ export const WIDTHS = [375, 768, 1280] as const;
 export const MODES = ["light", "dark"] as const;
 type Mode = (typeof MODES)[number];
 
-
 export interface Problem {
   width?: number;
   mode: Mode;
@@ -23,11 +22,13 @@ export interface Problem {
 interface PageFindings {
   theme: string | null;
   missing: string[];
+  colors: Record<string, string>;
+  forcedColors: Record<string, string>;
   contrast: { ratio: number; needs: number; element: string }[];
   overflow: { width: number; element: string }[];
 }
 
-function inPage(required: string[]): PageFindings {
+function inPage({ required, colors, opposite }: { required: string[]; colors: string[]; opposite: Mode }): PageFindings {
   type Rgba = [number, number, number, number];
   const parse = (color: string): Rgba => {
     const parts = color.match(/[\d.]+/g)?.map(Number) ?? [0, 0, 0, 0];
@@ -90,7 +91,9 @@ function inPage(required: string[]): PageFindings {
   for (const element of document.body.querySelectorAll("*")) {
     const ownText = [...element.childNodes].some((node) => node.nodeType === Node.TEXT_NODE && node.textContent!.trim() !== "");
     if (!ownText || !visible(element) || element.matches("script, style, option")) continue;
-    if (element.closest(":disabled, [aria-disabled='true'], [aria-hidden='true'], [inert]")) continue;
+    const inactive = element.closest(":disabled, [aria-disabled='true'], [inert]");
+    if (inactive && !inactive.matches("[data-state='correct'], [data-state='wrong']")) continue;
+    if (element.closest("[aria-hidden='true']")) continue;
     if (element.closest("[class^='tome-'][data-state='error']") && !element.closest(".tome-notice")) continue;
     const style = getComputedStyle(element);
     const background = backgroundOf(element);
@@ -122,10 +125,21 @@ function inPage(required: string[]): PageFindings {
   }));
   if (overflow.length === 0 && root.scrollWidth > viewport) overflow.push({ width: root.scrollWidth, element: "the page" });
 
-  const tokens = getComputedStyle(root);
+  const read = (names: string[]) => {
+    const style = getComputedStyle(root);
+    return Object.fromEntries(names.map((name) => [name, style.getPropertyValue(name).trim()]));
+  };
+  const tokens = read(required);
+  const previousMode = root.getAttribute("data-mode");
+  root.setAttribute("data-mode", opposite);
+  const forcedColors = read(colors);
+  if (previousMode === null) root.removeAttribute("data-mode");
+  else root.setAttribute("data-mode", previousMode);
   return {
     theme: document.querySelector<HTMLMetaElement>('meta[name="tome-theme"]')?.content ?? null,
-    missing: required.filter((name) => tokens.getPropertyValue(name).trim() === ""),
+    missing: required.filter((name) => tokens[name] === ""),
+    colors: Object.fromEntries(colors.map((name) => [name, tokens[name]!])),
+    forcedColors,
     contrast,
     overflow,
   };
@@ -161,11 +175,16 @@ async function homeRoot(io: Io): Promise<string> {
   }
 }
 
-async function checkPage(page: Page, url: string): Promise<PageFindings> {
+async function checkPage(page: Page, url: string, mode: Mode): Promise<PageFindings> {
   await page.goto(url);
   await page.waitForFunction(() => document.documentElement.dataset.styleguide, undefined, { timeout: 20_000 });
   await page.evaluate(() => document.fonts.ready);
-  return page.evaluate(inPage, requiredTokenNames());
+  const arg: Parameters<typeof inPage>[0] = {
+    required: requiredTokenNames(),
+    colors: requiredTokenNames("color"),
+    opposite: mode === "light" ? "dark" : "light",
+  };
+  return page.evaluate<PageFindings, typeof arg>(inPage, arg);
 }
 
 export async function themeCheck(io: Io, args: string[], usage: string): Promise<number> {
@@ -174,12 +193,12 @@ export async function themeCheck(io: Io, args: string[], usage: string): Promise
     parsed = parseArgs({ args, allowPositionals: true, options: { out: { type: "string" } } });
   } catch (error) {
     io.stderr((error as Error).message);
-    return 1;
+    return 2;
   }
   const [action, name, ...extra] = parsed.positionals;
   if (action !== "check" || !name || extra.length > 0) {
     io.stderr(usage);
-    return 1;
+    return 2;
   }
 
   const home = await loadLearningHome(await homeRoot(io));
@@ -196,6 +215,7 @@ export async function themeCheck(io: Io, args: string[], usage: string): Promise
   }
 
   const problems: Problem[] = [];
+  const colors = new Map<Mode, { own: Record<string, string>; forced: Record<string, string> }>();
   try {
     io.stdout(`Checking ${name} at ${WIDTHS.join(", ")} px wide, in light and dark`);
     for (const mode of MODES) {
@@ -204,12 +224,13 @@ export async function themeCheck(io: Io, args: string[], usage: string): Promise
         const context = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: mode, reducedMotion: "reduce" });
         try {
           const page = await context.newPage();
-          const findings = await checkPage(page, `${server.url}/styleguide?theme=${encodeURIComponent(name)}`);
+          const findings = await checkPage(page, `${server.url}/styleguide?theme=${encodeURIComponent(name)}`, mode);
           if (findings.theme !== name) {
             io.stderr(`No theme "${name}" in themes/ or the built-in themes.`);
             return 1;
           }
           for (const token of findings.missing) missingInMode.add(token);
+          if (!colors.has(mode)) colors.set(mode, { own: findings.colors, forced: findings.forcedColors });
           for (const { ratio, needs, element } of findings.contrast) {
             problems.push({ width, mode, message: `contrast ${ratio.toFixed(2)}:1, needs ${needs}:1 · ${element}` });
           }
@@ -222,6 +243,16 @@ export async function themeCheck(io: Io, args: string[], usage: string): Promise
         }
       }
       for (const token of missingInMode) problems.unshift({ mode, message: `missing token ${token}` });
+    }
+    for (const mode of MODES) {
+      const opposite = mode === "light" ? "dark" : "light";
+      const expected = colors.get(mode)?.own ?? {};
+      const forced = colors.get(opposite)?.forced ?? {};
+      for (const token of Object.keys(expected)) {
+        if (expected[token] !== "" && forced[token] !== expected[token]) {
+          problems.push({ mode, message: `data-mode="${mode}" doesn't switch ${token} to its ${mode} value` });
+        }
+      }
     }
   } finally {
     await browser.close();
