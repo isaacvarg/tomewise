@@ -85,3 +85,30 @@ describe("the runner in /styleguide", () => {
     expect(await page.locator('.styleguide-nav a[href="#summary"]').innerText()).toBe("Summary");
   });
 });
+
+describe("Start in /styleguide", () => {
+  it.each(["phone", "desktop"] as const)("shows the break between subjects and the Start list at %s width", async (width) => {
+    const { page, pageErrors } = await openStyleguide(width);
+
+    expect(await page.evaluate(() => document.documentElement.dataset.styleguideErrors ?? "")).toBe("");
+    const screen = page.locator("#break .tome-break");
+    expect(await screen.locator(".tome-kicker").innerText()).toBe("Styleguide demo");
+    expect(await screen.locator(".tome-score").innerText()).toBe("60%");
+    expect(await screen.locator(".tome-break-next").innerText()).toBe("Next: Morse code, 9 items");
+    expect(await texts(page, "#break .tome-actions button")).toEqual(["Continue", "Skip", "Done"]);
+    expect(await texts(page, "#start-list .tome-pick")).toEqual([
+      "All, one after another\n13 items · 9 min",
+      "Morse code\n9 items · 6 min",
+      "Spanish\n4 items · 3 min",
+    ]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect(pageErrors).toEqual([]);
+  }, 20_000);
+
+  it("links the break and Start list from the styleguide's contents", async () => {
+    const { page } = await openStyleguide();
+
+    expect(await page.locator('.styleguide-nav a[href="#break"]').innerText()).toBe("Break");
+    expect(await page.locator('.styleguide-nav a[href="#start-list"]').innerText()).toBe("Start list");
+  });
+});

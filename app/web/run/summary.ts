@@ -15,6 +15,13 @@ export interface LookAgain {
   lesson?: { href: string; title: string };
 }
 
+export interface SubjectScore {
+  id: string;
+  name: string;
+  right: number;
+  answered: number;
+}
+
 export interface Summary {
   right: number;
   answered: number;
@@ -23,6 +30,7 @@ export interface Summary {
   time: string | undefined;
   timeUp: boolean;
   lookAgain: LookAgain[];
+  subjects: SubjectScore[];
 }
 
 function labelOf(item: Item | undefined, ref: string): string {
@@ -93,5 +101,11 @@ export function summarize(runs: readonly SubjectRun[]): Summary {
     time: sessions.length ? clock(sessions.reduce((total, ms) => total + ms, 0)) : undefined,
     timeUp: runs.some((run) => run.timeUp),
     lookAgain: [...lookAgain.values()],
+    subjects: runs.map((run) => ({
+      id: run.subject.id,
+      name: run.subject.name,
+      right: run.results.filter((result) => result.outcome === "correct").length,
+      answered: run.results.length,
+    })),
   };
 }

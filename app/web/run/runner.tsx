@@ -16,9 +16,10 @@ export interface RunnerProps {
   subject: Subject;
   drill: string;
   ownsPage?: boolean;
+  onDone?: (run: SubjectRun) => void;
 }
 
-export function Runner({ subject, drill, ownsPage = true }: RunnerProps) {
+export function Runner({ subject, drill, ownsPage = true, onDone }: RunnerProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [tome, setTome] = useState<Tome>();
@@ -26,6 +27,8 @@ export function Runner({ subject, drill, ownsPage = true }: RunnerProps) {
   const [run, setRun] = useState(0);
   const [done, setDone] = useState<SubjectRun>();
   const element = useRef<HTMLElement>(null);
+  const handOff = useRef(onDone);
+  handOff.current = onDone;
 
   useEffect(() => {
     let current = true;
@@ -55,7 +58,9 @@ export function Runner({ subject, drill, ownsPage = true }: RunnerProps) {
     if (!drillElement) return;
     const finished = (event: Event) => {
       event.preventDefault();
-      setDone({ ...(event as CustomEvent<DrillDone>).detail, subject });
+      const run = { ...(event as CustomEvent<DrillDone>).detail, subject };
+      if (handOff.current) handOff.current(run);
+      else setDone(run);
     };
     drillElement.addEventListener("tome-drill-done", finished);
     return () => drillElement.removeEventListener("tome-drill-done", finished);
@@ -117,7 +122,7 @@ export function RunSummary({ summary, focus = false, children }: RunSummaryProps
   return (
     <section className="tome-runner-summary" aria-label="Summary">
       <div className="tome-summary-head">
-        <span className="tome-kicker">{summary.timeUp ? "Time's up" : "Session done"}</span>
+        <span className="tome-kicker">{summary.timeUp ? "Time's up" : summary.subjects.length > 1 ? "All done" : "Session done"}</span>
         <span className="tome-score">{summary.score}</span>
         <span className="tome-score-sub">
           {summary.right} of {summary.answered} right
@@ -130,6 +135,15 @@ export function RunSummary({ summary, focus = false, children }: RunSummaryProps
             <span>{summary.time}</span>
           </li>
         )}
+        {summary.subjects.length > 1 &&
+          summary.subjects.map((subject, index) => (
+            <li key={`${index} ${subject.id}`}>
+              <span>{subject.name}</span>
+              <span>
+                {subject.right} of {subject.answered}
+              </span>
+            </li>
+          ))}
         {summary.answered < summary.planned && (
           <li>
             <span>Answered</span>

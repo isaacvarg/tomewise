@@ -1,34 +1,12 @@
 import { Link } from "react-router";
-import { type Activity, api, type Subject } from "../api.ts";
+import type { Activity, Subject } from "../api.ts";
 import { useLoad } from "../load.ts";
 import { Failed, Screen } from "../screen.tsx";
-import {
-  count,
-  type DueToday,
-  dueToday,
-  heatmapCells,
-  inSavedOrder,
-  longDate,
-  NARROW_WEEKS,
-  type WeekStart,
-  weekdayLetters,
-} from "./model.ts";
-
-interface HomeData {
-  subjects: Subject[];
-  activity: Activity;
-  due: DueToday;
-}
-
-async function loadHome(): Promise<HomeData> {
-  const [all, activity, settings] = await Promise.all([api.subjects(), api.activity(), api.settings()]);
-  const subjects = inSavedOrder(all, settings.subjects);
-  const due = await Promise.all(subjects.map(async (subject) => ({ subject, due: await api.due(subject.id, activity.today) })));
-  return { subjects, activity, due: dueToday(due) };
-}
+import { loadToday } from "../today.ts";
+import { count, type DueToday, heatmapCells, longDate, NARROW_WEEKS, type WeekStart, weekdayLetters } from "./model.ts";
 
 export function Home() {
-  const loaded = useLoad(loadHome, [], { refetchOn: ["content", "events"] });
+  const loaded = useLoad(loadToday, [], { refetchOn: ["content", "events"] });
   if (loaded.state === "loading") {
     return (
       <Screen title="Today" state="loading">
