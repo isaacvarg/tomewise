@@ -9,7 +9,7 @@ import { readRoutes } from "./reads.ts";
 import { trackRuleChanges } from "./rule-changes.ts";
 import { spaRoutes } from "./spa.ts";
 import { styleguideRoutes } from "./styleguide.ts";
-import { type Clock, type GitSync, startSync, syncOff, syncRoutes } from "./sync.ts";
+import { type Clock, type GitSync, startSync, syncOff, syncRoutes, systemClock } from "./sync.ts";
 import { themeResolver, type Warn } from "./themes.ts";
 import { BUILT_IN, themeRoutes, type ToolDirs, widgetRoutes } from "./tool-files.ts";
 import { type HomeView, watchLearningHome, type WatchOptions } from "./watcher.ts";
@@ -19,27 +19,28 @@ export interface AppOptions {
   tool?: ToolDirs;
   warn?: Warn;
   sync?: GitSync;
+  clock?: Clock;
 }
 
 export function createApp(
   view: () => HomeView,
-  { spa, tool = BUILT_IN, warn = console.warn, sync = syncOff }: AppOptions = {},
+  { spa, tool = BUILT_IN, warn = console.warn, sync = syncOff, clock = systemClock }: AppOptions = {},
 ): Hono {
   const app = new Hono();
   const home = () => view().home;
   const resolveTheme = themeResolver(tool, warn);
   app.route("/api/events", eventRoutes(home, sync));
   app.route("/api/sync", syncRoutes(sync));
-  app.route("/api", readRoutes(view));
+  app.route("/api", readRoutes(view, () => clock.now()));
   app.route("/s", pageRoutes(home, resolveTheme));
   app.route("/widgets", widgetRoutes(tool));
   app.route("/themes", themeRoutes(home, tool));
-  app.route("/styleguide", styleguideRoutes(home, resolveTheme));
+  app.route("/styleguide", styleguideRoutes(home, resolveTheme, { spa }));
   if (spa !== undefined && existsSync(spa)) app.route("/", spaRoutes(spa, home, resolveTheme));
   return app;
 }
 
-export interface ListenOptions extends Omit<AppOptions, "sync"> {
+export interface ListenOptions extends Omit<AppOptions, "sync" | "clock"> {
   host: string;
   port: number;
   watch?: WatchOptions;
@@ -56,7 +57,7 @@ export async function startServer(home: LearningHome, { host, port, watch, clock
   const watched = await watchLearningHome(home, { ...watch, onError });
   const sync = startSync(() => watched.current().home, { clock });
   await trackRuleChanges(watched, sync.exclusive, onError);
-  const server = createAdaptorServer({ fetch: createApp(watched.current, { ...options, sync }).fetch });
+  const server = createAdaptorServer({ fetch: createApp(watched.current, { ...options, sync, clock }).fetch });
   try {
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);

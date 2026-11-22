@@ -1,0 +1,19 @@
+import { Route, Routes } from "react-router";
+import { Home } from "./home/home.tsx";
+import { NotFound } from "./pages/not-found.tsx";
+import { RunDrill, RunDue } from "./pages/run.tsx";
+import { Settings } from "./pages/settings.tsx";
+import { SubjectHome } from "./pages/subject.tsx";
+
+export function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/s/:subject" element={<SubjectHome />} />
+      <Route path="/run/due" element={<RunDue />} />
+      <Route path="/run" element={<RunDrill />} />
+      <Route path="/settings" element={<Settings />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+}

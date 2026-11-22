@@ -1,0 +1,7 @@
+{
+  "formatVersion": 1,
+  "timezone": "Europe/London",
+  "weekStart": "monday",
+  "minimumSessionSeconds": 1,
+  "streak": { "restDaysPerWeek": 1 }
+}

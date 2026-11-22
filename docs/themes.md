@@ -121,9 +121,9 @@ Themes reach markup through tag names, `.tome-*` classes and `data-*` states.
 
 ### Dashboard classes
 
-The dashboard pages use these classes, taken from `docs/mockups/`. They arrive with the dashboard; `/styleguide` shows them as each page lands.
+The dashboard pages use these classes, taken from `docs/mockups/`. `/styleguide` shows each page as it lands; home is there now. `.tome-app` carries `data-state` (`loading`, `ready` or `error`), and heatmap cells carry `data-date`, `data-level` (1 to 4; none for a day without practice), `data-today`, `data-future`, and `data-old` on weeks only wide screens show.
 
-`tome-activity` `tome-app` `tome-cell` `tome-due` `tome-header` `tome-heat-days` `tome-heat-legend` `tome-heatmap` `tome-heatmap-wrap` `tome-kicker` `tome-runner` `tome-runner-bar` `tome-section` `tome-section-head` `tome-stage` `tome-start` `tome-streak` `tome-subject` `tome-subject-name` `tome-subjects` `tome-title`
+`tome-activity` `tome-app` `tome-cell` `tome-due` `tome-due-how` `tome-due-what` `tome-header` `tome-heat-days` `tome-heat-legend` `tome-heatmap` `tome-heatmap-wrap` `tome-hint` `tome-kicker` `tome-mark` `tome-mark-letter` `tome-meta` `tome-meta-narrow` `tome-meta-wide` `tome-notice` `tome-runner` `tome-runner-bar` `tome-section` `tome-section-head` `tome-stage` `tome-start` `tome-streak` `tome-streak-num` `tome-streak-text` `tome-subject` `tome-subject-name` `tome-subjects` `tome-title`
 
 ## Seeing a theme
 

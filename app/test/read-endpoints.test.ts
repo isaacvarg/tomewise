@@ -123,6 +123,18 @@ describe("GET /api/subjects/:subject/due", () => {
   });
 });
 
+describe("today, by the app's clock", () => {
+  const clock = { now: () => new Date("2026-11-21T12:00:00Z"), every: () => () => {} };
+
+  it("dates activity and what's due", async () => {
+    const app = await startTestApp(undefined, undefined, { clock });
+    const home = await loadLearningHome(app.root);
+
+    expect((await app.get("/api/activity")).body.today).toBe("2026-11-21");
+    expect((await app.get("/api/subjects/morse-code/due")).body).toEqual({ due: json(await dueItems(home, "morse-code", "2026-11-21")) });
+  });
+});
+
 describe("GET /api/activity", () => {
   const shortSessionsCount = (root: string) =>
     writeFile(

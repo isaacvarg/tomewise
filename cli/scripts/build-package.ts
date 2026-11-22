@@ -1,7 +1,8 @@
-import { chmod, cp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { chmod, cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
+import { buildSpa } from "../../app/scripts/build.ts";
 import { buildWidgets } from "../../widgets/scripts/build.ts";
 
 const REPO = fileURLToPath(new URL("../../", import.meta.url));
@@ -9,15 +10,6 @@ const REPO = fileURLToPath(new URL("../../", import.meta.url));
 export interface BuildOptions {
   out: string;
   spa?: string;
-}
-
-async function exists(path: string): Promise<boolean> {
-  try {
-    await stat(path);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 export async function buildPackage({ out, spa }: BuildOptions): Promise<void> {
@@ -60,5 +52,6 @@ export async function buildPackage({ out, spa }: BuildOptions): Promise<void> {
 
 if (import.meta.main) {
   const spa = join(REPO, "app/dist");
-  await buildPackage({ out: join(REPO, "build/tomewise"), spa: (await exists(spa)) ? spa : undefined });
+  await buildSpa(spa);
+  await buildPackage({ out: join(REPO, "build/tomewise"), spa });
 }

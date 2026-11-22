@@ -7,6 +7,38 @@
   const json = (body, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 
+  const TODAY = "2026-11-21";
+  const DAY_MS = 86_400_000;
+  const homeSubjects = [
+    { id: "morse-code", name: "Morse code", due: 9 },
+    { id: "spanish", name: "Spanish", due: 4 },
+    { id: "yoga", name: "Yoga", due: 0 },
+    { id: "cube", name: "3x3 cube", due: 0 },
+  ].map((subject) => ({ ...subject, settings: { timezone: "UTC", weekStart: "monday", minimumSessionSeconds: 60 } }));
+
+  const seeded = (n) => {
+    const x = Math.sin(n * 9301 + 49297) * 233280;
+    return x - Math.floor(x);
+  };
+
+  function homeActivity() {
+    const today = Date.parse(TODAY);
+    const days = [];
+    for (let ago = 364; ago >= 0; ago--) {
+      const r = seeded(ago);
+      let active = r < 0.3 ? 0 : r < 0.5 ? 1 : r < 0.72 ? 2 : r < 0.9 ? 3 : 4;
+      if (ago < 6) active = Math.max(active, 1 + (ago % 3));
+      if (ago === 6) active = 0;
+      if (active === 0) continue;
+      const date = new Date(today - ago * DAY_MS).toISOString().slice(0, 10);
+      days.push({ date, subjects: homeSubjects.slice(0, active).map((subject) => subject.id) });
+    }
+    return { today: TODAY, days, streak: { days: 6, restDaysLeft: 1 }, goals: [] };
+  }
+
+  const dueFor = (subject) =>
+    Array.from({ length: subject.due }, (_, index) => ({ item: { id: `${subject.id}-${index + 1}`, type: "flashcard" }, due: null }));
+
   const eventId = () => `01STYLEGUIDE${String(++counter).padStart(14, "0")}`;
 
   async function fakeApi(url, init = {}) {
@@ -19,6 +51,10 @@
       return json({ events: events.map((event) => ({ id: eventId(), ts: new Date().toISOString(), ...event })) }, 201);
     }
     if (method !== "GET") return json({ error: "Not found" }, 404);
+    if (url.pathname === "/api/activity") return json(homeActivity());
+    if (url.pathname === "/api/subjects") return json({ subjects: homeSubjects.map(({ due, ...subject }) => subject) });
+    const homeSubject = homeSubjects.find((candidate) => url.pathname === `/api/subjects/${candidate.id}/due`);
+    if (homeSubject) return json({ due: dueFor(homeSubject) });
     if (url.pathname === subject) return json(data.subject);
     if (url.pathname === `${subject}/events`) return json({ events: [] });
     if (url.pathname === `${subject}/due`) return json({ due: [] });
@@ -115,11 +151,25 @@
     for (const step of steps) await step(widget);
   }
 
+  async function homeReady(mount) {
+    if (!document.querySelector("script[data-styleguide-app]")) {
+      const note = document.createElement("p");
+      note.className = "styleguide-unbuilt";
+      note.textContent = "The dashboard isn't built. Run pnpm build:app to see it here.";
+      mount.append(note);
+      return;
+    }
+    await find(mount, '.tome-app[data-state="ready"]', 10000);
+  }
+
   async function ready() {
     for (const name of document.querySelectorAll("[data-styleguide-theme]")) name.textContent = data.themeName;
     const widgets = [...document.querySelectorAll("body :not(:defined)")].filter((element) => element.localName.startsWith("tome-"));
     await Promise.all(widgets.map(settle));
-    const results = await Promise.allSettled([...document.querySelectorAll("[data-demo]")].map(run));
+    const results = await Promise.allSettled([
+      ...[...document.querySelectorAll("[data-styleguide-home]")].map(homeReady),
+      ...[...document.querySelectorAll("[data-demo]")].map(run),
+    ]);
     const failed = results.filter((result) => result.status === "rejected").map((result) => String(result.reason?.message ?? result.reason));
     await sleep(300);
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));

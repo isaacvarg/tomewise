@@ -1,0 +1,6 @@
+[
+  { "id": "hola", "type": "flashcard", "front": "hola", "back": "hello" },
+  { "id": "adios", "type": "flashcard", "front": "adiós", "back": "goodbye" },
+  { "id": "gato", "type": "flashcard", "front": "el gato", "back": "the cat" },
+  { "id": "perro", "type": "flashcard", "front": "el perro", "back": "the dog" }
+]

@@ -9,6 +9,7 @@
   "scripts": {
     "test": "vitest run",
     "build": "node cli/scripts/build-package.ts",
+    "build:app": "node app/scripts/build.ts",
     "build:widgets": "node widgets/scripts/build.ts",
     "typecheck": "tsc --noEmit",
     "tome": "node cli/src/main.ts",

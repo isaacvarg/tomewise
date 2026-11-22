@@ -13,7 +13,7 @@ function subjectOf(view: HomeView, id: string) {
   throw new SubjectNotFoundError(`No subject "${id}" in ${view.home.root}. Subjects: ${ids.join(", ") || "none"}`);
 }
 
-export function readRoutes(view: () => HomeView): Hono {
+export function readRoutes(view: () => HomeView, now: () => Date = () => new Date()): Hono {
   const routes = new Hono();
 
   routes.get("/subjects", (c) => c.json({ subjects: [...view().subjects.values()] }));
@@ -26,11 +26,11 @@ export function readRoutes(view: () => HomeView): Hono {
   });
 
   routes.get("/subjects/:subject/due", async (c) =>
-    c.json({ due: await dueItems(view().home, c.req.param("subject"), query(c, "date") ?? new Date()) }),
+    c.json({ due: await dueItems(view().home, c.req.param("subject"), query(c, "date") ?? now()) }),
   );
 
   routes.get("/activity", async (c) =>
-    c.json(await readActivity(view().home, { from: query(c, "from"), to: query(c, "to") })),
+    c.json(await readActivity(view().home, { now: now(), from: query(c, "from"), to: query(c, "to") })),
   );
 
   routes.onError((error, c) => {
