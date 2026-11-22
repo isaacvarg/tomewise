@@ -1,0 +1,66 @@
+:root {
+  color-scheme: light;
+  --t-bg: #fffff8;
+  --t-surface: #f6f4ea;
+  --t-ink: #1d1d1b;
+  --t-muted: #6b6b66;
+  --t-rule: #e2e0d6;
+  --t-accent: #9a3b1e;
+  --t-accent-ink: #fffff8;
+  --t-good: #2f6b3a;
+  --t-good-bg: #e3efe1;
+  --t-bad: #a1301f;
+  --t-bad-bg: #f6e1dc;
+  --t-heat-0: #efece0;
+  --t-heat-1: #ebcdbd;
+  --t-heat-2: #d39a7f;
+  --t-heat-3: #b8623f;
+  --t-heat-4: #9a3b1e;
+  --t-display: "Newsreader", "Iowan Old Style", Palatino, Georgia, serif;
+  --t-ui: "IBM Plex Sans", system-ui, sans-serif;
+  --t-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --t-radius: 4px;
+  --t-cell-radius: 2px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-mode="light"]) {
+    color-scheme: dark;
+    --t-bg: #161614;
+    --t-surface: #1f1e1b;
+    --t-ink: #e8e6dc;
+    --t-muted: #9a988e;
+    --t-rule: #33322d;
+    --t-accent: #e0835f;
+    --t-accent-ink: #161614;
+    --t-good: #8fcf98;
+    --t-good-bg: #1f3323;
+    --t-bad: #f0907c;
+    --t-bad-bg: #3a2019;
+    --t-heat-0: #252420;
+    --t-heat-1: #4a2e22;
+    --t-heat-2: #7a4330;
+    --t-heat-3: #b0603f;
+    --t-heat-4: #e0835f;
+  }
+}
+
+:root[data-mode="dark"] {
+  color-scheme: dark;
+  --t-bg: #161614;
+  --t-surface: #1f1e1b;
+  --t-ink: #e8e6dc;
+  --t-muted: #9a988e;
+  --t-rule: #33322d;
+  --t-accent: #e0835f;
+  --t-accent-ink: #161614;
+  --t-good: #8fcf98;
+  --t-good-bg: #1f3323;
+  --t-bad: #f0907c;
+  --t-bad-bg: #3a2019;
+  --t-heat-0: #252420;
+  --t-heat-1: #4a2e22;
+  --t-heat-2: #7a4330;
+  --t-heat-3: #b0603f;
+  --t-heat-4: #e0835f;
+}

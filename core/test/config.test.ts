@@ -3,7 +3,7 @@ import { InvalidLearningHomeError, loadLearningHome, UnsupportedFormatVersionErr
 import { buildHome, snapshot } from "./helpers.ts";
 
 describe("loading tomewise.json", () => {
-  it("applies defaults for timezone, week start and minimum session length", async () => {
+  it("applies defaults for timezone, week start, minimum session length and theme", async () => {
     const home = await buildHome({ "tomewise.json": { formatVersion: 1 } });
 
     const { config } = await loadLearningHome(home);
@@ -14,6 +14,7 @@ describe("loading tomewise.json", () => {
       weekStart: "monday",
       minimumSessionSeconds: 60,
       streak: { restDaysPerWeek: 0 },
+      theme: "paper",
     });
   });
 
@@ -25,6 +26,7 @@ describe("loading tomewise.json", () => {
         weekStart: "sunday",
         minimumSessionSeconds: 120,
         streak: { restDaysPerWeek: 2 },
+        theme: "meadow",
       },
     });
 
@@ -36,6 +38,7 @@ describe("loading tomewise.json", () => {
       weekStart: "sunday",
       minimumSessionSeconds: 120,
       streak: { restDaysPerWeek: 2 },
+      theme: "meadow",
     });
   });
 });

@@ -1,7 +1,8 @@
 {
   "valid": {
     "only formatVersion": { "formatVersion": 1 },
-    "every setting": { "formatVersion": 1, "timezone": "Europe/London", "weekStart": "sunday", "minimumSessionSeconds": 0 }
+    "every setting": { "formatVersion": 1, "timezone": "Europe/London", "weekStart": "sunday", "minimumSessionSeconds": 0, "theme": "meadow" },
+    "a learner's own theme": { "formatVersion": 1, "theme": "My_Theme.2" }
   },
   "invalid": {
     "not an object": [],
@@ -13,7 +14,9 @@
     "timezone not a string": { "formatVersion": 1, "timezone": 0 },
     "short weekday": { "formatVersion": 1, "weekStart": "mon" },
     "negative minimumSessionSeconds": { "formatVersion": 1, "minimumSessionSeconds": -1 },
-    "unknown field": { "formatVersion": 1, "theme": "paper" }
+    "theme as a path": { "formatVersion": 1, "theme": "../paper" },
+    "empty theme": { "formatVersion": 1, "theme": "" },
+    "unknown field": { "formatVersion": 1, "skin": "paper" }
   },
   "zodOnly": {
     "unknown timezone": { "formatVersion": 1, "timezone": "Mars/Phobos" }

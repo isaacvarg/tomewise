@@ -1,0 +1,7 @@
+{
+  "name": "Meadow",
+  "author": "Tomewise",
+  "version": "1.0.0",
+  "description": "Playful and green: leaf-shaped heatmap cells, rolling hills, and leaves that rise when you start or get one right.",
+  "script": "leaves.js"
+}

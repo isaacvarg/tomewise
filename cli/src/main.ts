@@ -32,6 +32,8 @@ import { installService, serviceHost, serviceStatus, uninstallService, type Serv
 import { listenOptions, serveHome } from "./serve.ts";
 import { importWorkspace } from "./import.ts";
 import type { PromptStreams } from "./prompt.ts";
+import { THEME_USAGE, themeCheck } from "./theme-check.ts";
+import type { ToolDirs } from "@tomewise/app";
 
 export interface Io {
   cwd: string;
@@ -43,6 +45,7 @@ export interface Io {
   signal?: AbortSignal;
   service?: Partial<ServiceHost>;
   prompt?: PromptStreams;
+  tool?: ToolDirs;
 }
 
 export const USAGE = [
@@ -60,6 +63,7 @@ export const USAGE = [
   "  tome service uninstall",
   "  tome service status [--json]",
   "  tome import <dir> [--slug <slug>] [--name <name>]",
+  THEME_USAGE,
 ].join("\n");
 
 export const NO_APP_URL = "No app URL set (appUrl in ~/.config/tomewise/config.json or TOMEWISE_URL)";
@@ -413,6 +417,7 @@ export async function run(args: string[], io: Io): Promise<number> {
   if (command === "query") return query(io, rest);
   if (command === "service") return service(io, rest);
   if (command === "import") return importWorkspace(io, rest);
+  if (command === "theme") return themeCheck(io, rest, USAGE);
   io.stderr(USAGE);
   return 2;
 }

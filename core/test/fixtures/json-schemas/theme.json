@@ -1,0 +1,18 @@
+{
+  "valid": {
+    "required fields": { "name": "Moss", "author": "Me", "version": "0.1.0" },
+    "with a script in a folder": { "name": "Moss", "author": "Me", "version": "0.1.0", "description": "Green.", "script": "js/moss.js" }
+  },
+  "invalid": {
+    "not an object": [],
+    "no name": { "author": "Me", "version": "0.1.0" },
+    "no author": { "name": "Moss", "version": "0.1.0" },
+    "no version": { "name": "Moss", "author": "Me" },
+    "empty name": { "name": "", "author": "Me", "version": "0.1.0" },
+    "script outside the folder": { "name": "Moss", "author": "Me", "version": "0.1.0", "script": "../paper/x.js" },
+    "absolute script": { "name": "Moss", "author": "Me", "version": "0.1.0", "script": "/x.js" },
+    "script with a dot segment": { "name": "Moss", "author": "Me", "version": "0.1.0", "script": "./x.js" },
+    "unknown field": { "name": "Moss", "author": "Me", "version": "0.1.0", "colour": "green" }
+  },
+  "zodOnly": {}
+}

@@ -28,17 +28,19 @@ describe("the tomewise npm package", () => {
     const tarball = await packed();
     const root = await copyExample("morse");
     const env = { ...process.env, HOME: await tempDir(), npm_config_cache: await tempDir(), npm_config_update_notifier: "false" };
-    const child = spawn("npx", ["--yes", "--offline", "--package", tarball, "tomewise", "serve", "--port", "0"], { cwd: root, env });
-    const exited = new Promise<number | null>((resolve) => child.on("exit", (code) => resolve(code)));
+    const child = spawn("npx", ["--yes", "--offline", "--package", tarball, "tomewise", "serve", "--port", "0"], { cwd: root, env, detached: true });
+    const exited = new Promise<string>((resolve) => child.on("exit", (code, signal) => resolve(signal ? `killed by ${signal}` : `exited ${code}`)));
     onTestFinished(() => {
-      child.kill("SIGKILL");
+      try {
+        process.kill(-child.pid!, "SIGKILL");
+      } catch {}
     });
     const stderr: string[] = [];
     child.stderr.on("data", (chunk) => stderr.push(String(chunk)));
 
     const [line] = (await Promise.race([
       once(createInterface({ input: child.stdout }), "line"),
-      exited.then((code) => [`exited ${code}: ${stderr.join("")}`]),
+      exited.then((how) => [`${how}: ${stderr.join("")}`]),
     ])) as [string];
     const url = /^Listening on (http:\/\/\S+)$/.exec(line)?.[1];
     expect(url, line).toBeDefined();
@@ -59,15 +61,22 @@ describe("the tomewise npm package", () => {
     expect(written.trimEnd().split("\n").at(-1)).toBe(JSON.stringify(event));
 
     const home = await fetch(`${url}/`);
-    expect(await home.text()).toBe(INDEX);
+    const homePage = await home.text();
+    expect(homePage).toContain("<title>Tomewise</title>");
+    expect(homePage).toContain(`@import url("/themes/paper/tokens.css") layer(theme);`);
+    for (const file of ["/themes/paper/tokens.css", "/themes/paper/theme.json", "/widgets/v1/base.css", "/styleguide", "/styleguide/styleguide.js"]) {
+      expect((await fetch(`${url}${file}`)).status, file).toBe(200);
+    }
 
     const tome = await fetch(`${url}/widgets/v1/tome.js`);
     expect(tome.status).toBe(200);
     expect(tome.headers.get("content-type")).toBe("text/javascript; charset=utf-8");
     expect(await tome.text()).toMatch(/export\s*\{/);
 
-    child.kill("SIGTERM");
-    expect(await exited).toBe(0);
+    process.kill(-child.pid!, "SIGTERM");
+    await exited;
+    await expect.poll(() => fetch(url!).then(() => "listening", () => "stopped"), { timeout: 5_000 }).toBe("stopped");
+    expect(stderr.join("")).toBe("");
   });
 
   it("installs both the tomewise and tome commands, with no runtime dependencies", async () => {

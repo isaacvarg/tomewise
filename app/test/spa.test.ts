@@ -4,7 +4,8 @@ import { loadLearningHome } from "@tomewise/core";
 import { copyExample, tempDir, writeFiles } from "../../core/test/helpers.ts";
 import { startServer } from "../src/index.ts";
 
-const INDEX = "<!doctype html><title>Tomewise</title><div id=root></div>";
+const BODY = "<title>Tomewise</title><div id=root></div>";
+const INDEX = `<!doctype html>${BODY}`;
 
 async function startWithSpa(spa: string | undefined) {
   const home = await loadLearningHome(await copyExample("morse"));
@@ -30,7 +31,7 @@ describe("dashboard SPA", () => {
     const response = await get("/");
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toMatch(/^text\/html/);
-    expect(await response.text()).toBe(INDEX);
+    expect(await response.text()).toContain(BODY);
   });
 
   it("serves built assets with their content type", async () => {
@@ -48,7 +49,7 @@ describe("dashboard SPA", () => {
     for (const path of ["/settings", "/s/morse-code", "/run/due"]) {
       const response = await get(path);
       expect(response.status, path).toBe(200);
-      expect(await response.text(), path).toBe(INDEX);
+      expect(await response.text(), path).toContain(BODY);
     }
   });
 
@@ -64,7 +65,7 @@ describe("dashboard SPA", () => {
 
     const unknown = await get("/api/nothing-here");
     expect(unknown.status).toBe(404);
-    expect(await unknown.text()).not.toBe(INDEX);
+    expect(await unknown.text()).not.toContain(BODY);
 
     const posted = await get("/api/events", { method: "POST", body: "[]" });
     expect(posted.status).toBe(400);

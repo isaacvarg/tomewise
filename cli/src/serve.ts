@@ -52,6 +52,7 @@ export async function serveHome(io: Io, root: string, listen: Listen): Promise<n
     server = await startServer(home, {
       ...listen,
       spa: BUILT_SPA,
+      warn: (message) => io.stderr(message),
       watch: { onError: (error) => io.stderr(`Not reloading ${root}: ${(error as Error).message}`) },
     });
   } catch (error) {

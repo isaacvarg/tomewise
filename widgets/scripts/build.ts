@@ -1,4 +1,4 @@
-import { readdir, rm } from "node:fs/promises";
+import { copyFile, readdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
@@ -24,6 +24,7 @@ export async function buildWidgets(out: string = WIDGETS_OUT): Promise<void> {
     chunkNames: "chunks/[name]-[hash]",
     logLevel: "warning",
   });
+  await copyFile(join(SRC, "base.css"), join(dir, "base.css"));
 }
 
 if (import.meta.main) await buildWidgets();

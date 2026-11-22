@@ -487,52 +487,10 @@ Keyboard: focus moves into each new item (the play button, the first choice, the
 
 ## Theme contract
 
-Themes reach widgets through tag names, the classes and `data-*` states each widget renders, and the `--t-*` tokens its base styles read. All three are part of the theme contract and follow the [v1 rule](#versions). Each widget's section above shows its markup and states; the tables here are the full lists.
+Themes reach widgets through tag names, the classes and `data-*` states each widget renders, and the `--t-*` tokens its base styles read. All three are part of the theme contract and follow the [v1 rule](#versions). Each widget's section above shows its markup and states. [docs/themes.md](./themes.md) has the full lists and the shared conventions.
 
-Shared conventions:
+Base styles sit in the `tome.widgets` cascade layer, so any theme rule wins, and use only `--t-*` tokens: no literal colours, fonts or radii. `widgets/test/theme-contract.test.ts` checks the lists and the markup blocks above against the widget source.
 
-- The element's first child is a block whose class is the tag name (`<tome-choice>` → `.tome-choice`). It carries `data-state`.
-- While loading, the block holds only `<p class="tome-hint">Loading…</p>`.
-- `.tome-notice` (`role="alert"`) inside the block reports a problem with the widget itself: an unknown item, a missing attribute. A failed save appends `.tome-notice[data-state="unsaved"]` as the element's last child, outside the block.
-- Shortcut keys show as `<kbd>` inside their button.
-- Base styles sit in the `tome.widgets` cascade layer, so any theme rule wins, and use only `--t-*` tokens: no literal colours, fonts or radii.
-
-### Classes and tokens per widget
-
-| Widget | Classes | Tokens |
-| ------ | ------- | ------ |
-| `<tome-flashcard>` | `tome-back` `tome-flashcard` `tome-front` `tome-grade` `tome-grades` `tome-hint` `tome-notice` `tome-reveal` `tome-stage` `tome-verdict` | `--t-accent` `--t-accent-ink` `--t-bad` `--t-bad-bg` `--t-bg` `--t-display` `--t-good` `--t-good-bg` `--t-ink` `--t-mono` `--t-muted` `--t-radius` `--t-rule` `--t-surface` `--t-ui` |
-| `<tome-choice>` | `tome-answer` `tome-answers` `tome-choice` `tome-feedback` `tome-hint` `tome-notice` `tome-prompt` `tome-retry` `tome-skip` `tome-stage` `tome-verdict` | `--t-accent` `--t-accent-ink` `--t-bad` `--t-bad-bg` `--t-bg` `--t-display` `--t-good` `--t-good-bg` `--t-ink` `--t-mono` `--t-muted` `--t-radius` `--t-rule` `--t-surface` `--t-ui` |
-| `<tome-typed>` | `tome-entry` `tome-feedback` `tome-hint` `tome-input` `tome-notice` `tome-prompt` `tome-retry` `tome-skip` `tome-stage` `tome-submit` `tome-typed` `tome-verdict` | `--t-accent` `--t-accent-ink` `--t-bad` `--t-bad-bg` `--t-bg` `--t-display` `--t-good` `--t-good-bg` `--t-ink` `--t-mono` `--t-muted` `--t-radius` `--t-rule` `--t-surface` `--t-ui` |
-| `<tome-audio>` | `tome-answer` `tome-answers` `tome-audio` `tome-countdown` `tome-feedback` `tome-hint` `tome-input` `tome-notice` `tome-play` `tome-prompt` `tome-respond` `tome-retry` `tome-say` `tome-stage` `tome-submit` `tome-verdict` | `--t-accent` `--t-accent-ink` `--t-bad` `--t-bad-bg` `--t-bg` `--t-display` `--t-good` `--t-good-bg` `--t-ink` `--t-mono` `--t-muted` `--t-radius` `--t-rule` `--t-surface` `--t-ui` |
-| `<tome-routine>` | `tome-grade` `tome-grades` `tome-hint` `tome-next` `tome-notice` `tome-progress` `tome-routine` `tome-routine-name` `tome-stage` `tome-start` `tome-step` `tome-verdict` | `--t-accent` `--t-accent-ink` `--t-bad` `--t-bad-bg` `--t-bg` `--t-display` `--t-good` `--t-good-bg` `--t-ink` `--t-mono` `--t-muted` `--t-radius` `--t-rule` `--t-surface` `--t-ui` |
-| `<tome-timer>` | `tome-clock` `tome-notice` `tome-timer` `tome-timer-controls` `tome-timer-reset` `tome-timer-toggle` `tome-verdict` | `--t-accent` `--t-accent-ink` `--t-bad` `--t-bad-bg` `--t-bg` `--t-good` `--t-good-bg` `--t-ink` `--t-mono` `--t-muted` `--t-radius` `--t-rule` `--t-ui` |
-| `<tome-explain>` | `tome-actions` `tome-explain` `tome-explain-text` `tome-hint` `tome-notice` `tome-prompt` `tome-save` `tome-verdict` | `--t-accent` `--t-accent-ink` `--t-bad` `--t-bad-bg` `--t-bg` `--t-display` `--t-good` `--t-good-bg` `--t-ink` `--t-mono` `--t-muted` `--t-radius` `--t-rule` `--t-surface` `--t-ui` |
-| `<tome-exam-question>` | `tome-exam-question` `tome-notice` `tome-question` | `--t-bad` `--t-bad-bg` `--t-ink` `--t-radius` `--t-rule` `--t-surface` `--t-ui` |
-| `<tome-done>` | `tome-done` `tome-done-button` `tome-notice` `tome-verdict` | `--t-accent` `--t-accent-ink` `--t-bad` `--t-bad-bg` `--t-good` `--t-good-bg` `--t-ink` `--t-muted` `--t-radius` `--t-rule` `--t-surface` `--t-ui` |
-| `<tome-drill>` | `tome-actions` `tome-again` `tome-clock` `tome-count` `tome-drill` `tome-drill-bar` `tome-drill-item` `tome-drill-name` `tome-drill-next` `tome-drill-title` `tome-empty` `tome-empty-title` `tome-hint` `tome-kicker` `tome-next` `tome-notice` `tome-progress` `tome-saved` `tome-score` `tome-score-sub` `tome-stats` `tome-summary` `tome-summary-head` | `--t-accent` `--t-accent-ink` `--t-bad` `--t-bad-bg` `--t-bg` `--t-display` `--t-ink` `--t-muted` `--t-radius` `--t-rule` `--t-surface` `--t-ui` |
-
-### Tokens
-
-| Token            | Used for                                   |
-| ---------------- | ------------------------------------------ |
-| `--t-bg`         | page background; buttons and inputs        |
-| `--t-surface`    | widget background                          |
-| `--t-ink`        | text                                       |
-| `--t-muted`      | secondary text: hints, kickers, skip       |
-| `--t-rule`       | borders and dividers                       |
-| `--t-accent`     | primary buttons, focus rings, progress     |
-| `--t-accent-ink` | text on `--t-accent`                       |
-| `--t-good`       | correct: text and borders                  |
-| `--t-good-bg`    | correct: background                        |
-| `--t-bad`        | wrong, errors and notices: text and borders |
-| `--t-bad-bg`     | wrong, errors and notices: background      |
-| `--t-display`    | display font: prompts, fronts, scores      |
-| `--t-ui`         | interface font                             |
-| `--t-mono`       | monospace: `<kbd>`, clocks                 |
-| `--t-radius`     | corner radius                              |
-
-`widgets/test/theme-contract.test.ts` checks these tables and the markup blocks above against the widget source.
 ## Browser tests
 
 `widgets/test/` runs widgets in a real page: `startWidgetApp()` (`widgets/test/browser.ts`) builds the widgets, starts the app on a copy of the Morse example plus the fixture subjects in `widgets/test/fixtures/`, and opens a Playwright Chromium page. Tests interact as a learner and assert on the events written to disk. They run with `pnpm test`.

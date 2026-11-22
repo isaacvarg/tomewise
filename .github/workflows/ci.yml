@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm typecheck
+      - run: pnpm test
+
+  themes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Find changed themes
+        id: changed
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then BASE=$(git rev-list --max-parents=0 HEAD | tail -n 1); fi
+          themes=$(git diff --name-only "$BASE" HEAD -- app/themes \
+            | cut -d/ -f3 | sort -u \
+            | while read -r name; do
+                [[ "$name" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] && [ -f "app/themes/$name/tokens.css" ] && echo "$name"
+              done \
+            | tr '\n' ' ')
+          echo "Changed themes: ${themes:-none}"
+          echo "themes=$themes" >> "$GITHUB_OUTPUT"
+      - uses: pnpm/action-setup@v4
+        if: steps.changed.outputs.themes != ''
+      - uses: actions/setup-node@v4
+        if: steps.changed.outputs.themes != ''
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Check changed themes
+        if: steps.changed.outputs.themes != ''
+        env:
+          THEMES: ${{ steps.changed.outputs.themes }}
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec playwright install --with-deps chromium
+          pnpm build:widgets
+          status=0
+          for theme in $THEMES; do
+            pnpm tome theme check "$theme" --out "theme-check/$theme" || status=1
+          done
+          exit $status
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.changed.outputs.themes != ''
+        with:
+          name: theme-check-screenshots
+          path: theme-check/

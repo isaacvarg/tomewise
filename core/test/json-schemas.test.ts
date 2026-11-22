@@ -49,6 +49,15 @@ async function eventLines(dir: string): Promise<Record<string, unknown>> {
 
 const subject = "subjects/morse-code";
 
+async function builtInThemes(): Promise<Record<string, unknown>> {
+  const themes = join(repo, "app/themes");
+  const manifests: Record<string, unknown> = {};
+  for (const name of (await readdir(themes)).sort()) {
+    manifests[`app/themes/${name}/theme.json`] = await readJsonFile(join(themes, name, "theme.json"));
+  }
+  return manifests;
+}
+
 async function morseExamples(file: SchemaFile): Promise<Record<string, unknown>> {
   switch (file) {
     case "tomewise.json":
@@ -63,6 +72,8 @@ async function morseExamples(file: SchemaFile): Promise<Record<string, unknown>>
       return { [`${subject}/curriculum.json`]: await readJsonFile(join(morse, subject, "curriculum.json")) };
     case "event.json":
       return eventLines(`${subject}/events`);
+    case "theme.json":
+      return builtInThemes();
   }
 }
 
@@ -76,7 +87,7 @@ describe("published JSON Schemas", () => {
   it("are published for every file type and the event envelope, under the format version", async () => {
     expect(JSON_SCHEMA_DIR).toBe("schemas/v1");
     expect((await readdir(published)).sort()).toEqual(
-      ["curriculum.json", "drill.json", "event.json", "item-set.json", "subject.json", "tomewise.json"],
+      ["curriculum.json", "drill.json", "event.json", "item-set.json", "subject.json", "theme.json", "tomewise.json"],
     );
   });
 

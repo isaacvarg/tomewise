@@ -8,23 +8,28 @@ import { pageRoutes } from "./pages.ts";
 import { readRoutes } from "./reads.ts";
 import { trackRuleChanges } from "./rule-changes.ts";
 import { spaRoutes } from "./spa.ts";
+import { styleguideRoutes } from "./styleguide.ts";
+import { themeResolver, type Warn } from "./themes.ts";
 import { BUILT_IN, themeRoutes, type ToolDirs, widgetRoutes } from "./tool-files.ts";
 import { type HomeView, watchLearningHome, type WatchOptions } from "./watcher.ts";
 
 export interface AppOptions {
   spa?: string;
   tool?: ToolDirs;
+  warn?: Warn;
 }
 
-export function createApp(view: () => HomeView, { spa, tool = BUILT_IN }: AppOptions = {}): Hono {
+export function createApp(view: () => HomeView, { spa, tool = BUILT_IN, warn = console.warn }: AppOptions = {}): Hono {
   const app = new Hono();
   const home = () => view().home;
+  const resolveTheme = themeResolver(tool, warn);
   app.route("/api/events", eventRoutes(home));
   app.route("/api", readRoutes(view));
-  app.route("/s", pageRoutes(home, tool));
+  app.route("/s", pageRoutes(home, resolveTheme));
   app.route("/widgets", widgetRoutes(tool));
   app.route("/themes", themeRoutes(home, tool));
-  if (spa !== undefined && existsSync(spa)) app.route("/", spaRoutes(spa));
+  app.route("/styleguide", styleguideRoutes(home, resolveTheme));
+  if (spa !== undefined && existsSync(spa)) app.route("/", spaRoutes(spa, home, resolveTheme));
   return app;
 }
 
