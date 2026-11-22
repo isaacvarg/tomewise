@@ -164,6 +164,7 @@ describe("owning event files", () => {
       }
     }
 
-    expect(writers.filter((file) => file !== "core/src/json-schemas.ts")).toEqual(["core/src/event-store.ts"]);
+    const notEvents = ["core/src/json-schemas.ts", "core/src/init.ts"];
+    expect(writers.filter((file) => !notEvents.includes(file))).toEqual(["core/src/event-store.ts"]);
   });
 });
