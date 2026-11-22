@@ -127,7 +127,7 @@ function sessionStart() {
   return { subject: "morse-code", kind: "session.start", ref: "lesson:0001-k-and-m", schemaVersion: 2, data: {} };
 }
 
-function poll<T>(read: () => Promise<T>) {
+function poll<T>(read: () => T | Promise<T>) {
   return expect.poll(read, { timeout: 3000, interval: 25 });
 }
 
@@ -245,6 +245,50 @@ describe("git sync", () => {
     expect(response.body).toMatchObject({ stopped: false, lastError: null });
     expect(await snapshotEvents(app.root)).toEqual(written);
     await poll(() => lessons(app)).toContain("0005-e");
+  });
+
+  it("announces the events a pull brings in", async () => {
+    const { app, agentPushes } = await cloneSeam();
+    const stream = await app.changes();
+    const event = { ...sessionStart(), id: "01KAJ0000000000000000PHONE", ts: "2026-11-22T08:00:00.000Z" };
+    await agentPushes({ [`${EVENTS}/2026-11.phone.jsonl`]: `${JSON.stringify({ ...event, sessionId: event.id })}\n` });
+
+    await app.send("POST", "/api/sync");
+
+    await poll(() => stream.received).toContainEqual({ event: "events", data: { subjects: ["morse-code"] } });
+  });
+
+  it("announces the events of a first pull into a home with no commits yet", async () => {
+    const remote = await mkdtemp(join(tmpdir(), "tomewise-remote-"));
+    const agent = await mkdtemp(join(tmpdir(), "tomewise-agent-"));
+    const event = { ...sessionStart(), id: "01KAJ0000000000000000PHONE", ts: "2026-11-22T08:00:00.000Z" };
+    await git(remote, "init", "--bare", "--quiet", "--initial-branch=main");
+    await git(agent, "init", "--quiet", "--initial-branch=main");
+    await writeFiles(agent, { [`${EVENTS}/2026-11.phone.jsonl`]: `${JSON.stringify({ ...event, sessionId: event.id })}\n` });
+    await git(agent, "add", "-A");
+    await git(agent, "commit", "--quiet", "-m", "chore: phone");
+    await git(agent, "push", "--quiet", remote, "main");
+    const app = await startTestApp(async (root) => {
+      await enableGit(root, { remote: "origin" });
+      await git(root, "init", "--quiet", "--initial-branch=main");
+      await git(root, "remote", "add", "origin", remote);
+    });
+    const stream = await app.changes();
+
+    const response = await app.send("POST", "/api/sync");
+
+    expect(response.body).toMatchObject({ stopped: false, lastError: null });
+    await poll(() => stream.received).toContainEqual({ event: "events", data: { subjects: ["morse-code"] } });
+  });
+
+  it("announces no events when a pull brings only content", async () => {
+    const { app, agentPushes } = await cloneSeam();
+    const stream = await app.changes();
+    await agentPushes({ [`${SUBJECT}/lessons/0005-e.html`]: "<!doctype html><title>E</title>" });
+
+    await app.send("POST", "/api/sync");
+
+    await poll(() => stream.received).toEqual([{ event: "content", data: {} }]);
   });
 
   it("never forces or resets", async () => {

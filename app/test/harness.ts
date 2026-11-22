@@ -17,10 +17,10 @@ export async function startTestApp(
   await prepare?.(root);
   const reloadErrors: unknown[] = [];
   const warnings: string[] = [];
-  const start = async () =>
+  const start = async (port = 0) =>
     startServer(await loadLearningHome(root), {
       host: "127.0.0.1",
-      port: 0,
+      port,
       tool,
       spa,
       clock,
@@ -37,9 +37,10 @@ export async function startTestApp(
   onTestFinished(stop);
 
   async function restart(whileDown?: () => Promise<void>) {
+    const { port } = new URL(server.url);
     await stop();
     await whileDown?.();
-    server = await start();
+    server = await start(Number(port));
     running = true;
   }
 
@@ -92,8 +93,41 @@ export async function startTestApp(
     });
   }
 
+  async function changes() {
+    const stop = new AbortController();
+    onTestFinished(() => stop.abort());
+    const response = await fetch(`${server.url}/api/changes`, { signal: stop.signal });
+    const received: { event: string; data: any }[] = [];
+    const result = { status: response.status, type: response.headers.get("content-type"), received, ended: false };
+    void (async () => {
+      const decoder = new TextDecoder();
+      let buffer = "";
+      try {
+        for await (const chunk of response.body!) {
+          buffer += decoder.decode(chunk, { stream: true });
+          let end: number;
+          while ((end = buffer.indexOf("\n\n")) !== -1) {
+            const block = buffer.slice(0, end);
+            buffer = buffer.slice(end + 2);
+            const field = (name: string) =>
+              block
+                .split("\n")
+                .find((line) => line.startsWith(`${name}:`))
+                ?.slice(name.length + 1)
+                .trim();
+            const event = field("event");
+            if (event !== undefined) received.push({ event, data: JSON.parse(field("data") ?? "null") });
+          }
+        }
+      } catch {}
+      result.ended = true;
+    })();
+    return result;
+  }
+
   return {
     root,
+    changes,
     get url() {
       return server.url;
     },
