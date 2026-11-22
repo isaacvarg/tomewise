@@ -57,7 +57,7 @@ describe("appending an event", () => {
     const root = await buildHome(lessonsAndItems);
     const home = await loadLearningHome(root);
 
-    await appendEvent(home, sessionStart(), { machine: "laptop" });
+    await appendEvent(home, sessionStart(), { target: { machine: "laptop" } });
 
     expect(await lines(root, "subjects/morse-code/events/2026-11.laptop.jsonl")).toEqual([
       { ...sessionStart(), data: {} },
@@ -68,8 +68,8 @@ describe("appending an event", () => {
     const root = await buildHome(lessonsAndItems);
     const home = await loadLearningHome(root);
 
-    await appendEvent(home, sessionStart(), { machine: "laptop" });
-    await appendEvent(home, attempt(), { machine: "laptop" });
+    await appendEvent(home, sessionStart(), { target: { machine: "laptop" } });
+    await appendEvent(home, attempt(), { target: { machine: "laptop" } });
 
     expect(await lines(root, "subjects/morse-code/events/2026-11.laptop.jsonl")).toMatchObject([
       { kind: "session.start" },
@@ -80,10 +80,10 @@ describe("appending an event", () => {
   it("gives an event without an id or timestamp a new ULID and the current time", async () => {
     const root = await buildHome(lessonsAndItems);
     const home = await loadLearningHome(root);
-    await appendEvent(home, sessionStart(), { machine: "laptop" });
+    await appendEvent(home, sessionStart(), { target: { machine: "laptop" } });
 
     const { event } = await appendEvent(home, { ...attempt(), id: undefined, ts: undefined }, {
-      machine: "laptop",
+      target: { machine: "laptop" },
       now: new Date(1469918176385),
     });
 
@@ -96,7 +96,7 @@ describe("appending an event", () => {
     const home = await loadLearningHome(root);
 
     const { event } = await appendEvent(home, { ...sessionStart(), id: undefined, sessionId: undefined }, {
-      machine: "laptop",
+      target: { machine: "laptop" },
     });
 
     expect(event.sessionId).toBe(event.id);
@@ -107,10 +107,10 @@ describe("rejecting an event", () => {
   async function rejected(input: unknown, files: Record<string, unknown> = lessonsAndItems) {
     const root = await buildHome(files);
     const home = await loadLearningHome(root);
-    await appendEvent(home, sessionStart(), { machine: "laptop" });
+    await appendEvent(home, sessionStart(), { target: { machine: "laptop" } });
     const before = await snapshot(root);
 
-    const error = await appendEvent(home, input, { machine: "laptop" }).catch((e: unknown) => e);
+    const error = await appendEvent(home, input, { target: { machine: "laptop" } }).catch((e: unknown) => e);
 
     expect(error).toBeInstanceOf(InvalidEventError);
     expect(await snapshot(root)).toEqual(before);
@@ -189,7 +189,7 @@ describe("event ids", () => {
     const home = await loadLearningHome(await buildHome(lessonsAndItems));
 
     const error = await appendEvent(home, sessionStart({ id: "81KAJ0000000000000000000S1", sessionId: undefined }), {
-      machine: "laptop",
+      target: { machine: "laptop" },
     }).catch((e: unknown) => e);
 
     expect((error as InvalidEventError).issues).toContainEqual({ file: "event", path: "id", message: expect.stringContaining("ULID") });

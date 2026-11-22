@@ -18,8 +18,8 @@ export {
   SubjectNotFoundError,
   UnsupportedFormatVersionError,
 } from "./errors.ts";
-export { appendEvent, machineName, readEvents } from "./event-files.ts";
-export type { AppendOptions, EventRange } from "./event-files.ts";
+export { appendEvent, appendEvents, machineName, readEvents } from "./event-store.ts";
+export type { AppendedEvent, AppendOptions, EventRange, EventTarget } from "./event-store.ts";
 export type { LearningEvent, EventKind } from "./events.ts";
 export type { PayloadSchemaVersion } from "./payload.ts";
 export { dueItems } from "./due.ts";

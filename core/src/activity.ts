@@ -1,6 +1,6 @@
 import type { z } from "zod";
 import { InvalidLearningHomeError } from "./errors.ts";
-import { type EventLine, scanEvents } from "./event-files.ts";
+import { type EventLine, scanEvents } from "./event-store.ts";
 import { issuesFrom, type ValidationIssue } from "./issues.ts";
 import { loadSubject, type LearningHome } from "./load.ts";
 import { type Goal, ruleChanges, type StreakRules, weekdays } from "./schemas.ts";
@@ -33,6 +33,8 @@ export interface Activity {
 
 export interface ActivityOptions {
   now?: Date;
+  from?: string;
+  to?: string;
 }
 
 const DAY_MS = 86_400_000;
@@ -46,6 +48,12 @@ function localDay(time: number, timezone: string): number {
 
 function isoDate(day: number): string {
   return new Date(day * DAY_MS).toISOString().slice(0, 10);
+}
+
+function parseDay(date: string): number {
+  const time = /^\d{4}-\d{2}-\d{2}$/.test(date) ? Date.parse(date) : NaN;
+  if (Number.isNaN(time) || isoDate(time / DAY_MS) !== date) throw new RangeError(`Not a date: ${date}; use YYYY-MM-DD`);
+  return time / DAY_MS;
 }
 
 function weekOf(day: number, weekStart: (typeof weekdays)[number]): number {
@@ -153,7 +161,8 @@ function goalsOf(
 
 export async function readActivity(home: LearningHome, options: ActivityOptions = {}): Promise<Activity> {
   const { timezone } = home.config;
-  const today = localDay((options.now ?? new Date()).getTime(), timezone);
+  const today = options.to === undefined ? localDay((options.now ?? new Date()).getTime(), timezone) : parseDay(options.to);
+  const from = options.from === undefined ? -Infinity : parseDay(options.from);
   const issues: ValidationIssue[] = [];
   const activeSubjects = new Map<number, string[]>();
   const streakChanges: { time: number; from: StreakRules }[] = [];
@@ -187,9 +196,10 @@ export async function readActivity(home: LearningHome, options: ActivityOptions 
   return {
     today: isoDate(today),
     days: [...activeSubjects]
+      .filter(([day]) => day >= from)
       .sort(([a], [b]) => a - b)
       .map(([day, subjects]) => ({ date: isoDate(day), subjects: subjects.sort() })),
     streak: streakOf(active, today, home, streakRules),
-    goals,
+    goals: goals.filter((goal) => parseDay(goal.to) >= from),
   };
 }

@@ -1,5 +1,5 @@
 import { DefaultScheduler, type Grade } from "ts-fsrs";
-import { readEvents } from "./event-files.ts";
+import { readEvents } from "./event-store.ts";
 import { parseRef, type LearningEvent } from "./events.ts";
 import type { Item } from "./items.ts";
 import { loadSubject, type LearningHome } from "./load.ts";

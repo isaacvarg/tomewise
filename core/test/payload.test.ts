@@ -72,13 +72,13 @@ function attempt(schemaVersion: number, data: Record<string, unknown>) {
 
 async function homeWith(payloadSchemas: unknown[]) {
   const home = await loadLearningHome(await buildHome(files(payloadSchemas)));
-  await appendEvent(home, start, { machine: "laptop" });
+  await appendEvent(home, start, { target: { machine: "laptop" } });
   return home;
 }
 
 async function issuesLogging(payloadSchemas: unknown[], event: unknown) {
   const home = await homeWith(payloadSchemas);
-  const error = await appendEvent(home, event, { machine: "laptop" }).catch((e: unknown) => e);
+  const error = await appendEvent(home, event, { target: { machine: "laptop" } }).catch((e: unknown) => e);
   expect(error).toBeInstanceOf(InvalidEventError);
   return (error as InvalidEventError).issues;
 }
@@ -88,12 +88,12 @@ describe("payload schemas", () => {
     const home = await homeWith([v1, v2]);
 
     const old = await appendEvent(home, attempt(1, { answer: "K", heard: "K", responseTime: 640 }), {
-      machine: "laptop",
+      target: { machine: "laptop" },
     });
     const current = await appendEvent(
       home,
       attempt(2, { answer: "K", heard: "K", responseTime: 640, wpm: 18.5, mode: "copy", timings: [60, 180, 60] }),
-      { machine: "laptop" },
+      { target: { machine: "laptop" } },
     );
 
     expect(old.event.data).toEqual({ answer: "K", heard: "K", responseTime: 640 });
@@ -134,7 +134,7 @@ describe("payload schemas", () => {
     const home = await homeWith([]);
 
     const { event } = await appendEvent(home, { ...start, id: undefined, sessionId: undefined, schemaVersion: 1 }, {
-      machine: "laptop",
+      target: { machine: "laptop" },
     });
 
     expect(event.data).toEqual({});
