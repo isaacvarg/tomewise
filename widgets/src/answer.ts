@@ -5,6 +5,8 @@ import { adoptStyles, messageOf, TomeElement } from "./element.ts";
 
 export type AnswerState = "loading" | "error" | "ready" | "saving" | "failed" | "saved";
 
+export type Recorder = (answer: Answer) => Promise<unknown>;
+
 export interface Answer {
   ref: string;
   outcome: Outcome;
@@ -71,6 +73,7 @@ export abstract class AnswerElement<T extends Prompted> extends TomeElement {
   declare item: T | undefined;
   declare notice: string | undefined;
   declare result: Answer | undefined;
+  declare recorder: Recorder | undefined;
 
   protected abstract readonly block: string;
   protected abstract readonly itemType: T["type"];
@@ -79,6 +82,8 @@ export abstract class AnswerElement<T extends Prompted> extends TomeElement {
   #shownAt: number | undefined;
   #observer: IntersectionObserver | undefined;
   #limit: ReturnType<typeof setTimeout> | undefined;
+  #inline: T | undefined;
+  #read = false;
 
   constructor() {
     super();
@@ -89,6 +94,13 @@ export abstract class AnswerElement<T extends Prompted> extends TomeElement {
   override connectedCallback(): void {
     super.connectedCallback();
     adoptStyles("tome-answer", CSS);
+    if (!this.#read) {
+      this.#read = true;
+      const options = [...this.querySelectorAll(":scope > option")].map((option) => option.textContent?.trim() ?? "");
+      this.querySelectorAll(":scope > option").forEach((option) => option.remove());
+      const answer = this.getAttribute("answer");
+      if (answer !== null) this.#inline = this.inlineItem(answer, options);
+    }
     this.#observer = new IntersectionObserver((entries) => {
       if (!entries.some((entry) => entry.isIntersecting)) return;
       this.#shownAt ??= performance.now();
@@ -123,7 +135,7 @@ export abstract class AnswerElement<T extends Prompted> extends TomeElement {
   protected answer(outcome: Outcome, given?: string): void {
     if (this.state !== "ready" || !this.item) return;
     this.result = {
-      ref: `item:${this.item.id}`,
+      ref: this.item.id ? `item:${this.item.id}` : "",
       outcome,
       grade: gradeOf(outcome),
       duration: performance.now() - (this.#shownAt ?? performance.now()),
@@ -133,9 +145,13 @@ export abstract class AnswerElement<T extends Prompted> extends TomeElement {
   }
 
   protected record(answer: Answer): Promise<unknown> {
+    if (this.recorder) return this.recorder(answer);
     const { ref, outcome, grade, duration } = answer;
+    if (!ref) return Promise.reject(new Error(`An answer written in the page is only recorded inside <tome-exam-question>.`));
     return tome.attempt({ ref, outcome, grade, duration });
   }
+
+  protected abstract inlineItem(answer: string, options: string[]): T;
 
   protected abstract renderControl(item: T): TemplateResult;
 
@@ -144,6 +160,11 @@ export abstract class AnswerElement<T extends Prompted> extends TomeElement {
     this.state = "loading";
     this.notice = undefined;
     this.result = undefined;
+    if (!ref && this.#inline) {
+      this.item = this.#inline;
+      this.state = "ready";
+      return;
+    }
     try {
       const item = await tome.item(ref);
       if (ref !== this.ref) return;
@@ -197,7 +218,7 @@ export abstract class AnswerElement<T extends Prompted> extends TomeElement {
     }
     return html`
       <div class=${this.block} data-state=${this.state} aria-busy=${this.state === "saving" ? "true" : "false"}>
-        <div class="tome-stage"><p class="tome-prompt">${this.item.prompt}</p></div>
+        ${this.item.prompt ? html`<div class="tome-stage"><p class="tome-prompt">${this.item.prompt}</p></div>` : nothing}
         ${this.renderControl(this.item)}
         ${this.state === "ready"
           ? html`<button type="button" class="tome-skip" @click=${() => this.answer("skipped")}>Skip</button>`

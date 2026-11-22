@@ -130,6 +130,33 @@ describe("payload schemas", () => {
     ).toEqual([{ file: "event", path: "data.note", message: "Unknown field" }]);
   });
 
+  it("accepts an exam question id in an attempt's payload", async () => {
+    const home = await homeWith([v1]);
+
+    const { event } = await appendEvent(home, attempt(1, { answer: "K", heard: "K", responseTime: 640, question: "q1" }), {
+      target: { machine: "laptop" },
+    });
+
+    expect(event.data).toMatchObject({ question: "q1" });
+  });
+
+  it("accepts an exam question id on a subject with no attempt payload", async () => {
+    const home = await homeWith([]);
+
+    const { event } = await appendEvent(home, attempt(1, { question: "q1" }), { target: { machine: "laptop" } });
+
+    expect(event.data).toEqual({ question: "q1" });
+  });
+
+  it("rejects an exam question id that isn't a string, or on another kind", async () => {
+    expect(await issuesLogging([v1], attempt(1, { answer: "K", heard: "K", responseTime: 640, question: 1 }))).toEqual([
+      { file: "event", path: "data.question", message: expect.any(String) },
+    ]);
+    expect(
+      await issuesLogging([v1], { ...attempt(1, { question: "q1" }), kind: "lesson.completed", ref: "lesson:0001-k-and-m", grade: undefined }),
+    ).toEqual([{ file: "event", path: "data.question", message: "Unknown field" }]);
+  });
+
   it("gives a subject without payload schemas a version 1 with no payload", async () => {
     const home = await homeWith([]);
 
@@ -191,6 +218,21 @@ describe("validating payload schema versions", () => {
         file: "subjects/morse-code/subject.json",
         path: "payloadSchemas[1].kinds",
         message: 'Version 2 drops kind "attempt" from version 1; versions are only ever extended',
+      },
+    ]);
+  });
+
+  it("reports an attempt field named question, which exam questions use", async () => {
+    const taken = {
+      version: 1,
+      kinds: { attempt: { type: "object", properties: { question: { type: "integer" } }, required: [] } },
+    };
+
+    expect(await validateLearningHome(await buildHome(files([taken])))).toEqual([
+      {
+        file: "subjects/morse-code/subject.json",
+        path: "payloadSchemas[0].kinds.attempt.properties.question",
+        message: 'The attempt field "question" is reserved for the exam question id; rename it',
       },
     ]);
   });

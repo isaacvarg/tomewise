@@ -1,9 +1,12 @@
 export const TOME_JS = "/widgets/v1/tome.js";
 
+export type PageKind = "lesson" | "quiz" | "exam";
+
 export interface Injection {
   themeCss?: string;
   subject: string;
-  lesson: string;
+  kind: PageKind;
+  id: string;
 }
 
 function escapeAttribute(value: string): string {
@@ -18,10 +21,11 @@ function references(html: string, attribute: "src" | "href", url: string): boole
   return new RegExp(`\\b${attribute}\\s*=\\s*["']?${escapeRegExp(url)}(?=["'\\s>])`, "i").test(html);
 }
 
-export function injectLesson(html: string, { themeCss, subject, lesson }: Injection): string {
+export function injectPage(html: string, { themeCss, subject, kind, id }: Injection): string {
   const tags = [
     `<meta name="tome-subject" content="${escapeAttribute(subject)}">`,
-    `<meta name="tome-lesson" content="${escapeAttribute(lesson)}">`,
+    `<meta name="tome-page-kind" content="${kind}">`,
+    `<meta name="tome-${kind}" content="${escapeAttribute(id)}">`,
   ];
   if (themeCss && !references(html, "href", themeCss)) tags.push(`<link rel="stylesheet" href="${themeCss}">`);
   if (!references(html, "src", TOME_JS)) tags.push(`<script type="module" src="${TOME_JS}"></script>`);
