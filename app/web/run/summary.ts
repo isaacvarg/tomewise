@@ -1,0 +1,97 @@
+import type { Subject } from "../api.ts";
+import type { Answered, DrillDone } from "./tome.ts";
+
+type Item = Subject["items"][number];
+
+export interface SubjectRun extends DrillDone {
+  subject: Subject;
+}
+
+export interface LookAgain {
+  key: string;
+  label: string;
+  why: string;
+  times: number;
+  lesson?: { href: string; title: string };
+}
+
+export interface Summary {
+  right: number;
+  answered: number;
+  planned: number;
+  score: string;
+  time: string | undefined;
+  timeUp: boolean;
+  lookAgain: LookAgain[];
+}
+
+function labelOf(item: Item | undefined, ref: string): string {
+  if (!item) return ref.replace(/^item:/, "");
+  switch (item.type) {
+    case "flashcard":
+      return item.front;
+    case "routine":
+      return item.name;
+    default:
+      return item.answer;
+  }
+}
+
+function whyOf(item: Item | undefined, result: Answered): string {
+  if (result.outcome === "skipped") return "No answer";
+  return item?.type === "flashcard" || item?.type === "routine" ? "Again" : "Wrong";
+}
+
+export function lessonTitle(id: string): string {
+  const numbered = /^(\d+)-(.+)$/.exec(id);
+  return numbered ? `Lesson ${Number(numbered[1])}: ${numbered[2]!.replaceAll("-", " ")}` : id.replaceAll("-", " ");
+}
+
+export function clock(ms: number): string {
+  const total = Math.round(ms / 1000);
+  const minutes = Math.floor(total / 60);
+  const seconds = String(total % 60).padStart(2, "0");
+  return minutes >= 60 ? `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, "0")}:${seconds}` : `${minutes}:${seconds}`;
+}
+
+export function summarize(runs: readonly SubjectRun[]): Summary {
+  const results = runs.flatMap((run) => run.results);
+  const right = results.filter((result) => result.outcome === "correct").length;
+  const sessions = runs.flatMap((run) => (run.session ? [run.session.duration] : []));
+  const lookAgain = new Map<string, LookAgain>();
+  for (const run of runs) {
+    const items = new Map(run.subject.items.map((item) => [`item:${item.id}`, item]));
+    for (const result of run.results) {
+      if (result.grade !== 1) continue;
+      const key = `${run.subject.id} ${result.ref}`;
+      const seen = lookAgain.get(key);
+      if (seen) {
+        seen.times++;
+        continue;
+      }
+      const item = items.get(result.ref);
+      const lesson = item?.unlockedBy;
+      lookAgain.set(key, {
+        key,
+        label: labelOf(item, result.ref),
+        why: whyOf(item, result),
+        times: 1,
+        ...(lesson && {
+          lesson: {
+            href: `/s/${encodeURIComponent(run.subject.id)}/lessons/${encodeURIComponent(lesson)}.html`,
+            title: lessonTitle(lesson),
+          },
+        }),
+      });
+    }
+  }
+  return {
+    right,
+    answered: results.length,
+    planned: runs.reduce((total, run) => total + run.planned, 0),
+    score: results.length ? `${Math.round((right / results.length) * 100)}%` : "–",
+    time: sessions.length ? clock(sessions.reduce((total, ms) => total + ms, 0)) : undefined,
+    timeUp: runs.some((run) => run.timeUp),
+    lookAgain: [...lookAgain.values()],
+  };
+}

@@ -278,6 +278,54 @@ describe("<tome-drill>", () => {
     expect(await root.locator(".tome-stats").textContent()).toContain("Answered0 of 4");
   });
 
+  it("links close and hands the summary to a host that takes tome-drill-done", async () => {
+    const { page, root, eventsUntil } = await spanish({
+      lessons: ["answers"],
+      widget: `<tome-drill close="/"></tome-drill>
+<script>
+document.addEventListener("tome-drill-done", (event) => {
+  event.preventDefault();
+  window.done = event.detail;
+});
+</script>`,
+    });
+    expect(await root.locator(".tome-drill-bar > .tome-close").getAttribute("href")).toBe("/");
+    expect(await root.locator(".tome-close").getAttribute("aria-label")).toBe("End session");
+    for (let i = 0; i < 2; i++) {
+      await waitForItem(root, i + 1, 2);
+      await root.locator(".tome-skip").click();
+      await root.locator(".tome-next").click();
+    }
+
+    await expect.poll(() => root.locator(".tome-drill").getAttribute("data-state")).toBe("done");
+    expect(await root.locator(".tome-summary").count()).toBe(0);
+    const events = await eventsUntil("spanish", (events) => events.some((event) => event.kind === "session.end"));
+    const end = events.find((event) => event.kind === "session.end")!;
+    const done = await page.evaluate(() => (window as any).done);
+    expect(done).toMatchObject({ drill: "review", planned: 2, timeUp: false, session: { sessionId: end.sessionId, duration: end.duration } });
+    expect(done.results.map((result: { ref: string; outcome: string; grade: number }) => [result.ref, result.outcome, result.grade]).sort()).toEqual([
+      ["item:gracias", "skipped", 1],
+      ["item:rojo", "skipped", 1],
+    ]);
+  });
+
+  it("ends a session that was still starting when the page ended it", async () => {
+    const { page, eventsUntil } = await spanish({ lessons: [] });
+
+    const ended = await page.evaluate(`(async () => {
+      const { tome } = await import("/widgets/v1/tome.js");
+      const starting = tome.start();
+      const result = tome.end();
+      await starting;
+      return result ?? null;
+    })()`);
+
+    expect(ended).toBeNull();
+    const events = await eventsUntil("spanish", (events) => events.some((event) => event.kind === "session.end"));
+    expect(kinds(events)).toEqual(["session.start", "session.end"]);
+    expect(events[1]).toMatchObject({ sessionId: events[0]!.id, ref: "drill:review" });
+  });
+
   it("names an unknown drill", async () => {
     const { root } = await spanish({ drill: "nope", widget: `<tome-drill drill="nope"></tome-drill>` });
     expect(await root.locator(".tome-notice").textContent()).toBe('No drill "nope" in Spanish. Drills: review.');

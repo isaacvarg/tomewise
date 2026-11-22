@@ -34,7 +34,7 @@ export const widgetClasses: Readonly<Record<string, readonly string[]>> = {
   "tome-audio": ["tome-answer", "tome-answers", "tome-audio", "tome-countdown", "tome-feedback", "tome-hint", "tome-input", "tome-notice", "tome-play", "tome-prompt", "tome-respond", "tome-retry", "tome-say", "tome-stage", "tome-submit", "tome-verdict"],
   "tome-choice": ["tome-answer", "tome-answers", "tome-choice", "tome-feedback", "tome-hint", "tome-notice", "tome-prompt", "tome-retry", "tome-skip", "tome-stage", "tome-verdict"],
   "tome-done": ["tome-done", "tome-done-button", "tome-notice", "tome-verdict"],
-  "tome-drill": ["tome-actions", "tome-again", "tome-clock", "tome-count", "tome-drill", "tome-drill-bar", "tome-drill-item", "tome-drill-name", "tome-drill-next", "tome-drill-title", "tome-empty", "tome-empty-title", "tome-hint", "tome-kicker", "tome-next", "tome-notice", "tome-progress", "tome-saved", "tome-score", "tome-score-sub", "tome-stats", "tome-summary", "tome-summary-head"],
+  "tome-drill": ["tome-actions", "tome-again", "tome-clock", "tome-close", "tome-count", "tome-drill", "tome-drill-bar", "tome-drill-item", "tome-drill-name", "tome-drill-next", "tome-drill-title", "tome-empty", "tome-empty-title", "tome-hint", "tome-kicker", "tome-next", "tome-notice", "tome-progress", "tome-saved", "tome-score", "tome-score-sub", "tome-stats", "tome-summary", "tome-summary-head"],
   "tome-exam-question": ["tome-exam-question", "tome-notice", "tome-question"],
   "tome-explain": ["tome-actions", "tome-explain", "tome-explain-text", "tome-hint", "tome-notice", "tome-prompt", "tome-save", "tome-verdict"],
   "tome-flashcard": ["tome-back", "tome-flashcard", "tome-front", "tome-grade", "tome-grades", "tome-hint", "tome-notice", "tome-reveal", "tome-stage", "tome-verdict"],
@@ -44,11 +44,13 @@ export const widgetClasses: Readonly<Record<string, readonly string[]>> = {
 };
 
 export const appClasses: readonly string[] = [
-  "tome-activity", "tome-app", "tome-cell", "tome-due", "tome-due-how", "tome-due-what", "tome-header", "tome-heat-days",
-  "tome-heat-legend", "tome-heatmap", "tome-heatmap-wrap", "tome-hint", "tome-kicker", "tome-mark", "tome-mark-letter",
-  "tome-meta", "tome-meta-narrow", "tome-meta-wide", "tome-notice", "tome-runner", "tome-runner-bar", "tome-section",
-  "tome-section-head", "tome-stage", "tome-start", "tome-streak", "tome-streak-num", "tome-streak-text", "tome-subject",
-  "tome-subject-name", "tome-subjects", "tome-title",
+  "tome-actions", "tome-activity", "tome-again", "tome-app", "tome-back", "tome-cell", "tome-due", "tome-due-how",
+  "tome-due-what", "tome-header", "tome-heat-days", "tome-heat-legend", "tome-heatmap", "tome-heatmap-wrap",
+  "tome-hint", "tome-kicker", "tome-look-again", "tome-look-item", "tome-look-why", "tome-mark", "tome-mark-letter",
+  "tome-meta", "tome-meta-narrow", "tome-meta-wide", "tome-notice", "tome-runner", "tome-runner-bar",
+  "tome-runner-summary", "tome-score", "tome-score-sub", "tome-section", "tome-section-head", "tome-stage",
+  "tome-start", "tome-stats", "tome-streak", "tome-streak-num", "tome-streak-text", "tome-subject", "tome-subject-name",
+  "tome-subjects", "tome-summary-head", "tome-title",
 ];
 
 export const requiredTokenNames = (kind?: TokenKind): string[] =>

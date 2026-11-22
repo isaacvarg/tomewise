@@ -48,9 +48,10 @@ export interface DashboardOptions {
   prepare?: (root: string) => Promise<void>;
   width?: Width;
   built?: boolean;
+  touch?: boolean;
 }
 
-export async function startDashboard({ prepare, width = "phone", built = true }: DashboardOptions = {}) {
+export async function startDashboard({ prepare, width = "phone", built = true, touch = false }: DashboardOptions = {}) {
   const { spa, widgets } = await builtApp();
   const app = await startTestApp(
     async (root) => {
@@ -61,7 +62,7 @@ export async function startDashboard({ prepare, width = "phone", built = true }:
     { spa: built ? spa : undefined, clock: { now: () => TODAY, every: () => () => {} } },
   );
   browser ??= launch();
-  const session = await (await browser).newContext({ viewport: WIDTHS[width], reducedMotion: "reduce" });
+  const session = await (await browser).newContext({ viewport: WIDTHS[width], reducedMotion: "reduce", ...(touch && { hasTouch: true, isMobile: true }) });
   onTestFinished(() => session.close());
   const page = await session.newPage();
   const pageErrors: Error[] = [];

@@ -1,17 +1,25 @@
 import { html, nothing, type PropertyValues } from "lit";
 import type { Drill, Item } from "@tomewise/core";
-import { type Grade, type Outcome, tome, TomeError } from "./api.ts";
+import { type EndedSession, type Grade, type Outcome, tome, TomeError } from "./api.ts";
 import { adoptStyles, messageOf, TomeElement } from "./element.ts";
 import { labelOf, median, planDrill, present } from "./drill-plan.ts";
 import { widgets } from "./loader.ts";
 
 type State = "loading" | "error" | "empty" | "running" | "done";
 
-interface Answered {
+export interface Answered {
   ref: string;
   outcome: Outcome;
   grade: Grade;
   duration: number;
+}
+
+export interface DrillDone {
+  drill: string;
+  planned: number;
+  timeUp: boolean;
+  results: Answered[];
+  session: EndedSession | undefined;
 }
 
 const PAUSE_RIGHT = 900;
@@ -21,6 +29,10 @@ const FOCUSABLE = "input:not([disabled]):not([readonly]), button:not([disabled])
 const CSS = `
 .tome-drill { display: flex; flex-direction: column; gap: 1rem; padding: 1rem 1.1rem 1.2rem; background: var(--t-bg); color: var(--t-ink); font-family: var(--t-ui); }
 .tome-drill > .tome-drill-bar { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: .8rem; }
+.tome-drill > .tome-drill-bar:has(> .tome-close) { grid-template-columns: auto 1fr auto auto; }
+.tome-drill .tome-close { width: 2.75rem; height: 2.75rem; margin: -.4rem 0 -.4rem -.6rem; display: grid; place-items: center; border-radius: 50%; color: var(--t-muted); text-decoration: none; font-size: 1.4rem; line-height: 1; touch-action: manipulation; }
+.tome-drill .tome-close:hover { background: var(--t-surface); }
+.tome-drill .tome-close:focus-visible { outline: 2px solid var(--t-accent); outline-offset: 2px; }
 .tome-drill-title { display: flex; flex-direction: column; min-width: 0; }
 .tome-drill .tome-kicker { font-size: .72rem; color: var(--t-muted); letter-spacing: .05em; text-transform: uppercase; }
 .tome-drill-name { font-size: .92rem; font-weight: 600; }
@@ -62,6 +74,7 @@ export class TomeDrill extends TomeElement {
   static override properties = {
     drill: { type: String },
     payload: { type: String },
+    close: { type: String },
     state: { state: true },
     notice: { state: true },
     current: { state: true },
@@ -74,6 +87,7 @@ export class TomeDrill extends TomeElement {
 
   declare drill: string;
   declare payload: string;
+  declare close: string;
   declare state: State;
   declare notice: string | undefined;
   declare current: HTMLElement | undefined;
@@ -92,11 +106,13 @@ export class TomeDrill extends TomeElement {
   #deadline: number | undefined;
   #ticker: ReturnType<typeof setInterval> | undefined;
   #watcher: MutationObserver | undefined;
+  #hostSummary = false;
 
   constructor() {
     super();
     this.drill = "";
     this.payload = "";
+    this.close = "";
     this.state = "loading";
     this.index = 0;
     this.results = [];
@@ -146,6 +162,7 @@ export class TomeDrill extends TomeElement {
     this.results = [];
     this.answered = false;
     this.timeUp = false;
+    this.#hostSummary = false;
     try {
       const id = this.#drillId;
       const subject = await tome.subject();
@@ -244,8 +261,15 @@ export class TomeDrill extends TomeElement {
     this.#stopTimers();
     this.timeUp = timeUp;
     this.current = undefined;
+    const detail: DrillDone = {
+      drill: this.#drillId,
+      planned: this.#plan.length,
+      timeUp,
+      results: this.results,
+      session: tome.end(),
+    };
+    this.#hostSummary = !this.dispatchEvent(new CustomEvent("tome-drill-done", { bubbles: true, cancelable: true, detail }));
     this.state = "done";
-    tome.end();
     void this.updateComplete.then(() => this.querySelector<HTMLButtonElement>(".tome-again")?.focus({ preventScroll: true }));
   }
 
@@ -258,7 +282,11 @@ export class TomeDrill extends TomeElement {
         : html`<span class="tome-clock" role="timer" aria-label="Time left" data-state=${left <= 10_000 ? "low" : nothing}
             >${clock(left)}</span
           >`;
+    const close = this.close
+      ? html`<a class="tome-close" href=${this.close} aria-label="End session">×</a>`
+      : nothing;
     return html`<header class="tome-drill-bar">
+      ${close}
       <div class="tome-drill-title">
         <span class="tome-kicker">${this.#subjectName}</span>
         <span class="tome-drill-name">${this.#definition?.name}</span>
@@ -343,7 +371,8 @@ export class TomeDrill extends TomeElement {
     }
     if (this.state === "done") {
       return html`<div class="tome-drill" data-state="done">
-        ${this.#bar(`${this.results.length} / ${total}`)} ${this.#progress(total)} ${this.#summary()}
+        ${this.#bar(`${this.results.length} / ${total}`)} ${this.#progress(total)}
+        ${this.#hostSummary ? nothing : this.#summary()}
       </div>`;
     }
     return html`<div class="tome-drill" data-state="running">

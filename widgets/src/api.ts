@@ -54,14 +54,23 @@ export function readPageContext(doc: Document): PageContext | undefined {
 interface Session {
   id: string;
   startedAt: number;
+  subject: string;
+  ref: string;
+  schemaVersion: number;
+}
+
+export interface EndedSession {
+  sessionId: string;
+  duration: number;
 }
 
 export class Tome {
   readonly #window: Window;
-  #subject?: Promise<Subject>;
-  #schemaVersion?: number;
+  #subjects = new Map<string, Promise<Subject>>();
+  #schemaVersions = new Map<string, number>();
   #session?: Promise<Session>;
   #current?: Session;
+  #ended = 0;
   #watching = false;
   #completion?: Promise<LearningEvent>;
 
@@ -81,11 +90,16 @@ export class Tome {
   }
 
   subject(): Promise<Subject> {
-    this.#subject ??= this.#loadSubject().catch((error: unknown) => {
-      this.#subject = undefined;
-      throw error;
-    });
-    return this.#subject;
+    const { subject: id } = this.context;
+    let loading = this.#subjects.get(id);
+    if (!loading) {
+      loading = this.#loadSubject(id).catch((error: unknown) => {
+        this.#subjects.delete(id);
+        throw error;
+      });
+      this.#subjects.set(id, loading);
+    }
+    return loading;
   }
 
   async item(ref: string): Promise<Item> {
@@ -166,22 +180,30 @@ export class Tome {
     });
   }
 
-  end(): void {
+  end(): EndedSession | undefined {
     const session = this.#current;
-    if (!session || this.#schemaVersion === undefined) return;
+    this.#ended++;
     this.#current = undefined;
     this.#session = undefined;
-    const event = this.#envelope({
+    return session && this.#postEnd(session);
+  }
+
+  #postEnd(session: Session): EndedSession {
+    const duration = Math.max(0, Math.round(this.#window.performance.now() - session.startedAt));
+    const event = {
+      subject: session.subject,
+      schemaVersion: session.schemaVersion,
       kind: "session.end",
-      ref: this.page,
+      ref: session.ref,
       sessionId: session.id,
-      duration: Math.max(0, Math.round(this.#window.performance.now() - session.startedAt)),
+      duration,
       data: {},
-    });
+    };
     const body = new Blob([JSON.stringify(event)], { type: "application/json" });
     if (!this.#window.navigator.sendBeacon?.(EVENTS_URL, body)) {
       void this.#window.fetch(EVENTS_URL, { method: "POST", body, keepalive: true }).catch(() => undefined);
     }
+    return { sessionId: session.id, duration };
   }
 
   watch(): void {
@@ -196,8 +218,7 @@ export class Tome {
     this.#window.addEventListener("pagehide", () => this.end());
   }
 
-  async #loadSubject(): Promise<Subject> {
-    const { subject } = this.context;
+  async #loadSubject(subject: string): Promise<Subject> {
     let response: Response;
     try {
       response = await this.#window.fetch(`/api/subjects/${encodeURIComponent(subject)}`);
@@ -206,7 +227,7 @@ export class Tome {
     }
     if (!response.ok) throw new TomeError(`Couldn't load subject "${subject}" (the app answered ${response.status}).`);
     const loaded = (await response.json()) as Subject;
-    this.#schemaVersion = Math.max(...loaded.payloadSchemas.map((schema) => schema.version));
+    this.#schemaVersions.set(subject, Math.max(...loaded.payloadSchemas.map((schema) => schema.version)));
     return loaded;
   }
 
@@ -223,11 +244,16 @@ export class Tome {
   }
 
   async #postStart(): Promise<Session> {
+    const ended = this.#ended;
+    const { subject } = this.context;
+    const ref = this.page;
     await this.subject();
     const startedAt = this.#window.performance.now();
-    const event = await this.#post({ kind: "session.start", ref: this.page, data: {} });
-    this.#current = { id: event.id, startedAt };
-    return this.#current;
+    const event = await this.#post({ kind: "session.start", ref, data: {} });
+    const session = { id: event.id, startedAt, subject, ref, schemaVersion: this.#schemaVersions.get(subject)! };
+    if (ended === this.#ended) this.#current = session;
+    else this.#postEnd(session);
+    return session;
   }
 
   async #postCompleted(): Promise<LearningEvent> {
@@ -240,7 +266,8 @@ export class Tome {
   }
 
   #envelope(fields: Record<string, unknown>): Record<string, unknown> {
-    return { subject: this.context.subject, schemaVersion: this.#schemaVersion, ...fields };
+    const { subject } = this.context;
+    return { subject, schemaVersion: this.#schemaVersions.get(subject), ...fields };
   }
 
   async #post(fields: Record<string, unknown>): Promise<LearningEvent> {

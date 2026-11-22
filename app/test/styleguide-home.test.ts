@@ -57,3 +57,31 @@ describe("home in /styleguide", () => {
     expect(pageErrors).toEqual([]);
   });
 });
+
+describe("the runner in /styleguide", () => {
+  it.each(["phone", "desktop"] as const)("shows the runner running a demo drill and a summary at %s width", async (width) => {
+    const { page, pageErrors } = await openStyleguide(width);
+
+    expect(await page.evaluate(() => document.documentElement.dataset.styleguideErrors ?? "")).toBe("");
+    expect(await page.locator("#runner .tome-runner").first().getAttribute("data-state")).toBe("running");
+    expect(await texts(page, "#runner .tome-runner .tome-drill-name")).toEqual(["Vocabulary"]);
+    expect(await page.locator("#runner tome-drill .tome-close").count()).toBe(1);
+    expect(await page.locator("#runner tome-drill .tome-flashcard").count()).toBe(1);
+    const summary = page.locator("#summary .tome-runner-summary");
+    expect(await summary.locator(".tome-score").innerText()).toBe("60%");
+    expect(await summary.locator(".tome-score-sub").innerText()).toBe("3 of 5 right");
+    expect(await texts(page, "#summary .tome-look-again li")).toEqual([
+      "adiós\nAgain\nLesson 1: greetings",
+      "rojo\nWrong\nLesson 2: colours",
+    ]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect(pageErrors).toEqual([]);
+  });
+
+  it("links the runner and summary from the styleguide's contents", async () => {
+    const { page } = await openStyleguide();
+
+    expect(await page.locator('.styleguide-nav a[href="#runner"]').innerText()).toBe("Runner");
+    expect(await page.locator('.styleguide-nav a[href="#summary"]').innerText()).toBe("Summary");
+  });
+});

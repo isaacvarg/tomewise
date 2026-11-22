@@ -67,7 +67,7 @@ await tome.attempt({ ref: "item:letter-k", outcome: "correct", grade: 3, duratio
 | `tome.due()`               | Resolves to the items due today, most overdue first.                                                   |
 | `tome.unlocked()`          | Resolves to the unretired items whose lesson is completed, or that need none.                          |
 | `tome.complete(widget?)`   | Posts `lesson.completed` for the page's lesson in its session, then ends the session. Once per page: later calls resolve to the same event. Lesson pages only. |
-| `tome.start()`, `tome.end()` | Start or end the page's session by hand. Widgets rarely need these.                                   |
+| `tome.start()`, `tome.end()` | Start or end the page's session by hand. Widgets rarely need these. `end()` returns `{ sessionId, duration }` for the session it ended, or `undefined` if none was open. |
 | `tome.context`, `tome.page`  | The page context, and its ref (`lesson:<id>`).                                                         |
 
 `attempt` takes `ref`, `outcome` (`correct`, `wrong`, `skipped`), `grade` (1–4), `duration` (ms, rounded to whole ms) and `data` (the payload; validated against the subject's newest payload schema version). Events carry that version as `schemaVersion`.
@@ -432,6 +432,7 @@ Completion is sent once per page, so a lesson may have both a `final` widget and
 | --------- | -------------------------------------------------------------------------------------------------------- |
 | `drill`   | Optional. Drill id: a file in the subject's `drills/` (no extension), or `review`. Defaults to the page's id on a drill page, else `review`. |
 | `payload` | Optional. JSON object passed to each item widget as its `payload`, e.g. `payload='{"wpm":20}'`.          |
+| `close`   | Optional. Address for an "End session" link (`.tome-close`, ×) at the start of the bar, e.g. `close="/"`. |
 
 ```html
 <tome-drill drill="listen-kmrsu" payload='{"wpm":20}'></tome-drill>
@@ -445,6 +446,7 @@ Runs a drill as a sequence of the item widgets, one item at a time. `review` is 
 - **Attempts and session.** Each answer posts one attempt on its item, through the item widget, so every attempt updates that item's schedule. The session is the page's: on a drill page (`tome-page-kind` `drill`, `tome-drill` the drill id) its ref is `drill:<id>`. Finishing the run posts `session.end`; "Run again" selects afresh and starts a new session.
 - **Pace.** After an answer the drill moves on by itself (0.9 s when right, 1.6 s otherwise), or at once with Next. From the second item on, audio items play by themselves.
 - **End.** The summary shows the score, right out of answered, median answer time, how many were skipped or out of time, and the missed items. A selection with nothing in it shows an empty state instead.
+- **Hosting.** When the run ends, after `session.end`, the drill dispatches `tome-drill-done` (bubbles, cancelable) with `detail` `{ drill, planned, timeUp, results, session }`: `results` holds one `{ ref, outcome, grade, duration }` per answer, `planned` is how many items the run had, and `session` is what `tome.end()` returned. A host that calls `preventDefault()` shows its own summary; the drill then keeps only its bar and progress. The dashboard's runner does this.
 
 A failed save keeps the item on screen with its notice (inside the item widget) and "Save again"; the drill waits for it.
 
@@ -456,6 +458,7 @@ Keyboard: focus moves into each new item (the play button, the first choice, the
 <tome-drill drill="listen-kmrsu">
   <div class="tome-drill" data-state="running | done | empty | loading | error">
     <header class="tome-drill-bar">
+      <a class="tome-close" href="/" aria-label="End session">×</a>        <!-- with close -->
       <div class="tome-drill-title">
         <span class="tome-kicker">Morse code</span>
         <span class="tome-drill-name">Listen · K M R S U</span>
