@@ -32,6 +32,7 @@ export async function buildPackage({ out, spa }: BuildOptions): Promise<void> {
     platform: "node",
     format: "esm",
     target: "node24",
+    external: ["playwright"],
     logLevel: "warning",
   });
   await chmod(bin, 0o755);

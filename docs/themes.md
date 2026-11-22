@@ -134,6 +134,27 @@ Open `/styleguide` in the app. It shows a sample lesson and every widget in each
 
 Once every demo has reached its state, the page sets `data-styleguide="ready"` on `<html>` (or `"failed"`, with the reasons in `data-styleguide-errors`). Dashboard pages join the styleguide as they land.
 
+## Checking a theme
+
+```
+tome theme check meadow [--out <dir>]
+```
+
+The check serves your learning home (or, outside one, the built-in demo home), loads `/styleguide` in the theme at 375, 768 and 1280 px wide, in light and dark, with reduced motion, and reports:
+
+- required tokens the theme doesn't define, in each mode;
+- text below WCAG AA contrast against the colour behind it: 4.5:1, or 3:1 for large text (24px, or 18.66px bold). Disabled and inert controls, and the inactive parts of a widget in its error state, are exempt, as WCAG allows;
+- any element that sticks out past the edge of the window, which would make the page scroll sideways.
+
+It writes a full-page screenshot for each width and mode to `--out` (default: a new temporary folder), prints the folder, and exits with 1 if it found any problem.
+
+The check drives a browser with Playwright. In a clone of this repo it is already installed (`pnpm tome theme check meadow`). With the installed tool, add Playwright alongside it:
+
+```
+npx playwright install chromium
+npx -p tomewise -p playwright tome theme check meadow
+```
+
 ## For agents writing lessons
 
 Style lessons with `var(--t-*)` tokens and the classes above, never literal colours or fonts, so a lesson follows whatever theme the learner picks.
