@@ -11,8 +11,14 @@ export interface ToolDirs {
 
 export const BUILT_IN: ToolDirs = {
   widgets: fileURLToPath(new URL("../widgets/", import.meta.url)),
-  themes: fileURLToPath(new URL("../../themes/", import.meta.url)),
+  themes: fileURLToPath(new URL("../themes/", import.meta.url)),
 };
+
+export async function themeDir(home: LearningHome, tool: ToolDirs, name: string): Promise<string | undefined> {
+  if (!isSafeSegment(name)) return undefined;
+  const own = join(home.root, "themes", name);
+  return (await isDirectory(own)) ? own : join(tool.themes, name);
+}
 
 export async function resolveThemeFile(
   home: LearningHome,
@@ -20,9 +26,8 @@ export async function resolveThemeFile(
   name: string,
   path: string,
 ): Promise<string | undefined> {
-  if (!isSafeSegment(name)) return undefined;
-  const own = join(home.root, "themes", name);
-  return resolveUnder((await isDirectory(own)) ? own : join(tool.themes, name), path);
+  const dir = await themeDir(home, tool, name);
+  return dir && resolveUnder(dir, path);
 }
 
 export function widgetRoutes(tool: ToolDirs): Hono {

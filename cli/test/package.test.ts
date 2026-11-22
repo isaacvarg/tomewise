@@ -59,7 +59,12 @@ describe("the tomewise npm package", () => {
     expect(written.trimEnd().split("\n").at(-1)).toBe(JSON.stringify(event));
 
     const home = await fetch(`${url}/`);
-    expect(await home.text()).toBe(INDEX);
+    const homePage = await home.text();
+    expect(homePage).toContain("<title>Tomewise</title>");
+    expect(homePage).toContain(`@import url("/themes/paper/tokens.css") layer(theme);`);
+    for (const file of ["/themes/paper/tokens.css", "/themes/paper/theme.json", "/widgets/v1/base.css"]) {
+      expect((await fetch(`${url}${file}`)).status, file).toBe(200);
+    }
 
     const tome = await fetch(`${url}/widgets/v1/tome.js`);
     expect(tome.status).toBe(200);

@@ -9,7 +9,7 @@ export type { Curriculum } from "./curriculum.ts";
 export { validateLearningHome } from "./validate.ts";
 export { formatIssue } from "./issues.ts";
 export type { ValidationIssue } from "./issues.ts";
-export { TomewiseConfig, SUPPORTED_FORMAT_VERSION } from "./schemas.ts";
+export { DEFAULT_THEME, ThemeManifest, ThemeName, TomewiseConfig, SUPPORTED_FORMAT_VERSION } from "./schemas.ts";
 export {
   GlobalConfigError,
   InvalidEventError,

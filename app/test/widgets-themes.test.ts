@@ -6,7 +6,8 @@ import { startTestApp } from "./harness.ts";
 
 const LESSON = "subjects/morse-code/lessons/0001-k-and-m.html";
 const TOME_JS = '<script type="module" src="/widgets/v1/tome.js"></script>';
-const PAPER_CSS = '<link rel="stylesheet" href="/themes/paper/tokens.css">';
+const PAPER_LINK = '<link rel="stylesheet" href="/themes/paper/tokens.css">';
+const PAPER_CSS = '@import url("/themes/paper/tokens.css") layer(theme);';
 
 async function put(path: string, text: string) {
   await mkdir(join(path, ".."), { recursive: true });
@@ -111,7 +112,7 @@ describe("page context", () => {
       await withQuizAndExam(root);
       const page = join(root, "subjects/morse-code", folder, `${id}.html`);
       const written = await readFile(page, "utf8");
-      await writeFile(page, written.replace("</head>", `${PAPER_CSS}\n${TOME_JS}\n</head>`));
+      await writeFile(page, written.replace("</head>", `${PAPER_LINK}\n${TOME_JS}\n</head>`));
     });
 
     const html = (await app.raw(`/s/morse-code/${folder}/${id}.html`)).body.toString();

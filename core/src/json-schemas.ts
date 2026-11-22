@@ -5,7 +5,7 @@ import { Curriculum } from "./curriculum.ts";
 import { DrillFile } from "./drills.ts";
 import { EventEnvelope } from "./events.ts";
 import { ItemSetFile } from "./items.ts";
-import { SubjectFile, SUPPORTED_FORMAT_VERSION, TomewiseConfig } from "./schemas.ts";
+import { SubjectFile, SUPPORTED_FORMAT_VERSION, ThemeManifest, TomewiseConfig } from "./schemas.ts";
 
 export type JsonSchema = z.core.JSONSchema.JSONSchema;
 
@@ -18,6 +18,7 @@ export const fileSchemas = {
   "drill.json": { title: "Drill (drills/*.json)", schema: DrillFile },
   "curriculum.json": { title: "curriculum.json", schema: Curriculum },
   "event.json": { title: "Event envelope (one line of events/*.jsonl)", schema: EventEnvelope },
+  "theme.json": { title: "theme.json (themes/<name>/theme.json)", schema: ThemeManifest },
 } satisfies Record<string, { title: string; schema: z.ZodType }>;
 
 export type SchemaFile = keyof typeof fileSchemas;

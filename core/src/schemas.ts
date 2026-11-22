@@ -53,7 +53,29 @@ export const ruleChanges = {
   "streak.changed": z.strictObject({ from: StreakRules, to: StreakRules }),
 };
 
-export const explanationText = z.string().trim().min(1, { error: "An explanation needs some text" });
+export const DEFAULT_THEME = "paper";
+
+export const ThemeName = z.string().regex(/^[A-Za-z0-9][\w.-]*$/, {
+  error: (issue) => `Theme ${JSON.stringify(issue.input)} must be a folder name, such as "paper" or "meadow"`,
+});
+
+const ThemePath = z
+  .string()
+  .regex(/^(?!.*(?:^|\/)\.\.?(?:\/|$))[\w.-]+(?:\/[\w.-]+)*$/, {
+    error: (issue) => `${JSON.stringify(issue.input)} must be a path inside the theme folder, such as "theme.js"`,
+  });
+
+export const ThemeManifest = z.strictObject({
+  name: z.string().min(1),
+  author: z.string().min(1),
+  version: z.string().min(1),
+  description: z.string().optional(),
+  script: ThemePath.optional(),
+});
+
+export type ThemeManifest = z.output<typeof ThemeManifest>;
+
+export const explanationText =z.string().trim().min(1, { error: "An explanation needs some text" });
 
 export const TomewiseConfig = z.strictObject({
   formatVersion: z.int().min(1).max(SUPPORTED_FORMAT_VERSION, {
@@ -63,6 +85,7 @@ export const TomewiseConfig = z.strictObject({
   weekStart: z.enum(weekdays).default("monday"),
   minimumSessionSeconds: z.number().min(0).default(60),
   streak: z.strictObject({ restDaysPerWeek: RestDaysPerWeek.default(0) }).default({ restDaysPerWeek: 0 }),
+  theme: ThemeName.default(DEFAULT_THEME),
 });
 
 export type TomewiseConfig = z.output<typeof TomewiseConfig>;

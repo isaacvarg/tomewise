@@ -1,0 +1,12 @@
+h1, h2, h3 { font-weight: 400; }
+h1 { font-style: italic; }
+
+.tome-header { border-bottom: 1px solid var(--t-rule); padding-bottom: .9rem; }
+.tome-kicker { font-variant: small-caps; text-transform: none; letter-spacing: .08em; font-size: .85rem; }
+.tome-title { font-style: italic; }
+.tome-subject { background: transparent; }
+.tome-start:active { transform: translateY(1px); }
+.tome-runner-bar { border-bottom: 1px solid var(--t-rule); padding-bottom: .7rem; }
+.tome-progress { height: 2px; border-radius: 0; }
+.tome-answer { background: transparent; }
+.tome-score { font-style: italic; }

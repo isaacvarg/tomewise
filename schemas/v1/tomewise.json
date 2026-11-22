@@ -43,6 +43,11 @@
         }
       },
       "additionalProperties": false
+    },
+    "theme": {
+      "default": "paper",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][\\w.-]*$"
     }
   },
   "required": [
