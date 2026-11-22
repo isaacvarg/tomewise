@@ -20,6 +20,7 @@ import {
   validateLearningHome,
   type ValidationIssue,
 } from "@tomewise/core";
+import { importWorkspace } from "./import.ts";
 
 export interface Io {
   cwd: string;
@@ -31,19 +32,22 @@ export interface Io {
   signal?: AbortSignal;
 }
 
-const USAGE = [
+export const USAGE = [
   "Usage:",
   "  tome validate",
   "  tome log <event JSON>",
   "  tome log -        read the event from stdin",
   "  tome serve [--host <host>] [--port <port>]",
+  "  tome import <dir> [--slug <slug>] [--name <name>]",
 ].join("\n");
+
+export const NO_APP_URL = "No app URL set (appUrl in ~/.config/tomewise/config.json or TOMEWISE_URL)";
 
 const DEFAULT_HOST = "127.0.0.1";
 const DEFAULT_PORT = 4777;
 const SEND_TIMEOUT_MS = 2000;
 
-async function findRoot(io: Io): Promise<string | undefined> {
+export async function findRoot(io: Io): Promise<string | undefined> {
   try {
     return await findLearningHome({ cwd: io.cwd, env: io.env });
   } catch (error) {
@@ -69,8 +73,8 @@ async function validate(io: Io): Promise<number> {
   return 1;
 }
 
-type Sent =
-  | { outcome: "sent"; event: unknown }
+export type Sent =
+  | { outcome: "sent"; events: unknown[] }
   | { outcome: "rejected"; issues: ValidationIssue[] }
   | { outcome: "failed"; message: string }
   | { outcome: "unreachable"; reason: string };
@@ -112,7 +116,7 @@ function parseBody(text: string): any {
   }
 }
 
-async function send(appUrl: string, input: unknown): Promise<Sent> {
+export async function send(appUrl: string, input: unknown): Promise<Sent> {
   const url = new URL(`${appUrl.replace(/\/+$/, "")}/api/events`);
   let answer: Answer;
   try {
@@ -123,11 +127,12 @@ async function send(appUrl: string, input: unknown): Promise<Sent> {
     return { outcome: "unreachable", reason };
   }
   const body = parseBody(answer.body);
-  if (answer.status === 201 && Array.isArray(body?.events) && body.events.length === 1) {
-    return { outcome: "sent", event: body.events[0] };
+  const count = Array.isArray(input) ? input.length : 1;
+  if (answer.status === 201 && Array.isArray(body?.events) && body.events.length === count) {
+    return { outcome: "sent", events: body.events };
   }
   if (answer.status === 400 && Array.isArray(body?.issues)) return { outcome: "rejected", issues: body.issues };
-  return { outcome: "failed", message: `${url} answered ${answer.status} ${answer.statusText}; event not logged` };
+  return { outcome: "failed", message: `${url} answered ${answer.status} ${answer.statusText}; ${count === 1 ? "event" : "events"} not logged` };
 }
 
 async function readEventArg(io: Io, arg: string): Promise<{ input: unknown } | undefined> {
@@ -157,11 +162,11 @@ async function log(io: Io, arg: string | undefined): Promise<number> {
     return 2;
   }
 
-  let notice = "No app URL set (appUrl in ~/.config/tomewise/config.json or TOMEWISE_URL)";
+  let notice = NO_APP_URL;
   if (appUrl) {
     const sent = await send(appUrl, read.input);
     if (sent.outcome === "sent") {
-      io.stdout(JSON.stringify(sent.event));
+      io.stdout(JSON.stringify(sent.events[0]));
       return 0;
     }
     if (sent.outcome === "rejected") {
@@ -269,6 +274,7 @@ export async function run(args: string[], io: Io): Promise<number> {
   if (command === "validate") return validate(io);
   if (command === "log") return log(io, rest[0]);
   if (command === "serve") return serve(io, rest);
+  if (command === "import") return importWorkspace(io, rest);
   io.stderr(USAGE);
   return 2;
 }
