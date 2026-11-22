@@ -133,6 +133,57 @@ Once saved, the widget dispatches a bubbling `tome-answered` event with `detail:
 
 `data-state` on `.tome-answer` and `.tome-input` is set only after answering. These class names, `data-*` states and this structure are part of the theme contract.
 
+## `<tome-audio>`
+
+| Attribute | Meaning                                                                                       |
+| --------- | --------------------------------------------------------------------------------------------- |
+| `ref`     | `item:<id>` of a `timed-audio` item                                                           |
+| `choices` | Optional. Space-separated answers to pick from, e.g. `choices="K M R S U"`. Without it, the learner types the answer. |
+| `payload` | Optional. JSON object of fixed payload fields, e.g. `payload='{"wpm":20}'`.                    |
+
+```html
+<tome-audio ref="item:letter-k" choices="K M R S U" payload='{"wpm":20}'></tome-audio>
+```
+
+The play button plays the item's `audio` (served from the subject, e.g. `assets/audio/k.wav`). An item with only a `prompt` shows a Start button instead, and the prompt appears once started. The answers unlock when the sound has finished; the response time and the item's `timeLimitSeconds` count from then. The play button replays at any time.
+
+Answers are compared trimmed and ignoring case. Correct is grade 3, wrong is grade 1. `duration` is the response time in whole ms.
+
+**Running out of time** posts the attempt with outcome `skipped`, grade 1 and an empty answer. Grade 1 because not answering in time means the item isn't known at speed, so the scheduler should bring it back soon. `skipped` rather than `wrong` so stats can tell a timeout from a confusion (K heard as M).
+
+**Payload.** The widget measures `heard` (the item's answer), `answer` (what the learner gave, `""` on timeout), `responseTime` (ms) and `replays` (plays after the first, before answering). It attaches each of these that the subject's newest payload schema declares for `attempt`, then the `payload` attribute's fields. For the Morse subject that gives `{ heard, answer, responseTime, wpm }`. The server validates the result like any other event; if it rejects it, the widget shows the reason and a "Save again" button, and keeps the answer on screen.
+
+Keyboard: Tab to the play button, Enter or Space to play; Space replays while focus is in the widget (outside the answer field). With single-character choices, that character's key answers (`k`); with longer choices, keys 1–9. Without choices, focus moves to the answer field and Enter answers. Touch: tap the buttons.
+
+### Markup
+
+```html
+<tome-audio ref="item:letter-k" choices="K M">
+  <div class="tome-audio" data-state="ready | listening | answering | saving | saved | unsaved | loading | error">
+    <div class="tome-stage">
+      <button class="tome-play" data-playing>…</button>   <!-- data-playing while sound plays -->
+      <p class="tome-prompt">…</p>                          <!-- prompt items, once started -->
+      <p class="tome-hint">Tap to play · <kbd>Space</kbd></p>
+      <div class="tome-countdown"><span></span></div>       <!-- while answering, if there is a time limit -->
+      <div class="tome-feedback" aria-live="polite">
+        <p class="tome-say">K</p>                           <!-- once answered -->
+        <p class="tome-verdict" data-state="correct | wrong | skipped">Right · 0.82 s</p>
+      </div>
+    </div>
+    <div class="tome-answers" role="group">                 <!-- with choices -->
+      <button class="tome-answer" data-choice="K" data-state="correct | wrong | faded"><b>K</b><kbd>k</kbd></button>
+    </div>
+    <form class="tome-respond">                             <!-- without choices -->
+      <input class="tome-input"><button class="tome-submit">Answer</button>
+    </form>
+    <button class="tome-retry">Save again</button>          <!-- after a failed save -->
+    <p class="tome-notice" role="alert">…</p>
+  </div>
+</tome-audio>
+```
+
+These class names, `data-*` states and this structure are part of the theme contract.
+
 ## Styling
 
 Widgets ship base styles in the `tome.widgets` cascade layer, so any theme rule wins. Base styles use only `--t-*` tokens: `--t-bg`, `--t-surface`, `--t-ink`, `--t-muted`, `--t-rule`, `--t-accent`, `--t-accent-ink`, `--t-good`, `--t-good-bg`, `--t-bad`, `--t-bad-bg`, `--t-display`, `--t-ui`, `--t-mono`, `--t-radius`.
