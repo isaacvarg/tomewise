@@ -5,19 +5,22 @@ import {
   CONFIG_FILE,
   checkInitSettings,
   DEFAULT_APP_URL,
+  DEFAULT_GIT_CADENCE,
+  GIT_CADENCES,
   initLearningHome,
   type InitProblem,
   type InitSetting,
   type InitSettings,
 } from "@tomewise/core";
-import { setUpGit } from "./git.ts";
+import { GIT_REMOTE, setUpGit } from "./git.ts";
 import { APP_CHOICES, handOff, isAppChoice, listenFor, type AppChoice, type Launch } from "./handoff.ts";
 import type { Io } from "./main.ts";
 import { createPrompter, PromptCancelled, type Prompter } from "./prompt.ts";
 
 export const INIT_USAGE = [
   "  tome init [<dir>] [--timezone <IANA zone>] [--week-start <weekday>] [--rest-days <0-6>] [--app-url <url>]",
-  "            [--git [--remote <url>] | --no-git] [--app <now|service|docker|none>] [--subject <topic> | --no-subject]",
+  "            [--git [--remote <url>] [--cadence <session|hourly|daily>] [--push | --no-push] | --no-git]",
+  "            [--app <now|service|docker|none>] [--subject <topic> | --no-subject]",
 ].join("\n");
 
 const flagFor: Record<InitSetting, string> = {
@@ -25,13 +28,14 @@ const flagFor: Record<InitSetting, string> = {
   weekStart: "--week-start",
   restDaysPerWeek: "--rest-days",
   appUrl: "--app-url",
+  cadence: "--cadence",
+  push: "--push",
 };
 
 interface Answers {
   dir?: string;
   settings: InitSettings;
-  git?: boolean;
-  remote?: string;
+  remoteUrl?: string;
   app?: AppChoice;
   subject?: string | false;
 }
@@ -53,6 +57,8 @@ function parseInitArgs(args: string[]): Parsed | string {
         "app-url": { type: "string" },
         git: { type: "boolean" },
         remote: { type: "string" },
+        cadence: { type: "string" },
+        push: { type: "boolean" },
         app: { type: "string" },
         subject: { type: "string" },
       },
@@ -61,7 +67,13 @@ function parseInitArgs(args: string[]): Parsed | string {
     return (error as Error).message;
   }
   if (positionals.length > 1) return `Expected one folder, got ${positionals.length}`;
-  if (values.git === false && values.remote !== undefined) return "--remote needs git; drop --no-git or --remote";
+  const gitFlags = [
+    values.remote !== undefined && "--remote",
+    values.cadence !== undefined && "--cadence",
+    values.push === true && "--push",
+    values.push === false && "--no-push",
+  ].filter((flag) => flag !== false);
+  if (values.git === false && gitFlags.length > 0) return `${gitFlags[0]} needs git; drop --no-git or ${gitFlags[0]}`;
   const app = values.app as string | undefined;
   if (app !== undefined && !isAppChoice(app)) return `--app takes ${APP_CHOICES.join(", ")}, not "${app}"`;
   const subject = values.subject as string | false | undefined;
@@ -75,7 +87,6 @@ function parseInitArgs(args: string[]): Parsed | string {
     else problems.push({ setting: "restDaysPerWeek", message: parsed.message });
   }
 
-  const remote = values.remote as string | undefined;
   return {
     answers: {
       dir: positionals[0],
@@ -84,9 +95,11 @@ function parseInitArgs(args: string[]): Parsed | string {
         weekStart: values["week-start"] as string | undefined,
         restDaysPerWeek,
         appUrl: values["app-url"] as string | undefined,
+        git: gitFlags.length > 0 ? true : (values.git as boolean | undefined),
+        cadence: values.cadence as string | undefined,
+        push: values.push as boolean | undefined,
       },
-      git: remote !== undefined ? true : (values.git as boolean | undefined),
-      remote,
+      remoteUrl: values.remote as string | undefined,
       app,
       subject: subject === "" ? undefined : subject,
     },
@@ -96,6 +109,10 @@ function parseInitArgs(args: string[]): Parsed | string {
 
 function parseRestDays(raw: string): number | { message: string } {
   return /^\d+$/.test(raw) ? Number(raw) : { message: `Use a whole number from 0 to 6, not "${raw}"` };
+}
+
+function coreSettings(answers: Answers): InitSettings {
+  return { ...answers.settings, remote: answers.remoteUrl === undefined ? undefined : GIT_REMOTE };
 }
 
 function problemWith(setting: InitSetting, settings: InitSettings): string | undefined {
@@ -132,11 +149,15 @@ async function askYesNo(prompter: Prompter, question: string, fallback: boolean)
   }
 }
 
-async function askApp(prompter: Prompter): Promise<AppChoice> {
+function isOneOf<T extends string>(choices: readonly T[], answer: string): answer is T {
+  return (choices as readonly string[]).includes(answer);
+}
+
+async function askChoice<T extends string>(prompter: Prompter, question: string, choices: readonly T[], fallback: T): Promise<T> {
   for (;;) {
-    const answer = (await prompter.ask(`Run the app now, install it as a service, or print the Docker command? (${APP_CHOICES.join("/")})`, "now")).toLowerCase();
-    if (isAppChoice(answer)) return answer;
-    prompter.say(`Answer ${APP_CHOICES.slice(0, -1).map((choice) => `"${choice}"`).join(", ")} or "${APP_CHOICES.at(-1)}".`);
+    const answer = (await prompter.ask(`${question} (${choices.join("/")})`, fallback)).toLowerCase();
+    if (isOneOf(choices, answer)) return answer;
+    prompter.say(`Answer ${choices.slice(0, -1).map((choice) => `"${choice}"`).join(", ")} or "${choices.at(-1)}".`);
   }
 }
 
@@ -160,20 +181,26 @@ async function ask(io: Io, prompter: Prompter, answers: Answers): Promise<Answer
   settings.restDaysPerWeek ??= await askSetting(prompter, "restDaysPerWeek", "Rest days per week", "0", parseRestDays);
   settings.appUrl ??= await askSetting(prompter, "appUrl", "App URL", DEFAULT_APP_URL, (raw) => raw);
 
-  const git = answers.git ?? (await askYesNo(prompter, "Set up git?", true));
-  let remote = answers.remote;
-  if (git && answers.git === undefined) {
-    const answer = await prompter.ask("Git remote URL (blank for none)");
-    remote = answer === "" ? undefined : answer;
+  settings.git ??= await askYesNo(prompter, "Set up git?", true);
+  let remoteUrl = answers.remoteUrl;
+  if (settings.git) {
+    while (remoteUrl === undefined) {
+      const answer = await prompter.ask("Git remote URL (blank for none)");
+      if (answer !== "") remoteUrl = answer;
+      else if (settings.push) prompter.say("--push needs a remote; enter its URL.");
+      else break;
+    }
+    settings.cadence ??= await askChoice(prompter, "Commit practice after each session, hourly or daily?", GIT_CADENCES, DEFAULT_GIT_CADENCE);
+    if (remoteUrl !== undefined) settings.push ??= await askYesNo(prompter, "Push to the remote after each commit?", true);
   }
 
-  const app = answers.app ?? (await askApp(prompter));
+  const app = answers.app ?? (await askChoice(prompter, "Run the app now, install it as a service, or print the Docker command?", APP_CHOICES, "now"));
   let subject = answers.subject;
   if (subject === undefined) {
     const answer = await prompter.ask("What do you want to learn first? (blank to skip)");
     subject = answer === "" ? false : answer;
   }
-  return { dir, settings, git, remote, app, subject };
+  return { dir, settings, remoteUrl, app, subject };
 }
 
 function report(io: Io, problems: InitProblem[]): void {
@@ -188,9 +215,14 @@ export async function init(io: Io, args: string[], usage: string): Promise<numbe
     io.stderr(usage);
     return 2;
   }
-  const checked = checkInitSettings(parsed.answers.settings);
-  if (parsed.problems.length > 0 || !checked.ok) {
-    report(io, [...parsed.problems, ...(checked.ok ? [] : checked.problems)]);
+  const checked = checkInitSettings(coreSettings(parsed.answers));
+  const remoteStillAsked = io.prompt !== undefined && parsed.answers.remoteUrl === undefined;
+  const problems = [
+    ...parsed.problems,
+    ...(checked.ok ? [] : checked.problems.filter((problem) => !(remoteStillAsked && problem.setting === "push"))),
+  ];
+  if (problems.length > 0) {
+    report(io, problems);
     return 1;
   }
 
@@ -225,18 +257,18 @@ export async function init(io: Io, args: string[], usage: string): Promise<numbe
     launch = { app, listen };
   }
 
-  const result = await initLearningHome(answers.dir ?? ".", answers.settings, { cwd: io.cwd, env: io.env });
+  const result = await initLearningHome(answers.dir ?? ".", coreSettings(answers), { cwd: io.cwd, env: io.env });
   switch (result.kind) {
     case "created": {
       io.stdout(`Created a learning home in ${result.root}.`);
       io.stdout(`Saved it as your learning home in ${result.globalConfig}.`);
-      if (answers.git) {
-        const git = await setUpGit(result.root, answers.remote);
+      if (answers.settings.git) {
+        const git = await setUpGit(result.root, answers.remoteUrl);
         if (!git.ok) {
           io.stderr(`Git setup failed: ${git.message}`);
           return 1;
         }
-        io.stdout(answers.remote ? `Initialised git with remote origin ${answers.remote}.` : "Initialised git.");
+        io.stdout(answers.remoteUrl ? `Initialised git with remote ${GIT_REMOTE} ${answers.remoteUrl}.` : "Initialised git.");
       }
       return handOff(io, { root: result.root, subject: answers.subject, launch });
     }

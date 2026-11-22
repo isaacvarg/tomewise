@@ -1,5 +1,7 @@
 import { execFile } from "node:child_process";
 
+export const GIT_REMOTE = "origin";
+
 export type GitResult = { ok: true } | { ok: false; message: string };
 
 function git(cwd: string, args: string[]): Promise<GitResult> {
@@ -17,5 +19,5 @@ function git(cwd: string, args: string[]): Promise<GitResult> {
 export async function setUpGit(root: string, remote: string | undefined): Promise<GitResult> {
   const initialised = await git(root, ["init", "--quiet"]);
   if (!initialised.ok || remote === undefined) return initialised;
-  return git(root, ["remote", "add", "origin", remote]);
+  return git(root, ["remote", "add", GIT_REMOTE, remote]);
 }

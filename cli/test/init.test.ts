@@ -60,6 +60,7 @@ describe("tome init", () => {
       timezone: "Europe/London",
       weekStart: "sunday",
       streak: { restDaysPerWeek: 1 },
+      git: { enabled: false },
     });
     expect(await readdir(join(root, "subjects"))).toEqual([]);
     expect(await readJsonFile(globalConfig(HOME))).toEqual({ learningHome: root, appUrl: "http://localhost:4800" });
@@ -82,6 +83,7 @@ describe("tome init", () => {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       weekStart: "monday",
       streak: { restDaysPerWeek: 0 },
+      git: { enabled: false },
     });
     expect(await readJsonFile(globalConfig(HOME))).toEqual({ learningHome: root, appUrl: "http://127.0.0.1:4777" });
   });
@@ -256,6 +258,7 @@ describe("tome init prompts", () => {
       timezone: zone,
       weekStart: "monday",
       streak: { restDaysPerWeek: 0 },
+      git: { enabled: false },
     });
     expect(await readJsonFile(globalConfig(HOME))).toEqual({ learningHome: root, appUrl: "http://127.0.0.1:4777" });
   });
@@ -281,6 +284,7 @@ describe("tome init prompts", () => {
       timezone: "Asia/Tokyo",
       weekStart: "friday",
       streak: { restDaysPerWeek: 2 },
+      git: { enabled: false },
     });
   });
 
@@ -299,13 +303,14 @@ describe("tome init prompts", () => {
       timezone: "UTC",
       weekStart: "tuesday",
       streak: { restDaysPerWeek: 3 },
+      git: { enabled: false },
     });
   });
 
   it("runs git init and adds the remote when git is chosen", async () => {
     const root = await temp("tomewise-init-");
     const HOME = await temp("tomewise-init-home-");
-    const script = scripted(["", "", "", "", "", "y", "git@example.com:me/learning.git", "none", ""]);
+    const script = scripted(["", "", "", "", "", "y", "git@example.com:me/learning.git", "", "", "none", ""]);
 
     const result = await tomeAsked(["init"], root, HOME, script.streams);
 
@@ -319,7 +324,7 @@ describe("tome init prompts", () => {
     const root = await temp("tomewise-init-");
     const HOME = await temp("tomewise-init-home-");
 
-    const result = await tomeAsked(["init"], root, HOME, scripted(["", "", "", "", "", "", "", "none", ""]).streams);
+    const result = await tomeAsked(["init"], root, HOME, scripted(["", "", "", "", "", "", "", "", "none", ""]).streams);
 
     expect(result.code).toBe(0);
     expect(await readdir(join(root, ".git"))).toContain("HEAD");
@@ -356,10 +361,91 @@ describe("tome init prompts", () => {
     expect(await readdir(root)).toEqual([]);
   });
 
-  it.each([1, 2, 3, 4, 5, 6, 7, 8, 9])("writes nothing when the input ends after %i answers", async (answered) => {
+  it("writes git sync settings from flags", async () => {
     const root = await temp("tomewise-init-");
     const HOME = await temp("tomewise-init-home-");
-    const answers = ["", "", "", "", "", "y", "", "none", ""].slice(0, answered - 1);
+
+    const result = await tome(["init", root, "--remote", "https://example.com/learning.git", "--cadence", "daily", "--no-push"], root, HOME);
+
+    expect(result.stderr).toBe("");
+    expect(result.code).toBe(0);
+    expect((await readJsonFile(join(root, "tomewise.json"))).git).toEqual({
+      enabled: true,
+      cadence: "daily",
+      remote: "origin",
+      push: false,
+    });
+    expect((await tome(["validate"], root, HOME)).code).toBe(0);
+  });
+
+  it("commits per session and pushes by default when a remote is given", async () => {
+    const root = await temp("tomewise-init-");
+    const HOME = await temp("tomewise-init-home-");
+
+    const result = await tome(["init", root, "--remote", "https://example.com/learning.git"], root, HOME);
+
+    expect(result.code).toBe(0);
+    expect((await readJsonFile(join(root, "tomewise.json"))).git).toEqual({
+      enabled: true,
+      cadence: "session",
+      remote: "origin",
+      push: true,
+    });
+  });
+
+  it("writes git sync without a remote from --git, not pushing", async () => {
+    const root = await temp("tomewise-init-");
+    const HOME = await temp("tomewise-init-home-");
+
+    const result = await tome(["init", root, "--git"], root, HOME);
+
+    expect(result.code).toBe(0);
+    expect((await readJsonFile(join(root, "tomewise.json"))).git).toEqual({ enabled: true, cadence: "session", push: false });
+    expect(git(root, ["remote"])).toBe("");
+  });
+
+  it("writes git off with --no-git, which tome validate accepts", async () => {
+    const root = await temp("tomewise-init-");
+    const HOME = await temp("tomewise-init-home-");
+
+    const result = await tome(["init", root, "--no-git"], root, HOME);
+
+    expect(result.code).toBe(0);
+    expect((await readJsonFile(join(root, "tomewise.json"))).git).toEqual({ enabled: false });
+    expect(await readdir(root)).not.toContain(".git");
+    expect((await tome(["validate"], root, HOME)).code).toBe(0);
+  });
+
+  it("reports a bad cadence and push without a remote, writing nothing", async () => {
+    const root = await temp("tomewise-init-");
+    const HOME = await temp("tomewise-init-home-");
+
+    const cadence = await tome(["init", root, "--cadence", "weekly"], root, HOME);
+    const push = await tome(["init", root, "--push"], root, HOME);
+
+    expect(cadence.code).toBe(1);
+    expect(cadence.stderr).toMatch(/^--cadence: .*hourly/m);
+    expect(push.code).toBe(1);
+    expect(push.stderr).toMatch(/^--push: .*remote/m);
+    expect(await readdir(root)).toEqual([]);
+    expect(await readdir(HOME)).toEqual([]);
+  });
+
+  it.each([["--cadence", "daily"], ["--push"], ["--no-push"]])("rejects %s with --no-git", async (...flag) => {
+    const root = await temp("tomewise-init-");
+    const HOME = await temp("tomewise-init-home-");
+
+    const result = await tome(["init", root, "--no-git", ...flag], root, HOME);
+
+    expect(result.code).toBe(2);
+    expect(result.stderr).toContain("--no-git");
+    expect(await readdir(root)).toEqual([]);
+  });
+
+  it.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])("writes nothing when the input ends after %i answers", async (answered) => {
+    const root = await temp("tomewise-init-");
+    const HOME = await temp("tomewise-init-home-");
+    const answers = ["", "", "", "", "", "y", "git@example.com:me/learning.git", "", "", "none", ""].slice(0, answered - 1);
 
     const result = await tomeAsked(["init"], root, HOME, scripted(answers).streams);
 
@@ -385,6 +471,81 @@ describe("tome init prompts", () => {
     expect(result.code).toBe(130);
     expect(await readdir(root)).toEqual([]);
     expect(await readdir(HOME)).toEqual([]);
+  });
+
+  it("asks for cadence and push when git is chosen with a remote, and writes them", async () => {
+    const root = await temp("tomewise-init-");
+    const HOME = await temp("tomewise-init-home-");
+    const script = scripted(["", "", "", "", "", "y", "git@example.com:me/learning.git", "weekly", "Daily", "n", "none", ""]);
+
+    const result = await tomeAsked(["init"], root, HOME, script.streams);
+
+    expect(result.stderr).toBe("");
+    expect(result.code).toBe(0);
+    expect(script.shown()).toContain("Commit practice after each session, hourly or daily? (session/hourly/daily) [session]: ");
+    expect(script.shown()).toContain('Answer "session", "hourly" or "daily".');
+    expect(script.shown()).toContain("Push to the remote after each commit? [Y/n]");
+    expect((await readJsonFile(join(root, "tomewise.json"))).git).toEqual({
+      enabled: true,
+      cadence: "daily",
+      remote: "origin",
+      push: false,
+    });
+    expect((await tome(["validate"], root, HOME)).code).toBe(0);
+  });
+
+  it("asks for cadence but not push when git is chosen without a remote", async () => {
+    const root = await temp("tomewise-init-");
+    const HOME = await temp("tomewise-init-home-");
+    const script = scripted(["", "", "", "", "", "y", "", "hourly", "none", ""]);
+
+    const result = await tomeAsked(["init"], root, HOME, script.streams);
+
+    expect(result.code).toBe(0);
+    expect(script.shown()).not.toContain("Push");
+    expect((await readJsonFile(join(root, "tomewise.json"))).git).toEqual({ enabled: true, cadence: "hourly", push: false });
+  });
+
+  it("still asks for the remote when a git flag other than --remote is given", async () => {
+    const root = await temp("tomewise-init-");
+    const HOME = await temp("tomewise-init-home-");
+    const script = scripted(["", "", "", "", "", "git@example.com:me/learning.git", "none", ""]);
+
+    const result = await tomeAsked(["init", root, "--cadence", "daily", "--push"], root, HOME, script.streams);
+
+    expect(result.stderr).toBe("");
+    expect(result.code).toBe(0);
+    expect(script.shown()).toContain("Git remote URL");
+    expect(script.shown()).toContain("--push needs a remote; enter its URL.");
+    expect(git(root, ["remote", "get-url", "origin"])).toBe("git@example.com:me/learning.git");
+    expect((await readJsonFile(join(root, "tomewise.json"))).git).toEqual({
+      enabled: true,
+      cadence: "daily",
+      remote: "origin",
+      push: true,
+    });
+  });
+
+  it("skips the cadence and push questions answered by flags", async () => {
+    const root = await temp("tomewise-init-");
+    const HOME = await temp("tomewise-init-home-");
+    const script = scripted(["", "", "", "", "none", ""]);
+
+    const result = await tomeAsked(
+      ["init", root, "--remote", "https://example.com/learning.git", "--cadence", "hourly", "--push"],
+      root,
+      HOME,
+      script.streams,
+    );
+
+    expect(result.code).toBe(0);
+    for (const question of ["Commit practice", "Push"]) expect(script.shown()).not.toContain(question);
+    expect((await readJsonFile(join(root, "tomewise.json"))).git).toEqual({
+      enabled: true,
+      cadence: "hourly",
+      remote: "origin",
+      push: true,
+    });
   });
 
   it("stops before asking more when the chosen folder is already a learning home", async () => {

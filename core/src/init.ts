@@ -2,7 +2,7 @@ import { access, mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { AppUrl, CONFIG_FILE, globalConfigPath } from "./find.ts";
 import { readJson } from "./json.ts";
-import { SUPPORTED_FORMAT_VERSION, systemTimezone, TomewiseConfig } from "./schemas.ts";
+import { DEFAULT_GIT_CADENCE, SUPPORTED_FORMAT_VERSION, systemTimezone, TomewiseConfig } from "./schemas.ts";
 
 export const DEFAULT_APP_URL = "http://127.0.0.1:4777";
 
@@ -11,9 +11,13 @@ export interface InitSettings {
   weekStart?: string;
   restDaysPerWeek?: number;
   appUrl?: string;
+  git?: boolean;
+  cadence?: string;
+  remote?: string;
+  push?: boolean;
 }
 
-export type InitSetting = keyof InitSettings;
+export type InitSetting = Exclude<keyof InitSettings, "git" | "remote">;
 
 export interface InitProblem {
   setting: InitSetting;
@@ -39,8 +43,20 @@ interface Checked {
 const settingAt: Record<string, InitSetting> = {
   timezone: "timezone",
   weekStart: "weekStart",
-  streak: "restDaysPerWeek",
+  "streak.restDaysPerWeek": "restDaysPerWeek",
+  "git.cadence": "cadence",
+  "git.push": "push",
 };
+
+function gitBlock(settings: InitSettings): Record<string, unknown> {
+  if (!settings.git) return { enabled: false };
+  return {
+    enabled: true,
+    cadence: settings.cadence ?? DEFAULT_GIT_CADENCE,
+    ...(settings.remote === undefined ? {} : { remote: settings.remote }),
+    push: settings.push ?? settings.remote !== undefined,
+  };
+}
 
 export function checkInitSettings(settings: InitSettings): { ok: true; checked: Checked } | { ok: false; problems: InitProblem[] } {
   const config = {
@@ -48,13 +64,14 @@ export function checkInitSettings(settings: InitSettings): { ok: true; checked: 
     timezone: settings.timezone ?? systemTimezone(),
     weekStart: settings.weekStart ?? "monday",
     streak: { restDaysPerWeek: settings.restDaysPerWeek ?? 0 },
+    git: gitBlock(settings),
   };
   const appUrl = settings.appUrl ?? DEFAULT_APP_URL;
   const problems: InitProblem[] = [];
 
   const parsed = TomewiseConfig.safeParse(config);
   for (const issue of parsed.error?.issues ?? []) {
-    const setting = settingAt[String(issue.path[0])];
+    const setting = settingAt[issue.path.join(".")];
     if (setting) problems.push({ setting, message: issue.message });
   }
   const url = AppUrl.safeParse(appUrl);

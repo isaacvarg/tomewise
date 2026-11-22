@@ -9,7 +9,7 @@ export type { Curriculum } from "./curriculum.ts";
 export { validateLearningHome } from "./validate.ts";
 export { formatIssue } from "./issues.ts";
 export type { ValidationIssue } from "./issues.ts";
-export { DEFAULT_THEME, ThemeManifest, ThemeName, TomewiseConfig, SUPPORTED_FORMAT_VERSION } from "./schemas.ts";
+export { DEFAULT_GIT_CADENCE, DEFAULT_THEME, GIT_CADENCES, GitSettings, ThemeManifest, ThemeName, TomewiseConfig, SUPPORTED_FORMAT_VERSION } from "./schemas.ts";
 export {
   GlobalConfigError,
   InvalidEventError,
@@ -31,7 +31,7 @@ export { readActivity } from "./activity.ts";
 export type { Activity, ActivityDay, ActivityOptions, GoalResult, Streak } from "./activity.ts";
 export { readStats } from "./stats.ts";
 export type { AttemptCounts, Stats, StatsOptions } from "./stats.ts";
-export type { Goal, StreakRules } from "./schemas.ts";
+export type { GitCadence, Goal, StreakRules } from "./schemas.ts";
 export { JSON_SCHEMA_DIR, jsonSchemas } from "./json-schemas.ts";
 export { appClasses, requiredTokenNames, themeTokens, widgetClasses } from "./theme-contract.ts";
 export type { ContractToken, TokenKind } from "./theme-contract.ts";

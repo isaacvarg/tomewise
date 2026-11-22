@@ -77,6 +77,52 @@ export type ThemeManifest = z.output<typeof ThemeManifest>;
 
 export const explanationText = z.string().trim().min(1, { error: "An explanation needs some text" });
 
+export const GIT_CADENCES = ["session", "hourly", "daily"] as const;
+
+export type GitCadence = (typeof GIT_CADENCES)[number];
+
+export const DEFAULT_GIT_CADENCE: GitCadence = "session";
+
+const GitRemote = z.string().regex(/^[A-Za-z0-9][\w.-]*$/, {
+  error: (issue) => `Remote ${JSON.stringify(issue.input)} must be a git remote name, such as "origin"`,
+});
+
+const GitBranch = z.string().regex(/^(?!.*\.\.)(?!.*\/\.)(?!.*\.lock(?:\/|$))\w[\w.-]*(?:\/[\w.-]+)*(?<!\.)$/, {
+  error: (issue) => `${JSON.stringify(issue.input)} must be a git branch name, such as "main"`,
+});
+
+export const GitSettings = z
+  .strictObject({
+    enabled: z.boolean().default(true).meta({ description: "Whether the app syncs the learning home with git." }),
+    cadence: z
+      .enum(GIT_CADENCES, { error: `Use one of ${GIT_CADENCES.map((cadence) => `"${cadence}"`).join(", ")}` })
+      .default(DEFAULT_GIT_CADENCE)
+      .meta({ description: "How often the app commits events: after each session, hourly or daily." }),
+    remote: GitRemote.optional().meta({
+      description:
+        "Name of the git remote to pull from and push to, such as \"origin\". The remote itself is set up in each clone with git remote add. Without one the app only commits.",
+    }),
+    branch: GitBranch.optional().meta({ description: "Branch to pull and push. Defaults to the checked-out branch." }),
+    push: z.boolean().default(false).meta({ description: "Whether the app pushes after committing. Needs a remote." }),
+    pullIntervalMinutes: z
+      .int()
+      .min(1)
+      .max(1440)
+      .default(5)
+      .meta({ description: "Minutes between pulls from the remote." }),
+  })
+  .refine((git) => !git.push || git.remote !== undefined, {
+    path: ["push"],
+    error: 'Push needs a remote; set git.remote, such as "origin", or set push to false',
+  })
+  .meta({
+    description: "Git sync settings. Leave the block out to keep git sync off; a block turns it on unless enabled is false.",
+    if: { properties: { push: { const: true } }, required: ["push"] },
+    then: { required: ["remote"] },
+  });
+
+export type GitSettings = z.output<typeof GitSettings>;
+
 export const TomewiseConfig = z.strictObject({
   formatVersion: z.int().min(1).max(SUPPORTED_FORMAT_VERSION, {
     error: (issue) => formatVersionTooNew(issue.input as number),
@@ -86,6 +132,7 @@ export const TomewiseConfig = z.strictObject({
   minimumSessionSeconds: z.number().min(0).default(60),
   streak: z.strictObject({ restDaysPerWeek: RestDaysPerWeek.default(0) }).default({ restDaysPerWeek: 0 }),
   theme: ThemeName.default(DEFAULT_THEME),
+  git: GitSettings.prefault({ enabled: false }),
 });
 
 export type TomewiseConfig = z.output<typeof TomewiseConfig>;

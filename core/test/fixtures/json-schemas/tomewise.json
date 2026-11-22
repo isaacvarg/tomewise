@@ -2,7 +2,11 @@
   "valid": {
     "only formatVersion": { "formatVersion": 1 },
     "every setting": { "formatVersion": 1, "timezone": "Europe/London", "weekStart": "sunday", "minimumSessionSeconds": 0, "theme": "meadow" },
-    "a learner's own theme": { "formatVersion": 1, "theme": "My_Theme.2" }
+    "a learner's own theme": { "formatVersion": 1, "theme": "My_Theme.2" },
+    "empty git block": { "formatVersion": 1, "git": {} },
+    "git off": { "formatVersion": 1, "git": { "enabled": false } },
+    "push off without a remote": { "formatVersion": 1, "git": { "push": false } },
+    "every git setting": { "formatVersion": 1, "git": { "enabled": true, "cadence": "hourly", "remote": "origin", "branch": "feature/history", "push": true, "pullIntervalMinutes": 10 } }
   },
   "invalid": {
     "not an object": [],
@@ -16,7 +20,20 @@
     "negative minimumSessionSeconds": { "formatVersion": 1, "minimumSessionSeconds": -1 },
     "theme as a path": { "formatVersion": 1, "theme": "../paper" },
     "empty theme": { "formatVersion": 1, "theme": "" },
-    "unknown field": { "formatVersion": 1, "skin": "paper" }
+    "unknown field": { "formatVersion": 1, "skin": "paper" },
+    "git not an object": { "formatVersion": 1, "git": true },
+    "unknown cadence": { "formatVersion": 1, "git": { "cadence": "weekly" } },
+    "enabled as a string": { "formatVersion": 1, "git": { "enabled": "yes" } },
+    "remote as a URL": { "formatVersion": 1, "git": { "remote": "git@example.com:me/learning.git" } },
+    "branch starting with a dash": { "formatVersion": 1, "git": { "branch": "-main" } },
+    "pull interval 0": { "formatVersion": 1, "git": { "pullIntervalMinutes": 0 } },
+    "fractional pull interval": { "formatVersion": 1, "git": { "pullIntervalMinutes": 2.5 } },
+    "unknown git field": { "formatVersion": 1, "git": { "interval": 5 } },
+    "push without a remote": { "formatVersion": 1, "git": { "push": true } },
+    "branch with ..": { "formatVersion": 1, "git": { "branch": "a..b" } },
+    "branch ending .lock": { "formatVersion": 1, "git": { "branch": "main.lock" } },
+    "branch ending with a dot": { "formatVersion": 1, "git": { "branch": "main." } },
+    "pull interval over a day": { "formatVersion": 1, "git": { "pullIntervalMinutes": 1441 } }
   },
   "zodOnly": {
     "unknown timezone": { "formatVersion": 1, "timezone": "Mars/Phobos" }

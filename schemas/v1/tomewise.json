@@ -48,6 +48,68 @@
       "default": "paper",
       "type": "string",
       "pattern": "^[A-Za-z0-9][\\w.-]*$"
+    },
+    "git": {
+      "default": {
+        "enabled": false
+      },
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "default": true,
+          "description": "Whether the app syncs the learning home with git.",
+          "type": "boolean"
+        },
+        "cadence": {
+          "default": "session",
+          "description": "How often the app commits events: after each session, hourly or daily.",
+          "type": "string",
+          "enum": [
+            "session",
+            "hourly",
+            "daily"
+          ]
+        },
+        "remote": {
+          "description": "Name of the git remote to pull from and push to, such as \"origin\". The remote itself is set up in each clone with git remote add. Without one the app only commits.",
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][\\w.-]*$"
+        },
+        "branch": {
+          "description": "Branch to pull and push. Defaults to the checked-out branch.",
+          "type": "string",
+          "pattern": "^(?!.*\\.\\.)(?!.*\\/\\.)(?!.*\\.lock(?:\\/|$))\\w[\\w.-]*(?:\\/[\\w.-]+)*(?<!\\.)$"
+        },
+        "push": {
+          "default": false,
+          "description": "Whether the app pushes after committing. Needs a remote.",
+          "type": "boolean"
+        },
+        "pullIntervalMinutes": {
+          "default": 5,
+          "description": "Minutes between pulls from the remote.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1440
+        }
+      },
+      "additionalProperties": false,
+      "description": "Git sync settings. Leave the block out to keep git sync off; a block turns it on unless enabled is false.",
+      "if": {
+        "properties": {
+          "push": {
+            "const": true
+          }
+        },
+        "required": [
+          "push"
+        ]
+      },
+      "then": {
+        "required": [
+          "remote"
+        ]
+      }
     }
   },
   "required": [
