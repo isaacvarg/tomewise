@@ -99,3 +99,49 @@ describe.each(BUILT_IN_THEMES)("the built-in %s theme", (theme) => {
     expect(forcedLight).toEqual(light);
   });
 });
+
+describe("Meadow", () => {
+  async function meadowStyleguide(reducedMotion: "reduce" | "no-preference") {
+    const app = await startWidgetApp({ context: { reducedMotion } });
+    await app.page.addInitScript(() => {
+      (window as any).leaves = 0;
+      new MutationObserver((records) => {
+        for (const record of records) {
+          for (const node of record.addedNodes) if (node instanceof Element && node.matches(".meadow-leaf")) (window as any).leaves++;
+        }
+      }).observe(document, { subtree: true, childList: true });
+    });
+    const page = await app.open("/styleguide?theme=meadow");
+    await page.waitForFunction(() => document.documentElement.dataset.styleguide, undefined, { timeout: 15000 });
+    return page;
+  }
+
+  const leafCount = (page: Page) => page.evaluate(() => (window as any).leaves as number);
+
+  it("restyles lessons when tomewise.json chooses it", async () => {
+    const { open } = await startWidgetApp({ prepare: (root) => chooseTheme(root, "meadow") });
+
+    const page = await open(LESSON);
+
+    expect(await page.locator('meta[name="tome-theme"]').getAttribute("content")).toBe("meadow");
+    expect(await page.evaluate(look)).toEqual({ background: "rgb(243, 247, 238)", ink: "rgb(47, 58, 42)", h1: "normal" });
+  });
+
+  it("raises leaves from correct answers and from Start", async () => {
+    const page = await meadowStyleguide("no-preference");
+    expect(await leafCount(page)).toBeGreaterThan(0);
+    const before = await leafCount(page);
+
+    await page.locator("figure.styleguide-state", { hasText: /^ready/ }).locator("tome-routine .tome-start").click();
+
+    expect(await leafCount(page)).toBe(before + 7);
+  });
+
+  it("raises no leaves when the learner prefers reduced motion", async () => {
+    const page = await meadowStyleguide("reduce");
+
+    await page.locator("figure.styleguide-state", { hasText: /^ready/ }).locator("tome-routine .tome-start").click();
+
+    expect(await leafCount(page)).toBe(0);
+  });
+});
