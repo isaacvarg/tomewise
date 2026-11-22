@@ -191,12 +191,15 @@ body {
 .tome-lessons .tome-exam .tome-check { border-style: dashed; }
 .tome-lessons .tome-exam .side { color: var(--t-accent); font-weight: 600; }
 
-.tome-drills ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
-.tome-drills .tome-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: .7rem .9rem; border-radius: var(--t-radius); background: var(--t-surface); border: 1px solid var(--t-rule); }
+.tome-drills ul, .tome-reference ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
+.tome-drills .tome-row, .tome-reference .tome-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: .7rem .9rem; border-radius: var(--t-radius); background: var(--t-surface); border: 1px solid var(--t-rule); }
 .tome-drill-name { font-weight: 600; font-size: .9rem; }
 .tome-drill-sub { display: block; font-size: .75rem; color: var(--t-muted); font-weight: 400; }
 .tome-drill-go { font-size: .8rem; font-weight: 600; color: var(--t-accent); white-space: nowrap; }
 .tome-drills [data-locked] .tome-row { opacity: .5; cursor: default; }
+.tome-reference [data-later] .tome-row { opacity: .5; }
+.tome-reference [data-later] .tome-row:hover { opacity: .8; }
+.tome-reference [data-later] .tome-drill-go { color: var(--t-muted); font-weight: 400; }
 .tome-drills [data-locked] .tome-drill-go { color: var(--t-muted); font-weight: 400; }
 
 .tome-charts { display: grid; gap: 1.4rem; }
@@ -218,7 +221,7 @@ body {
 [data-tome-theme="paper"] .tome-goal-num b { font-style: italic; }
 [data-tome-theme="paper"] .tome-goal-bar { height: 3px; border-radius: 0; }
 [data-tome-theme="paper"] .tome-goal-week i { border-radius: 0; height: 3px; }
-[data-tome-theme="paper"] .tome-drills .tome-row { background: transparent; }
+[data-tome-theme="paper"] .tome-drills .tome-row, [data-tome-theme="paper"] .tome-reference .tome-row { background: transparent; }
 [data-tome-theme="paper"] .tome-start:active { transform: translateY(1px); }
 
 [data-tome-theme="meadow"] .tome-app {
@@ -237,7 +240,7 @@ body {
 [data-tome-theme="meadow"] .tome-prompt { border: 0; background: var(--t-surface); box-shadow: 0 2px 0 var(--t-rule); position: relative; padding-left: 2.1rem; }
 [data-tome-theme="meadow"] .tome-prompt::before { content: ""; position: absolute; left: .85rem; top: 1.05rem; width: 9px; height: 9px; border-radius: 50%; background: var(--t-petal); }
 [data-tome-theme="meadow"] .tome-say { background: var(--t-bg); }
-[data-tome-theme="meadow"] .tome-milestone, [data-tome-theme="meadow"] .tome-drills .tome-row { border: 0; background: var(--t-surface); box-shadow: 0 2px 0 var(--t-rule); }
+[data-tome-theme="meadow"] .tome-milestone, [data-tome-theme="meadow"] .tome-drills .tome-row, [data-tome-theme="meadow"] .tome-reference .tome-row { border: 0; background: var(--t-surface); box-shadow: 0 2px 0 var(--t-rule); }
 [data-tome-theme="meadow"] .tome-check { border-radius: 2px 70% 2px 70%; }
 [data-tome-theme="meadow"] .tome-chart .bar { rx: 3px; }
 [data-tome-theme="meadow"] .tome-chart .line { stroke-width: 3; }
@@ -258,8 +261,8 @@ body {
   .tome-page {
     display: grid; gap: 1.5rem 2.4rem; align-items: start;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-rows: auto auto auto auto auto 1fr auto;
-    grid-template-areas: "header header" "goal roadmap" "prompts roadmap" "due roadmap" "drills roadmap" "drills roadmap" "charts charts";
+    grid-template-rows: auto auto auto auto auto auto 1fr auto;
+    grid-template-areas: "header header" "goal roadmap" "prompts roadmap" "due roadmap" "drills roadmap" "reference roadmap" "reference roadmap" "charts charts";
   }
   .tome-header { grid-area: header; }
   .tome-goal { grid-area: goal; }
@@ -267,6 +270,7 @@ body {
   .tome-due { grid-area: due; }
   .tome-roadmap { grid-area: roadmap; }
   .tome-drills { grid-area: drills; }
+  .tome-reference { grid-area: reference; }
   .tome-charts { grid-area: charts; grid-template-columns: 1fr 1fr; gap: 2.4rem; border-top: 1px solid var(--t-rule); padding-top: 1.3rem; }
   .tome-chart-plot { grid-template-rows: 10rem auto; }
 }
@@ -275,7 +279,7 @@ body {
 <div class="page">
   <header class="intro">
     <h1>Tomewise subject home</h1>
-    <p>The page you reach by tapping Morse code on the home screen. Top to bottom: today's goal, what to ask your agent, what's due here with its own Start, the curriculum, drills and charts. Both phones use the same markup in Paper and Meadow, and each follows your system's light or dark setting. The desktop window below lays the same markup out in two columns: today's things on the left, the roadmap on the right, charts underneath, two across.</p>
+    <p>The page you reach by tapping Morse code on the home screen. Top to bottom: today's goal, what to ask your agent, what's due here with its own Start, the curriculum, drills, reference and charts. Both phones use the same markup in Paper and Meadow, and each follows your system's light or dark setting. The desktop window below lays the same markup out in two columns: today's things on the left, the roadmap on the right, charts underneath, two across.</p>
   </header>
 
   <div class="frames" id="frames"></div>
@@ -303,6 +307,7 @@ body {
         <li>Due here, with a Start for this subject</li>
         <li>Roadmap: units, milestones and their lessons, then "Other lessons"</li>
         <li>Drills, dimmed until one of their items is unlocked</li>
+        <li>Reference: the built-in glossary of items, then the agent's reference sheets</li>
         <li>Charts from the subject's chart specs</li>
       </ul>
     </div>
@@ -313,13 +318,13 @@ body {
         <li><code>.tome-prompt</code>, <code>.tome-say</code></li>
         <li><code>.tome-milestone</code>, <code>.tome-status[data-status]</code></li>
         <li><code>.tome-lessons [data-done]</code>, <code>[data-later]</code></li>
-        <li><code>.tome-drills [data-locked]</code></li>
+        <li><code>.tome-drills [data-locked]</code>, <code>.tome-reference</code></li>
         <li><code>.tome-chart</code> with <code>.line</code>, <code>.bar</code>, <code>.goal</code></li>
       </ul>
     </div>
     <div>
       <h2>Sample data</h2>
-      <p>Unit 1, its milestone, lessons 1 to 4, the listening drill and the response-time field come from the Morse example. Unit 2's lessons, the spacing lesson, the second drill, the goal, the explanation and the chart numbers are invented to fill the screen.</p>
+      <p>Unit 1, its milestone, lessons 1 to 4, the listening drill and the response-time field come from the Morse example. Unit 2's lessons, the spacing lesson, the second drill, both reference sheets, the goal, the explanation and the chart numbers are invented to fill the screen.</p>
     </div>
   </section>
 </div>
@@ -408,6 +413,15 @@ body {
       <ul>
         <li><a class="tome-row" href="#listen"><span class="tome-drill-name">Listen · K M R S U<span class="tome-drill-sub">12 sounds · pick the letter · 5 s each</span></span><span class="tome-drill-go">Run</span></a></li>
         <li data-locked><span class="tome-row" aria-disabled="true"><span class="tome-drill-name">Listen · A N<span class="tome-drill-sub">12 sounds · pick the letter</span></span><span class="tome-drill-go">After lesson 5</span></span></li>
+      </ul>
+    </section>
+
+    <section class="tome-section tome-reference">
+      <div class="tome-section-head"><h3>Reference</h3><span class="tome-meta">3</span></div>
+      <ul>
+        <li><a class="tome-row" href="glossary.html"><span class="tome-drill-name">Glossary<span class="tome-drill-sub">5 items · hear each one · built in</span></span><span class="tome-drill-go">Open</span></a></li>
+        <li><a class="tome-row" href="#wpm"><span class="tome-drill-name">How WPM timing works<span class="tome-drill-sub">Sheet from your agent · Lesson 1</span></span><span class="tome-drill-go">Open</span></a></li>
+        <li data-later><a class="tome-row" href="#an"><span class="tome-drill-name">A and N side by side<span class="tome-drill-sub">Sheet from your agent · Lesson 6</span></span><span class="tome-drill-go">after Unit 1</span></a></li>
       </ul>
     </section>
 

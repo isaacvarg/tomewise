@@ -3,7 +3,8 @@
 Throwaway HTML mockups from the design sessions of 2026-11-21 and 2026-11-22. Open any file in a browser. They are the visual reference for v1, not app code.
 
 - [home.html](./home.html): the home screen (heatmap, subjects, due today, streak, Start) on two phones and a desktop window.
-- [subject-home.html](./subject-home.html): the Morse subject home (goal, prompts for your agent, due here, curriculum roadmap, drills, charts) on two phones and a two-column desktop window.
+- [subject-home.html](./subject-home.html): the Morse subject home (goal, prompts for your agent, due here, curriculum roadmap, drills, reference, charts) on two phones and a two-column desktop window.
+- [glossary.html](./glossary.html): the built-in glossary, every unlocked Morse letter under its lesson with a play button, on two phones and a desktop window.
 - [drill-runner.html](./drill-runner.html): a playable Morse listening drill and its end-of-session summary, on two phones and a desktop window.
 
 All pages render the same markup in the two built-in themes planned for v1 (ADR 0012):
