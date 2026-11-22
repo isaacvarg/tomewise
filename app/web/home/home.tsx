@@ -28,7 +28,7 @@ async function loadHome(): Promise<HomeData> {
 }
 
 export function Home() {
-  const loaded = useLoad(loadHome);
+  const loaded = useLoad(loadHome, [], { refetchOn: ["content", "events"] });
   if (loaded.state === "loading") {
     return (
       <Screen title="Today" state="loading">

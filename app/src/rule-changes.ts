@@ -50,6 +50,6 @@ export async function trackRuleChanges(
 
   let pending = Promise.resolve();
   const run = (view: HomeView) => (pending = pending.catch(() => undefined).then(() => record(view)));
-  watched.onReload(run);
+  watched.onReload((view) => run(view).catch(onError));
   await run(startup).catch(onError);
 }

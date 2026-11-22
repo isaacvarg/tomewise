@@ -1,8 +1,9 @@
 import { Hono } from "hono";
 import { appendEvents, InvalidEventError, type LearningHome } from "@tomewise/core";
+import type { Changes } from "./changes.ts";
 import type { GitSync } from "./sync.ts";
 
-export function eventRoutes(home: () => LearningHome, sync: GitSync): Hono {
+export function eventRoutes(home: () => LearningHome, sync: GitSync, changes: Changes): Hono {
   const routes = new Hono();
 
   routes.post("/", async (c) => {
@@ -18,6 +19,7 @@ export function eventRoutes(home: () => LearningHome, sync: GitSync): Hono {
       const appended = await sync.exclusive(() => appendEvents(home(), inputs, { target: "main" }));
       const events = appended.map(({ event }) => event);
       sync.recorded(events);
+      changes.announce({ kind: "events", subjects: [...new Set(events.map((event) => event.subject))] });
       return c.json({ events }, 201);
     } catch (error) {
       if (error instanceof InvalidEventError) return c.json({ issues: error.issues }, 400);

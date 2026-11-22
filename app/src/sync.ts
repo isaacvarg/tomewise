@@ -77,7 +77,12 @@ export const syncOff: GitSync = {
   close: async () => {},
 };
 
-export function startSync(home: () => LearningHome, { clock = systemClock }: { clock?: Clock } = {}): GitSync {
+export interface SyncOptions {
+  clock?: Clock;
+  pulledEvents?: (subjects: string[]) => void;
+}
+
+export function startSync(home: () => LearningHome, { clock = systemClock, pulledEvents = () => {} }: SyncOptions = {}): GitSync {
   const { root, config } = home();
   const settings = config.git;
   if (!settings.enabled) return syncOff;
@@ -144,6 +149,7 @@ export function startSync(home: () => LearningHome, { clock = systemClock }: { c
 
   async function pull(remote: string): Promise<string> {
     const target = await checkedBranch();
+    const before = await git(root, ["rev-parse", "--verify", "--quiet", "HEAD"]).catch(() => undefined);
     try {
       await git(root, ["pull", "--rebase", "--autostash", "--quiet", remote, target]);
     } catch (error) {
@@ -151,6 +157,12 @@ export function startSync(home: () => LearningHome, { clock = systemClock }: { c
       throw error;
     }
     state.lastPull = clock.now().toISOString();
+    const pulled = await git(
+      root,
+      before === undefined ? ["ls-files", "--", EVENT_FILES] : ["diff", "--name-only", "--no-renames", before, "HEAD", "--", EVENT_FILES],
+    );
+    const subjects = new Set(pulled.split("\n").filter((path) => path !== "").map((path) => path.split("/")[1]!));
+    if (subjects.size > 0) pulledEvents([...subjects]);
     return target;
   }
 
