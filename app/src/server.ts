@@ -4,19 +4,26 @@ import { createAdaptorServer } from "@hono/node-server";
 import { Hono } from "hono";
 import type { LearningHome } from "@tomewise/core";
 import { eventRoutes } from "./events.ts";
+import { pageRoutes } from "./pages.ts";
 import { readRoutes } from "./reads.ts";
 import { trackRuleChanges } from "./rule-changes.ts";
 import { spaRoutes } from "./spa.ts";
+import { BUILT_IN, themeRoutes, type ToolDirs, widgetRoutes } from "./tool-files.ts";
 import { type HomeView, watchLearningHome, type WatchOptions } from "./watcher.ts";
 
 export interface AppOptions {
   spa?: string;
+  tool?: ToolDirs;
 }
 
-export function createApp(view: () => HomeView, { spa }: AppOptions = {}): Hono {
+export function createApp(view: () => HomeView, { spa, tool = BUILT_IN }: AppOptions = {}): Hono {
   const app = new Hono();
-  app.route("/api/events", eventRoutes(() => view().home));
+  const home = () => view().home;
+  app.route("/api/events", eventRoutes(home));
   app.route("/api", readRoutes(view));
+  app.route("/s", pageRoutes(home, tool));
+  app.route("/widgets", widgetRoutes(tool));
+  app.route("/themes", themeRoutes(home, tool));
   if (spa !== undefined && existsSync(spa)) app.route("/", spaRoutes(spa));
   return app;
 }

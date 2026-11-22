@@ -1,13 +1,14 @@
 import { readdir, readFile } from "node:fs/promises";
+import { request } from "node:http";
 import { join } from "node:path";
 import { onTestFinished } from "vitest";
 import { loadLearningHome } from "@tomewise/core";
 import { copyExample } from "../../core/test/helpers.ts";
-import { startServer } from "../src/index.ts";
+import { startServer, type ToolDirs } from "../src/index.ts";
 
 export const EVENTS = "subjects/morse-code/events";
 
-export async function startTestApp(prepare?: (root: string) => Promise<void>) {
+export async function startTestApp(prepare?: (root: string) => Promise<void>, tool?: ToolDirs) {
   const root = await copyExample("morse");
   await prepare?.(root);
   const reloadErrors: unknown[] = [];
@@ -15,6 +16,7 @@ export async function startTestApp(prepare?: (root: string) => Promise<void>) {
     startServer(await loadLearningHome(root), {
       host: "127.0.0.1",
       port: 0,
+      tool,
       watch: { onError: (error) => reloadErrors.push(error) },
     });
   let server = await start();
@@ -65,12 +67,28 @@ export async function startTestApp(prepare?: (root: string) => Promise<void>) {
     return (await readdir(join(root, EVENTS))).sort();
   }
 
+  function raw(path: string): Promise<{ status: number; type: string | undefined; body: Buffer }> {
+    return new Promise((resolve, reject) => {
+      request(`${server.url}${path}`, { path }, (response) => {
+        const chunks: Buffer[] = [];
+        response.on("data", (chunk: Buffer) => chunks.push(chunk));
+        response.on("end", () =>
+          resolve({ status: response.statusCode!, type: response.headers["content-type"], body: Buffer.concat(chunks) }),
+        );
+        response.on("error", reject);
+      })
+        .on("error", reject)
+        .end();
+    });
+  }
+
   return {
     root,
     get url() {
       return server.url;
     },
     get,
+    raw,
     post,
     lines,
     eventFiles,
