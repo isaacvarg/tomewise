@@ -114,7 +114,7 @@ describe("subject home tabs", () => {
     await page.locator('.tome-tab[aria-selected="true"]').focus();
     await page.keyboard.press("ArrowRight");
     await expect.poll(() => page.url()).toMatch(/\/curriculum$/);
-    expect(await page.evaluate(() => document.activeElement?.textContent)).toBe("Curriculum");
+    await expect.poll(() => page.evaluate(() => document.activeElement?.textContent)).toBe("Curriculum");
     await page.keyboard.press("End");
     await expect.poll(() => page.url()).toMatch(/\/stats$/);
     await page.keyboard.press("ArrowRight");
@@ -123,7 +123,9 @@ describe("subject home tabs", () => {
     await expect.poll(() => page.url()).toMatch(/\/stats$/);
     await page.keyboard.press("Home");
     await expect.poll(() => page.url()).toMatch(/\/s\/morse-code$/);
-    expect(await page.locator(".tome-tab").evaluateAll((els) => els.map((el) => el.getAttribute("tabindex")))).toEqual(["0", "-1", "-1", "-1", "-1"]);
+    await expect
+      .poll(() => page.locator(".tome-tab").evaluateAll((els) => els.map((el) => el.getAttribute("tabindex"))))
+      .toEqual(["0", "-1", "-1", "-1", "-1"]);
   });
 
   it("links back to today", async () => {

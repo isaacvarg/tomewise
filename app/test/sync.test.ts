@@ -577,7 +577,7 @@ describe("pushing history", () => {
     expect((await app.post(practice(1))).status).toBe(201);
 
     await poll(() => subjects(remote)).toEqual([ONE_SESSION, "feat: content", "chore: start"]);
-    expect((await app.get("/api/sync")).body).toMatchObject({ stopped: false, lastPush: expect.any(String), lastError: null });
+    await poll(async () => (await app.get("/api/sync")).body).toMatchObject({ stopped: false, lastPush: expect.any(String), lastError: null });
   });
 
   it("pushes nothing with push off", async () => {
