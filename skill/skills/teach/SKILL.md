@@ -50,6 +50,8 @@ tome due --json
 
 `git pull` brings in the history the app pushed since your last session. `tome stats --json` shows sessions, time, accuracy and streak; `tome due --json` lists the items the schedule says are due. If the pull fails, stop and show the learner the error.
 
+Then grade every explanation still waiting for feedback, following [GRADING.md](./GRADING.md).
+
 Done when all three have run and you have read their output.
 
 ### 2. Plan the lesson

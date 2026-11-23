@@ -60,14 +60,7 @@ A ref is `kind:id` and must name something that exists in the subject:
 
 ## Grading an explanation
 
-1. Read the `explanation.saved` event's `data.text` against the lesson it refers to.
-2. Log the grade with your feedback in `data.feedback`, referring to that event:
-
-   ```bash
-   tome log '{"subject":"morse-code","kind":"explanation.graded","ref":"event:01M6ERETN0YYARVDHJG0T15Q2K","schemaVersion":2,"data":{"feedback":"Right: R is dit-dah-dit and K is dah-di-dah, so each is the other with dits and dahs swapped."}}'
-   ```
-
-An `explanation.graded` without non-empty `feedback` is rejected.
+Follow [GRADING.md](./GRADING.md): it finds ungraded explanations, says what feedback to write, and shows the `tome log` call. An `explanation.graded` without non-empty `feedback` is rejected.
 
 ## Payload
 
