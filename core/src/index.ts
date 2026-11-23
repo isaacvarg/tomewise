@@ -29,6 +29,7 @@ export {
   QueryError,
   SubjectNotFoundError,
   UnsupportedFormatVersionError,
+  VaultDisabledError,
 } from "./errors.ts";
 export { appendEvent, appendEvents, machineName, readEvents } from "./event-store.ts";
 export type { AppendedEvent, AppendOptions, EventRange, EventTarget } from "./event-store.ts";
@@ -57,3 +58,5 @@ export type { ContractToken, TokenKind } from "./theme-contract.ts";
 export type { JsonSchema, SchemaFile } from "./json-schemas.ts";
 export { checkInitSettings, DEFAULT_APP_URL, initLearningHome } from "./init.ts";
 export type { InitOptions, InitProblem, InitResult, InitSetting, InitSettings } from "./init.ts";
+export { GENERATED_MARKER, rebuildVault, sessionNotes, writeSessionNote, writeSessionNotes } from "./session-notes.ts";
+export type { SessionNote, SessionSummary, WrittenNotes } from "./session-notes.ts";
