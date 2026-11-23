@@ -1,4 +1,4 @@
-import type { Item, LearningEvent, Subject } from "@tomewise/core";
+import type { ExamResult, Item, LearningEvent, Subject } from "@tomewise/core";
 import { clearUnsaved, showUnsaved } from "./notice.ts";
 
 export type PageKind = "lesson" | "quiz" | "exam" | "drill";
@@ -64,6 +64,11 @@ export interface EndedSession {
   duration: number;
 }
 
+export interface FinishedExam {
+  event: LearningEvent;
+  result: ExamResult;
+}
+
 export class Tome {
   readonly #window: Window;
   #subjects = new Map<string, Promise<Subject>>();
@@ -73,6 +78,7 @@ export class Tome {
   #ended = 0;
   #watching = false;
   #completion?: Promise<LearningEvent>;
+  #finish?: Promise<FinishedExam>;
 
   constructor(win: Window = window) {
     this.#window = win;
@@ -171,6 +177,16 @@ export class Tome {
     });
   }
 
+  finish(widget?: Element): Promise<FinishedExam> {
+    return this.#reported(widget, () => {
+      this.#finish ??= this.#postFinished().catch((error: unknown) => {
+        this.#finish = undefined;
+        throw error;
+      });
+      return this.#finish;
+    });
+  }
+
   explain(text: string, ref: string, widget?: Element): Promise<LearningEvent> {
     return this.#reported(widget, async () => {
       const trimmed = text.trim();
@@ -210,7 +226,7 @@ export class Tome {
     if (this.#watching || !readPageContext(this.#window.document)) return;
     this.#watching = true;
     const begin = () => {
-      if (!this.#completion) void this.start().catch(() => undefined);
+      if (!this.#completion && !this.#finish) void this.start().catch(() => undefined);
     };
     for (const type of ["pointerdown", "keydown"]) {
       this.#window.addEventListener(type, begin, { capture: true, passive: true });
@@ -265,12 +281,31 @@ export class Tome {
     return event;
   }
 
+  async #postFinished(): Promise<FinishedExam> {
+    const { kind } = this.context;
+    if (kind !== "exam") throw new TomeError(`Only an exam can be finished; this page is a ${kind}.`);
+    const session = await this.start();
+    const duration = Math.max(0, Math.round(this.#window.performance.now() - session.startedAt));
+    const body = await this.#send({ kind: "session.end", ref: session.ref, sessionId: session.id, duration, data: {} });
+    const result = body.exams?.[0];
+    if (!result) throw new TomeError("The app saved the end of this exam but sent back no score.");
+    if (this.#current === session) {
+      this.#current = undefined;
+      this.#session = undefined;
+    }
+    return { event: body.events[0]!, result };
+  }
+
   #envelope(fields: Record<string, unknown>): Record<string, unknown> {
     const { subject } = this.context;
     return { subject, schemaVersion: this.#schemaVersions.get(subject), ...fields };
   }
 
   async #post(fields: Record<string, unknown>): Promise<LearningEvent> {
+    return (await this.#send(fields)).events[0]!;
+  }
+
+  async #send(fields: Record<string, unknown>): Promise<{ events: LearningEvent[]; exams?: ExamResult[] }> {
     let response: Response;
     try {
       response = await this.#window.fetch(EVENTS_URL, {
@@ -282,9 +317,9 @@ export class Tome {
       throw new TomeError(UNREACHABLE);
     }
     const body = (await response.json().catch(() => undefined)) as
-      | { events?: LearningEvent[]; issues?: Issue[] }
+      | { events?: LearningEvent[]; exams?: ExamResult[]; issues?: Issue[] }
       | undefined;
-    if (response.status === 201 && body?.events?.[0]) return body.events[0];
+    if (response.status === 201 && body?.events?.[0]) return body as { events: LearningEvent[]; exams?: ExamResult[] };
     if (response.status === 400 && body?.issues) {
       const details = body.issues.map((issue) => `${issue.path ? `${issue.path}: ` : ""}${issue.message}`).join("; ");
       throw new TomeError(`The app didn't accept this: ${details}`, body.issues);

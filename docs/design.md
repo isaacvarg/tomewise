@@ -41,11 +41,11 @@ Finding the learning home: walk up from the current directory to `tomewise.json`
 ## Data
 
 - **Events** are appended to `events/YYYY-MM.jsonl`, one per attempt, plus lesson/session events.
-  - Envelope: `id` (ULID), `ts` (UTC ISO 8601), `subject`, `kind`, `ref`, `sessionId`, `duration` (whole ms), `outcome` (`correct` / `wrong` / `skipped`), `grade` (1–4, attempts only), `schemaVersion`.
+  - Envelope: `id` (ULID), `ts` (UTC ISO 8601), `subject`, `kind`, `ref`, `sessionId`, `duration` (whole ms), `outcome` (`correct` / `wrong` / `skipped`), `grade` (1–4, attempts only), `score` (0–100, `session.end` only), `schemaVersion`.
   - Kinds in v1: `attempt`, `session.start`, `session.end`, `lesson.completed`, `explanation.saved`, `explanation.graded`, `milestone.status`, `goal.changed`, `streak.changed`. Other settings, the curriculum and the mission stay file edits. When the app sees a goal or streak rule change in the files, it appends `goal.changed` or `streak.changed`, so past days are judged by the rules in force on that day.
   - `ref` is typed as `kind:id`: `item:letter-u`, `lesson:0004-the-late-bump`, `drill:listen-kmrsu`, `event:<ulid>`. Item ids are unique within a subject.
   - Payload: `data`, shaped by the schema in `subject.json`.
-  - A session opens with `session.start` (its `ref` is the lesson, drill, quiz or exam) and closes with `session.end`. An attempt's `ref` is always the item. An event about another event (an explanation's grade) uses that event's `id` as its `ref`.
+  - A session opens with `session.start` (its `ref` is the lesson, drill, quiz or exam) and closes with `session.end`. An exam's `session.end` carries the app's `score` for it, a percentage in the envelope. An attempt's `ref` is always the item. An event about another event (an explanation's grade) uses that event's `id` as its `ref`.
   - Payload schemas are versioned and only ever extended, so old events stay valid. Each event records the `schemaVersion` it was written under. A payload schema is a restricted JSON Schema (number, integer, string, boolean, enum, arrays of those), and each field may carry a `unit` (`ms`, `s`, `wpm`, `ratio`, ...).
 - **Schemas as code**: Zod schemas in `core` are the source of truth. JSON Schema files are generated from them and served at a versioned path, for `tome validate` and for agents without the tool.
 - **Scheduler state** is never stored: it's rebuilt by replaying attempt events through FSRS on start.

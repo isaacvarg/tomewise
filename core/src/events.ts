@@ -84,6 +84,12 @@ const Fields = z.strictObject({
   duration: z.int({ error: "Use whole milliseconds" }).min(0).optional(),
   outcome: z.enum(outcomes).optional(),
   grade: z.int().min(1).max(4).optional(),
+  score: z
+    .number()
+    .min(0)
+    .max(100)
+    .optional()
+    .meta({ description: "A session.end's score, as a percentage: what the app scored an exam or quiz session." }),
   schemaVersion: z.int().min(1),
   data: z.record(z.string(), z.unknown()).default({}),
 });
@@ -96,7 +102,11 @@ function kindRule(kind: EventKind): z.core.JSONSchema.JSONSchema {
     ...(kind === "session.end" ? ["duration"] : []),
     ...(kind === "attempt" ? ["outcome", "grade"] : []),
   ];
-  const forbidden = [...(allowed.length === 0 ? ["ref"] : []), ...(kind === "attempt" ? [] : ["grade"])];
+  const forbidden = [
+    ...(allowed.length === 0 ? ["ref"] : []),
+    ...(kind === "attempt" ? [] : ["grade"]),
+    ...(kind === "session.end" ? [] : ["score"]),
+  ];
   return {
     if: { properties: { kind: { const: kind } }, required: ["kind"] },
     then: {
@@ -130,6 +140,7 @@ export const EventEnvelope = Fields.superRefine((event, ctx) => {
   } else if (event.grade !== undefined) {
     issue("grade", "Only attempts have a grade");
   }
+  if (event.kind !== "session.end" && event.score !== undefined) issue("score", "Only a session.end has a score");
 }).meta({ allOf: eventKinds.map(kindRule) });
 
 export type LearningEvent = z.output<typeof EventEnvelope>;

@@ -56,6 +56,12 @@
       "minimum": 1,
       "maximum": 4
     },
+    "score": {
+      "description": "A session.end's score, as a percentage: what the app scored an exam or quiz session.",
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
     "schemaVersion": {
       "type": "integer",
       "minimum": 1,
@@ -102,7 +108,16 @@
           "sessionId",
           "outcome",
           "grade"
-        ]
+        ],
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "score"
+              ]
+            }
+          ]
+        }
       }
     },
     {
@@ -132,6 +147,11 @@
             {
               "required": [
                 "grade"
+              ]
+            },
+            {
+              "required": [
+                "score"
               ]
             }
           ]
@@ -199,6 +219,11 @@
               "required": [
                 "grade"
               ]
+            },
+            {
+              "required": [
+                "score"
+              ]
             }
           ]
         }
@@ -230,6 +255,11 @@
             {
               "required": [
                 "grade"
+              ]
+            },
+            {
+              "required": [
+                "score"
               ]
             }
           ]
@@ -263,6 +293,11 @@
               "required": [
                 "grade"
               ]
+            },
+            {
+              "required": [
+                "score"
+              ]
             }
           ]
         }
@@ -295,6 +330,11 @@
               "required": [
                 "grade"
               ]
+            },
+            {
+              "required": [
+                "score"
+              ]
             }
           ]
         }
@@ -323,6 +363,11 @@
               "required": [
                 "grade"
               ]
+            },
+            {
+              "required": [
+                "score"
+              ]
             }
           ]
         }
@@ -350,6 +395,11 @@
             {
               "required": [
                 "grade"
+              ]
+            },
+            {
+              "required": [
+                "score"
               ]
             }
           ]

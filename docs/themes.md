@@ -110,7 +110,7 @@ Themes reach markup through tag names, `.tome-*` classes and `data-*` states.
 | ------ | ------- |
 | `<tome-audio>` | `tome-answer` `tome-answers` `tome-audio` `tome-countdown` `tome-feedback` `tome-hint` `tome-input` `tome-notice` `tome-play` `tome-prompt` `tome-respond` `tome-retry` `tome-say` `tome-stage` `tome-submit` `tome-verdict` |
 | `<tome-choice>` | `tome-answer` `tome-answers` `tome-choice` `tome-feedback` `tome-hint` `tome-notice` `tome-prompt` `tome-retry` `tome-skip` `tome-stage` `tome-verdict` |
-| `<tome-done>` | `tome-done` `tome-done-button` `tome-notice` `tome-verdict` |
+| `<tome-done>` | `tome-done` `tome-done-button` `tome-exam-score` `tome-notice` `tome-score` `tome-score-sub` `tome-verdict` |
 | `<tome-drill>` | `tome-actions` `tome-again` `tome-clock` `tome-close` `tome-count` `tome-drill` `tome-drill-bar` `tome-drill-item` `tome-drill-name` `tome-drill-next` `tome-drill-title` `tome-empty` `tome-empty-title` `tome-hint` `tome-kicker` `tome-next` `tome-notice` `tome-progress` `tome-saved` `tome-score` `tome-score-sub` `tome-stats` `tome-summary` `tome-summary-head` |
 | `<tome-exam-question>` | `tome-exam-question` `tome-notice` `tome-question` |
 | `<tome-explain>` | `tome-actions` `tome-explain` `tome-explain-text` `tome-hint` `tome-notice` `tome-prompt` `tome-save` `tome-verdict` |
