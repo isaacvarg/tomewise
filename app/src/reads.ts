@@ -7,6 +7,7 @@ import {
   explanations,
   isoDate,
   localDay,
+  milestoneStatusesOf,
   nextDue,
   readActivity,
   readEvents,
@@ -51,9 +52,12 @@ export function readRoutes(view: () => HomeView, now: () => Date = () => new Dat
     return c.json({ today, items });
   });
 
-  routes.get("/subjects/:subject/progress", async (c) =>
-    c.json({ completedLessons: await completedLessons(view().home, c.req.param("subject")) }),
-  );
+  routes.get("/subjects/:subject/progress", async (c) => {
+    const current = view();
+    const subject = subjectOf(current, c.req.param("subject"));
+    const [completed, events] = await Promise.all([completedLessons(current.home, subject.id), readEvents(current.home, subject.id)]);
+    return c.json({ completedLessons: completed, milestones: milestoneStatusesOf(subject, events) });
+  });
 
   routes.get("/subjects/:subject/stats", async (c) => {
     const current = view();

@@ -1,6 +1,6 @@
 import { type KeyboardEvent, type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { type Activity, type AgentPrompt, api, type DueItem, type Explanation, type Subject, type SubjectPrompts } from "../api.ts";
+import { type Activity, type AgentPrompt, api, type DueItem, type Explanation, type Progress, type Subject, type SubjectPrompts } from "../api.ts";
 import { Heatmap } from "../heatmap.tsx";
 import { count, minutesFor } from "../home/model.ts";
 import { useLoad } from "../load.ts";
@@ -28,19 +28,19 @@ import { NotFound } from "./not-found.tsx";
 interface SubjectData {
   subject: Subject;
   activity: Activity;
-  completed: string[];
+  progress: Progress;
   due: DueItem[];
   prompts: SubjectPrompts;
 }
 
 async function loadSubjectHome(id: string): Promise<SubjectData> {
-  const [subject, activity, completed, prompts] = await Promise.all([
+  const [subject, activity, progress, prompts] = await Promise.all([
     api.subject(id),
     api.activity(id),
-    api.completedLessons(id),
+    api.progress(id),
     api.prompts(id),
   ]);
-  return { subject, activity, completed, prompts, due: await api.due(id, activity.today) };
+  return { subject, activity, progress, prompts, due: await api.due(id, activity.today) };
 }
 
 const backLink = (
@@ -377,7 +377,7 @@ const STATUS: Record<MilestoneView["status"], string> = {
 };
 
 function Curriculum({ data }: { data: SubjectData }) {
-  const view = curriculumView(data.subject, data.completed);
+  const view = curriculumView(data.subject, data.progress.completedLessons, data.progress.milestones);
   const hasCurriculum = data.subject.curriculum !== undefined;
   return (
     <section className="tome-section tome-curriculum" aria-label="Curriculum">
@@ -503,7 +503,7 @@ function Card({ name, detail, action, to, href }: CardProps) {
 }
 
 function Drills({ data }: { data: SubjectData }) {
-  const rows = drillRows(data.subject, data.completed);
+  const rows = drillRows(data.subject, data.progress.completedLessons);
   const ready = rows.filter((row) => row.locked === undefined).length;
   return (
     <section className="tome-section tome-drills">
@@ -535,7 +535,7 @@ function Drills({ data }: { data: SubjectData }) {
 function Glossary({ data }: { data: SubjectData }) {
   return (
     <li data-sheet="glossary">
-      <Card name="Glossary" detail={glossaryDetail(data.subject, data.completed)} action="Open" to={subjectPath(data.subject.id, "glossary")} />
+      <Card name="Glossary" detail={glossaryDetail(data.subject, data.progress.completedLessons)} action="Open" to={subjectPath(data.subject.id, "glossary")} />
     </li>
   );
 }

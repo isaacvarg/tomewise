@@ -3,10 +3,14 @@ import { Id } from "./items.ts";
 
 export const milestoneStatuses = ["done", "current", "upcoming", "skipped", "changed"] as const;
 
+export type MilestoneStatus = (typeof milestoneStatuses)[number];
+
+export const milestoneStatus = z.enum(milestoneStatuses, { error: `Use a milestone status: ${milestoneStatuses.join(", ")}` });
+
 const Milestone = z.strictObject({
   id: Id,
   title: z.string().min(1),
-  status: z.enum(milestoneStatuses),
+  status: milestoneStatus,
   lessons: z.array(z.string().min(1)).default([]),
   exam: z.string().min(1).optional(),
 });

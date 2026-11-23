@@ -1,4 +1,5 @@
 import { type LearningEvent, parseRef } from "./events.ts";
+import { milestoneStatusesOf } from "./milestones.ts";
 import type { Subject } from "./subject.ts";
 
 export interface PromptMilestone {
@@ -63,9 +64,10 @@ export function agentPrompts(subject: Subject, events: readonly LearningEvent[])
     const ref = event.kind === "lesson.completed" && event.ref !== undefined ? parseRef(event.ref) : undefined;
     if (ref?.kind === "lesson") done.add(ref.id);
   }
+  const statuses = milestoneStatusesOf(subject, events);
   const prompts = (subject.curriculum?.units ?? [])
     .flatMap((unit) => unit.milestones)
-    .filter((milestone) => !FINISHED.has(milestone.status) && milestone.lessons.length > 0 && milestone.lessons.every((id) => done.has(id)))
+    .filter((milestone) => !FINISHED.has(statuses[milestone.id]!) && milestone.lessons.length > 0 && milestone.lessons.every((id) => done.has(id)))
     .map((milestone) => milestonePrompt(subject, milestone));
   const ungraded = explanations(events)
     .filter((explanation) => explanation.grade === undefined)

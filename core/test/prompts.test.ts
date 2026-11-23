@@ -14,6 +14,10 @@ function completed(lesson: string) {
   return { id: nextId(), ts: "2026-11-02T09:00:00.000Z", subject: SUBJECT, kind: "lesson.completed", ref: `lesson:${lesson}`, schemaVersion: 1 };
 }
 
+function marked(status: string, ts = "2026-11-03T09:00:00.000Z") {
+  return { id: nextId(), ts, subject: SUBJECT, kind: "milestone.status", ref: "milestone:first-letters", schemaVersion: 1, data: { status } };
+}
+
 function saved(ref: string, text: string, ts = "2026-11-03T18:00:00.000Z") {
   return { id: nextId(), ts, subject: SUBJECT, kind: "explanation.saved", ref, schemaVersion: 1, data: { text } };
 }
@@ -95,6 +99,16 @@ describe("ask-your-agent prompts", () => {
     const events = [completed("0001-k-and-m"), completed("0002-r")];
     expect(await promptsFor(events, { status: "done", exam: "first-letters" }, { "exams/first-letters.html": "" })).toEqual([]);
     expect(await promptsFor(events, { status: "skipped" })).toEqual([]);
+  });
+
+  it("goes by the milestone's latest status event over curriculum.json", async () => {
+    const events = [completed("0001-k-and-m"), completed("0002-r")];
+    expect(await promptsFor([...events, marked("done")])).toEqual([]);
+    expect(await promptsFor([...events, marked("skipped")])).toEqual([]);
+    expect(await promptsFor([...events, marked("done"), marked("current", "2026-11-04T09:00:00.000Z")])).toHaveLength(1);
+    expect(await promptsFor([...events, marked("current")], { status: "done" })).toEqual([
+      { kind: "milestone-done", milestone: FIRST, say: "Mark the “Copy K, M and R” milestone done." },
+    ]);
   });
 
   it("has none for a milestone with no lessons", async () => {

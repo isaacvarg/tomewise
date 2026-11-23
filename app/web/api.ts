@@ -1,6 +1,11 @@
-import type { Activity, AgentPrompt, AppSetting, ChartSeries, DueItem, Explanation, ScheduledItem, StartMode, Subject } from "@tomewise/core";
+import type { Activity, AgentPrompt, AppSetting, ChartSeries, DueItem, Explanation, MilestoneStatus, ScheduledItem, StartMode, Subject } from "@tomewise/core";
 
-export type { Activity, AgentPrompt, ChartSeries, DueItem, Explanation, ScheduledItem, StartMode, Subject };
+export type { Activity, AgentPrompt, ChartSeries, DueItem, Explanation, MilestoneStatus, ScheduledItem, StartMode, Subject };
+
+export interface Progress {
+  completedLessons: string[];
+  milestones: Record<string, MilestoneStatus>;
+}
 
 export interface SubjectStats {
   totals: { durationMs: number; sessions: number; accuracy: number | null };
@@ -53,8 +58,7 @@ export const api = {
   unlocked: (id: string) => getJson<{ today: string; items: ScheduledItem[] }>(`${subjectPath(id)}/unlocked`),
   activity: (subject?: string) =>
     getJson<Activity>(subject === undefined ? "/api/activity" : `/api/activity?subject=${encodeURIComponent(subject)}`),
-  completedLessons: (id: string) =>
-    getJson<{ completedLessons: string[] }>(`${subjectPath(id)}/progress`).then((body) => body.completedLessons),
+  progress: (id: string) => getJson<Progress>(`${subjectPath(id)}/progress`),
   stats: (id: string) => getJson<SubjectStats>(`${subjectPath(id)}/stats`),
   prompts: (id: string) => getJson<SubjectPrompts>(`${subjectPath(id)}/prompts`),
   allPrompts: () =>

@@ -138,6 +138,34 @@ describe("validating events", () => {
     ]);
   });
 
+  it("checks a milestone status, whatever the subject's payload schema", async () => {
+    const status = (id: string, data: Record<string, unknown>) => ({
+      id,
+      ts: "2026-11-03T18:02:00.000Z",
+      subject: "morse-code",
+      kind: "milestone.status",
+      ref: "milestone:first-letters",
+      schemaVersion: 1,
+      data,
+    });
+    const home = await buildHome({
+      ...base,
+      "subjects/morse-code/curriculum.json": {
+        units: [{ title: "Koch letters", milestones: [{ id: "first-letters", title: "Copy K and M", status: "current" }] }],
+      },
+      [FILE]: jsonl(
+        status("01KAJ0000000000000000000M1", { status: "done" }),
+        status("01KAJ0000000000000000000M2", {}),
+        status("01KAJ0000000000000000000M3", { status: "finished" }),
+      ),
+    });
+
+    expect(await validateLearningHome(home)).toEqual([
+      { file: FILE, line: 2, path: "data.status", message: "Use a milestone status: done, current, upcoming, skipped, changed" },
+      { file: FILE, line: 3, path: "data.status", message: "Use a milestone status: done, current, upcoming, skipped, changed" },
+    ]);
+  });
+
   it("reports a file in events that isn't an event file", async () => {
     const home = await buildHome({ ...base, "subjects/morse-code/events/notes.txt": "hello" });
 

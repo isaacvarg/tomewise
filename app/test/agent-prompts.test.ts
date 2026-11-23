@@ -105,6 +105,28 @@ describe("ask-your-agent prompts on the subject home", () => {
     await expect.poll(() => page.locator(".tome-prompts").count()).toBe(0);
   });
 
+  it("go once an event marks the milestone done, and the Curriculum tab shows it done", async () => {
+    const { app, page, pageErrors } = await open("/s/morse-code", lessonsDone);
+    await expect.poll(() => prompts(page)).toEqual([examUnwritten]);
+
+    const marked = await app.post({
+      ...base,
+      id: "01KAZ0000000000000000000M1",
+      ts: "2026-11-21T11:00:00.000Z",
+      kind: "milestone.status",
+      ref: "milestone:first-five",
+      data: { status: "done" },
+    });
+    expect(marked.status).toBe(201);
+    await expect.poll(() => page.locator(".tome-prompts").count()).toBe(0);
+
+    await page.locator(".tome-tab", { hasText: "Curriculum" }).click();
+    const status = page.locator('[data-milestone="first-five"] .tome-status');
+    await expect.poll(() => status.getAttribute("data-status")).toBe("done");
+    expect(await status.innerText()).toBe("Done");
+    expect(pageErrors).toEqual([]);
+  });
+
   it("asks to mark a milestone with no exam done", async () => {
     const { app, page } = await open("/s/morse-code", lessonsDone);
     const curriculum = JSON.parse(await readFile(join(app.root, MORSE, "curriculum.json"), "utf8"));

@@ -160,13 +160,16 @@ describe("GET /api/subjects/:subject/unlocked", () => {
 });
 
 describe("GET /api/subjects/:subject/progress", () => {
-  it("lists the lessons completed so far, first completed first", async () => {
+  it("lists the lessons completed so far, first completed first, and each milestone's status", async () => {
     const app = await startTestApp();
 
     const response = await app.get("/api/subjects/morse-code/progress");
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ completedLessons: ["0001-k-and-m", "0002-r"] });
+    expect(response.body).toEqual({
+      completedLessons: ["0001-k-and-m", "0002-r"],
+      milestones: { "first-five": "current", "next-five": "upcoming" },
+    });
   });
 
   it("gives 404 for an unknown subject", async () => {
