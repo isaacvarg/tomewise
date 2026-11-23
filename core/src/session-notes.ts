@@ -7,6 +7,7 @@ import { parseRef, type LearningEvent, type Ref } from "./events.ts";
 import { loadSubject, type LearningHome } from "./load.ts";
 import { CONFIG_FILE } from "./find.ts";
 import { writeCurriculumCopies } from "./curriculum-copy.ts";
+import { writeSessionsBase } from "./sessions-base.ts";
 
 export const GENERATED_MARKER = "generatedBy: tomewise";
 
@@ -159,6 +160,8 @@ export async function rebuildVault(home: LearningHome): Promise<VaultRebuild> {
   assertVaultMode(home);
   const notes: SessionNote[] = [];
   for (const subject of home.subjects) notes.push(...(await sessionNotes(home, subject)));
+  const written = await writeSessionNotes(home, notes);
+  const base = await writeSessionsBase(home);
   const curricula = await writeCurriculumCopies(home, home.subjects);
-  return { ...(await writeSessionNotes(home, notes)), curricula };
+  return { written: [...written.written, ...base.written], leftAlone: [...written.leftAlone, ...base.leftAlone], curricula };
 }

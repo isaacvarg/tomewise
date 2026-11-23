@@ -61,3 +61,4 @@ export type { InitOptions, InitProblem, InitResult, InitSetting, InitSettings } 
 export { GENERATED_MARKER, rebuildVault, sessionNotes, writeSessionNote, writeSessionNotes } from "./session-notes.ts";
 export type { GeneratedNote, SessionNote, SessionSummary, VaultRebuild, WrittenNotes } from "./session-notes.ts";
 export { curriculumCopy, writeCurriculumCopies } from "./curriculum-copy.ts";
+export { writeSessionsBase } from "./sessions-base.ts";
