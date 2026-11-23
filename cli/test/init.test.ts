@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { PassThrough } from "node:stream";
+import { DEFAULT_ASSESSMENTS } from "@tomewise/core";
 import { run } from "../src/main.ts";
 import type { PromptStreams } from "../src/prompt.ts";
 
@@ -60,6 +61,7 @@ describe("tome init", () => {
       timezone: "Europe/London",
       weekStart: "sunday",
       streak: { restDaysPerWeek: 1 },
+      assessments: DEFAULT_ASSESSMENTS,
       git: { enabled: false },
     });
     expect(await readdir(join(root, "subjects"))).toEqual([]);
@@ -83,6 +85,7 @@ describe("tome init", () => {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       weekStart: "monday",
       streak: { restDaysPerWeek: 0 },
+      assessments: DEFAULT_ASSESSMENTS,
       git: { enabled: false },
     });
     expect(await readJsonFile(globalConfig(HOME))).toEqual({ learningHome: root, appUrl: "http://127.0.0.1:4777" });
@@ -187,6 +190,72 @@ describe("tome init", () => {
     expect(result.stderr).toContain("tome init");
     expect(await readdir(root)).toEqual([]);
   });
+
+  it("writes assessment settings from flags, which tome validate accepts", async () => {
+    const root = await temp("tomewise-init-");
+    const HOME = await temp("tomewise-init-home-");
+
+    const result = await tome(
+      ["init", root, "--quiz-frequency", "weekly", "--quiz-length", "8", "--no-exams", "--timed", "15", "--score-display", "pass-fail", "--pass-mark", "80%"],
+      root,
+      HOME,
+    );
+
+    expect(result.stderr).toBe("");
+    expect(result.code).toBe(0);
+    expect((await readJsonFile(join(root, "tomewise.json"))).assessments).toEqual({
+      enabled: true,
+      quizFrequency: "weekly",
+      quizLength: 8,
+      exams: false,
+      timed: { minutes: 15 },
+      scoreDisplay: "pass-fail",
+      passMark: 80,
+    });
+    expect((await tome(["validate"], root, HOME)).code).toBe(0);
+  });
+
+  it("writes quizzes every N lessons and on demand from flags", async () => {
+    const every = await temp("tomewise-init-");
+    const onDemand = await temp("tomewise-init-");
+    const HOME = await temp("tomewise-init-home-");
+
+    await tome(["init", every, "--quiz-frequency", "3"], every, HOME);
+    await tome(["init", onDemand, "--quiz-frequency", "on-demand"], onDemand, HOME);
+
+    expect((await readJsonFile(join(every, "tomewise.json"))).assessments.quizFrequency).toEqual({ every: 3 });
+    expect((await readJsonFile(join(onDemand, "tomewise.json"))).assessments.quizFrequency).toBe("onDemand");
+  });
+
+  it("turns assessments off with --no-assessments, keeping the other defaults", async () => {
+    const root = await temp("tomewise-init-");
+    const HOME = await temp("tomewise-init-home-");
+
+    const result = await tome(["init", root, "--no-assessments"], root, HOME);
+
+    expect(result.code).toBe(0);
+    expect((await readJsonFile(join(root, "tomewise.json"))).assessments).toEqual({ ...DEFAULT_ASSESSMENTS, enabled: false });
+  });
+
+  it("reports invalid assessment flags and writes nothing", async () => {
+    const root = await temp("tomewise-init-");
+    const HOME = await temp("tomewise-init-home-");
+
+    const result = await tome(
+      ["init", root, "--quiz-frequency", "daily", "--quiz-length", "0", "--timed", "soon", "--score-display", "letter", "--pass-mark", "120"],
+      root,
+      HOME,
+    );
+
+    expect(result.code).toBe(1);
+    expect(result.stderr).toMatch(/^--quiz-frequency: .*"weekly"/m);
+    expect(result.stderr).toMatch(/^--quiz-length: /m);
+    expect(result.stderr).toMatch(/^--timed: .*"off"/m);
+    expect(result.stderr).toMatch(/^--score-display: .*"pass-fail"/m);
+    expect(result.stderr).toMatch(/^--pass-mark: .*0 to 100/m);
+    expect(await readdir(root)).toEqual([]);
+    expect(await readdir(HOME)).toEqual([]);
+  });
 });
 
 function scripted(lines: string[]) {
@@ -220,7 +289,7 @@ describe("tome init prompts", () => {
     const flagsParent = await temp("tomewise-init-flags-");
     const flagsHOME = await temp("tomewise-init-flags-home-");
     const root = join(parent, "learning");
-    const script = scripted(["learning", "Europe/London", "Sunday", "1", "http://localhost:4800", "n", "none", ""]);
+    const script = scripted(["learning", "Europe/London", "Sunday", "1", "http://localhost:4800", "", "n", "none", ""]);
 
     const asked = await tomeAsked(["init"], parent, HOME, script.streams);
     const flagged = await tome(
@@ -246,7 +315,7 @@ describe("tome init prompts", () => {
     const root = await temp("tomewise-init-");
     const HOME = await temp("tomewise-init-home-");
     const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const script = scripted(["", "", "", "", "", "n", "none", ""]);
+    const script = scripted(["", "", "", "", "", "", "n", "none", ""]);
 
     const result = await tomeAsked(["init"], root, HOME, script.streams);
 
@@ -258,6 +327,7 @@ describe("tome init prompts", () => {
       timezone: zone,
       weekStart: "monday",
       streak: { restDaysPerWeek: 0 },
+      assessments: DEFAULT_ASSESSMENTS,
       git: { enabled: false },
     });
     expect(await readJsonFile(globalConfig(HOME))).toEqual({ learningHome: root, appUrl: "http://127.0.0.1:4777" });
@@ -266,7 +336,7 @@ describe("tome init prompts", () => {
   it("skips questions answered by flags", async () => {
     const parent = await temp("tomewise-init-");
     const HOME = await temp("tomewise-init-home-");
-    const script = scripted(["friday", "2", "none", ""]);
+    const script = scripted(["friday", "2", "", "none", ""]);
 
     const result = await tomeAsked(
       ["init", "learning", "--timezone", "Asia/Tokyo", "--app-url", "http://localhost:1", "--no-git"],
@@ -284,6 +354,7 @@ describe("tome init prompts", () => {
       timezone: "Asia/Tokyo",
       weekStart: "friday",
       streak: { restDaysPerWeek: 2 },
+      assessments: DEFAULT_ASSESSMENTS,
       git: { enabled: false },
     });
   });
@@ -291,7 +362,7 @@ describe("tome init prompts", () => {
   it("asks again after an invalid answer", async () => {
     const root = await temp("tomewise-init-");
     const HOME = await temp("tomewise-init-home-");
-    const script = scripted([".", "Mars/Olympus_Mons", "UTC", "funday", "tuesday", "seven", "9", "3", "not a url", "", "maybe", "n", "none", ""]);
+    const script = scripted([".", "Mars/Olympus_Mons", "UTC", "funday", "tuesday", "seven", "9", "3", "not a url", "", "", "maybe", "n", "none", ""]);
 
     const result = await tomeAsked(["init"], root, HOME, script.streams);
 
@@ -303,6 +374,7 @@ describe("tome init prompts", () => {
       timezone: "UTC",
       weekStart: "tuesday",
       streak: { restDaysPerWeek: 3 },
+      assessments: DEFAULT_ASSESSMENTS,
       git: { enabled: false },
     });
   });
@@ -310,7 +382,7 @@ describe("tome init prompts", () => {
   it("runs git init and adds the remote when git is chosen", async () => {
     const root = await temp("tomewise-init-");
     const HOME = await temp("tomewise-init-home-");
-    const script = scripted(["", "", "", "", "", "y", "git@example.com:me/learning.git", "", "", "none", ""]);
+    const script = scripted(["", "", "", "", "", "", "y", "git@example.com:me/learning.git", "", "", "none", ""]);
 
     const result = await tomeAsked(["init"], root, HOME, script.streams);
 
@@ -324,7 +396,7 @@ describe("tome init prompts", () => {
     const root = await temp("tomewise-init-");
     const HOME = await temp("tomewise-init-home-");
 
-    const result = await tomeAsked(["init"], root, HOME, scripted(["", "", "", "", "", "", "", "", "none", ""]).streams);
+    const result = await tomeAsked(["init"], root, HOME, scripted(["", "", "", "", "", "", "", "", "", "none", ""]).streams);
 
     expect(result.code).toBe(0);
     expect(await readdir(join(root, ".git"))).toContain("HEAD");
@@ -335,7 +407,7 @@ describe("tome init prompts", () => {
     const root = await temp("tomewise-init-");
     const HOME = await temp("tomewise-init-home-");
 
-    const result = await tomeAsked(["init"], root, HOME, scripted(["", "", "", "", "", "no", "none", ""]).streams);
+    const result = await tomeAsked(["init"], root, HOME, scripted(["", "", "", "", "", "", "no", "none", ""]).streams);
 
     expect(result.code).toBe(0);
     expect(await readdir(root)).not.toContain(".git");
@@ -442,10 +514,10 @@ describe("tome init prompts", () => {
     expect(await readdir(root)).toEqual([]);
   });
 
-  it.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])("writes nothing when the input ends after %i answers", async (answered) => {
+  it.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])("writes nothing when the input ends after %i answers", async (answered) => {
     const root = await temp("tomewise-init-");
     const HOME = await temp("tomewise-init-home-");
-    const answers = ["", "", "", "", "", "y", "git@example.com:me/learning.git", "", "", "none", ""].slice(0, answered - 1);
+    const answers = ["", "", "", "", "", "", "y", "git@example.com:me/learning.git", "", "", "none", ""].slice(0, answered - 1);
 
     const result = await tomeAsked(["init"], root, HOME, scripted(answers).streams);
 
@@ -476,7 +548,7 @@ describe("tome init prompts", () => {
   it("asks for cadence and push when git is chosen with a remote, and writes them", async () => {
     const root = await temp("tomewise-init-");
     const HOME = await temp("tomewise-init-home-");
-    const script = scripted(["", "", "", "", "", "y", "git@example.com:me/learning.git", "weekly", "Daily", "n", "none", ""]);
+    const script = scripted(["", "", "", "", "", "", "y", "git@example.com:me/learning.git", "weekly", "Daily", "n", "none", ""]);
 
     const result = await tomeAsked(["init"], root, HOME, script.streams);
 
@@ -497,7 +569,7 @@ describe("tome init prompts", () => {
   it("asks for cadence but not push when git is chosen without a remote", async () => {
     const root = await temp("tomewise-init-");
     const HOME = await temp("tomewise-init-home-");
-    const script = scripted(["", "", "", "", "", "y", "", "hourly", "none", ""]);
+    const script = scripted(["", "", "", "", "", "", "y", "", "hourly", "none", ""]);
 
     const result = await tomeAsked(["init"], root, HOME, script.streams);
 
@@ -509,7 +581,7 @@ describe("tome init prompts", () => {
   it("still asks for the remote when a git flag other than --remote is given", async () => {
     const root = await temp("tomewise-init-");
     const HOME = await temp("tomewise-init-home-");
-    const script = scripted(["", "", "", "", "", "git@example.com:me/learning.git", "none", ""]);
+    const script = scripted(["", "", "", "", "", "", "git@example.com:me/learning.git", "none", ""]);
 
     const result = await tomeAsked(["init", root, "--cadence", "daily", "--push"], root, HOME, script.streams);
 
@@ -529,7 +601,7 @@ describe("tome init prompts", () => {
   it("skips the cadence and push questions answered by flags", async () => {
     const root = await temp("tomewise-init-");
     const HOME = await temp("tomewise-init-home-");
-    const script = scripted(["", "", "", "", "none", ""]);
+    const script = scripted(["", "", "", "", "", "none", ""]);
 
     const result = await tomeAsked(
       ["init", root, "--remote", "https://example.com/learning.git", "--cadence", "hourly", "--push"],
@@ -546,6 +618,54 @@ describe("tome init prompts", () => {
       remote: "origin",
       push: true,
     });
+  });
+
+  it("turns assessments off when asked", async () => {
+    const root = await temp("tomewise-init-");
+    const HOME = await temp("tomewise-init-home-");
+    const script = scripted(["", "", "", "", "", "off", "n", "none", ""]);
+
+    const result = await tomeAsked(["init"], root, HOME, script.streams);
+
+    expect(result.code).toBe(0);
+    expect(script.shown()).toContain("Quizzes and exams: use the defaults, turn them off, or choose each setting? (defaults/off/choose) [defaults]: ");
+    expect((await readJsonFile(join(root, "tomewise.json"))).assessments).toEqual({ ...DEFAULT_ASSESSMENTS, enabled: false });
+  });
+
+  it("asks each assessment setting when choosing them, again after an invalid answer", async () => {
+    const root = await temp("tomewise-init-");
+    const HOME = await temp("tomewise-init-home-");
+    const script = scripted(["", "", "", "", "", "choose", "daily", "4", "0", "12", "n", "soon", "25", "letter", "hidden", "101", "65", "n", "none", ""]);
+
+    const result = await tomeAsked(["init"], root, HOME, script.streams);
+
+    expect(result.stderr).toBe("");
+    expect(result.code).toBe(0);
+    for (const question of ["Quiz every how many lessons?", "Questions per quiz [10]", "Exams at milestones? [Y/n]", "Time limit in minutes (or off) [off]", "Pass mark (%) [70]"]) {
+      expect(script.shown()).toContain(question);
+    }
+    expect(script.shown()).toContain('Answer "number", "pass-fail" or "hidden".');
+    expect((await readJsonFile(join(root, "tomewise.json"))).assessments).toEqual({
+      enabled: true,
+      quizFrequency: { every: 4 },
+      quizLength: 12,
+      exams: false,
+      timed: { minutes: 25 },
+      scoreDisplay: "hidden",
+      passMark: 65,
+    });
+  });
+
+  it("skips the assessment questions when an assessment flag is given", async () => {
+    const root = await temp("tomewise-init-");
+    const HOME = await temp("tomewise-init-home-");
+    const script = scripted(["", "", "", "", "n", "none", ""]);
+
+    const result = await tomeAsked(["init", root, "--pass-mark", "90"], root, HOME, script.streams);
+
+    expect(result.code).toBe(0);
+    expect(script.shown()).not.toContain("Quizzes and exams");
+    expect((await readJsonFile(join(root, "tomewise.json"))).assessments).toEqual({ ...DEFAULT_ASSESSMENTS, passMark: 90 });
   });
 
   it("stops before asking more when the chosen folder is already a learning home", async () => {
@@ -617,7 +737,7 @@ describe("tome init handoffs", () => {
   });
 
   it("installs the service when asked", async () => {
-    const result = await handoff({ args: [], lines: ["", "", "", "service", ""] });
+    const result = await handoff({ args: [], lines: ["", "", "", "", "service", ""] });
 
     expect(result.code).toBe(0);
     expect(result.shown()).toContain("Run the app now, install it as a service, or print the Docker command?");
@@ -646,7 +766,7 @@ describe("tome init handoffs", () => {
 
   it("runs nothing by default without prompts, and nothing when none is chosen", async () => {
     const flagged = await handoff({ args: [] });
-    const asked = await handoff({ args: [], lines: ["", "", "", "none", ""] });
+    const asked = await handoff({ args: [], lines: ["", "", "", "", "none", ""] });
 
     for (const result of [flagged, asked]) {
       expect(result.code).toBe(0);
@@ -657,7 +777,7 @@ describe("tome init handoffs", () => {
   });
 
   it("asks again after an unknown app choice and rejects an unknown --app", async () => {
-    const asked = await handoff({ args: [], lines: ["", "", "", "later", "none", ""] });
+    const asked = await handoff({ args: [], lines: ["", "", "", "", "later", "none", ""] });
     const flagged = await handoff({ args: ["--app", "later"] });
 
     expect(asked.code).toBe(0);
@@ -675,7 +795,7 @@ describe("tome init handoffs", () => {
   });
 
   it("prints the agent prompt for the first subject, naming what to learn", async () => {
-    const asked = await handoff({ args: [], lines: ["", "", "", "none", "Morse code"] });
+    const asked = await handoff({ args: [], lines: ["", "", "", "", "none", "Morse code"] });
     const flagged = await handoff({ args: ["--subject", "Morse code"] });
 
     for (const result of [asked, flagged]) {
@@ -688,7 +808,7 @@ describe("tome init handoffs", () => {
   it("prints a generic first-subject prompt without prompts, and none when skipped", async () => {
     const generic = await handoff({ args: [] });
     const skippedByFlag = await handoff({ args: ["--no-subject"] });
-    const skippedByAnswer = await handoff({ args: [], lines: ["", "", "", "none", ""] });
+    const skippedByAnswer = await handoff({ args: [], lines: ["", "", "", "", "none", ""] });
 
     expect(generic.stdout).toContain(`/teach Set up a new subject in ${generic.root}.`);
     expect(skippedByFlag.stdout).not.toContain("first subject");
@@ -697,7 +817,7 @@ describe("tome init handoffs", () => {
   });
 
   it("asks the handoff questions before writing anything", async () => {
-    const result = await handoff({ args: [], lines: ["", "", "", "service"] });
+    const result = await handoff({ args: [], lines: ["", "", "", "", "service"] });
 
     expect(result.code).toBe(130);
     expect(await readdir(result.root)).toEqual([]);

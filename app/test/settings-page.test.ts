@@ -156,6 +156,101 @@ describe("subject order", () => {
   });
 });
 
+describe("quizzes and exams", () => {
+  const subjectFile = (root: string, id: string) => readFile(join(root, "subjects", id, "subject.json"), "utf8");
+  const resolved = async (url: string, id: string) =>
+    ((await (await fetch(`${url}/api/subjects/${id}`)).json()) as { settings: { assessments: Record<string, unknown> } }).settings.assessments;
+
+  it("saves the home defaults to tomewise.json, and Cancel drops unsaved changes", async () => {
+    const { page, file, app } = await openSettings();
+    const home = page.locator('[data-setting="assessments"]');
+    expect(await home.getByLabel("Quiz frequency").inputValue()).toBe("every");
+    expect(await home.getByLabel("Pass mark").inputValue()).toBe("70");
+
+    await home.getByLabel("Pass mark").fill("55");
+    await home.getByRole("button", { name: "Cancel" }).click();
+
+    expect(await home.getByLabel("Pass mark").inputValue()).toBe("70");
+    expect(await file()).toBe(FIXTURE_CONFIG);
+
+    await home.getByLabel("Quiz frequency").selectOption("weekly");
+    await home.getByLabel("Time limit").selectOption("limit");
+    await home.getByLabel("Minutes").fill("15");
+    await home.getByLabel("Score").selectOption("pass-fail");
+    await home.getByLabel("Pass mark").fill("80");
+    await home.getByRole("button", { name: "Save" }).click();
+
+    await expect.poll(() => home.getByRole("button", { name: "Save" }).count()).toBe(0);
+    const config = JSON.parse(await file());
+    expect(config.assessments).toEqual({
+      enabled: true,
+      quizFrequency: "weekly",
+      quizLength: 10,
+      exams: true,
+      timed: { minutes: 15 },
+      scoreDisplay: "pass-fail",
+      passMark: 80,
+    });
+    expect(config.streak).toEqual({ restDaysPerWeek: 1 });
+    expect(await resolved(app.url, "spanish")).toMatchObject({ quizFrequency: "weekly", passMark: 80 });
+  });
+
+  it("turns assessments off for one subject in its subject.json, leaving the others on the home defaults", async () => {
+    const { page, file, app } = await openSettings();
+    const yoga = page.getByRole("group", { name: "Yoga" });
+    const before = await subjectFile(app.root, "spanish");
+    expect(await yoga.getByLabel("Quizzes and exams").inputValue()).toBe("");
+    expect(await yoga.getByLabel("Quizzes and exams").locator("option").first().innerText()).toBe("Home default (on)");
+
+    await yoga.getByLabel("Quizzes and exams").selectOption("off");
+    await yoga.getByRole("button", { name: "Save" }).click();
+
+    await expect.poll(() => yoga.getByRole("button", { name: "Save" }).count()).toBe(0);
+    expect(JSON.parse(await subjectFile(app.root, "yoga")).settings.assessments).toEqual({ enabled: false });
+    expect(await resolved(app.url, "yoga")).toMatchObject({ enabled: false, passMark: 70 });
+    expect(await resolved(app.url, "spanish")).toMatchObject({ enabled: true });
+    expect(await subjectFile(app.root, "spanish")).toBe(before);
+    expect(await file()).toBe(FIXTURE_CONFIG);
+
+    await yoga.getByLabel("Quizzes and exams").selectOption("");
+    await yoga.getByRole("button", { name: "Save" }).click();
+
+    await expect.poll(() => resolved(app.url, "yoga")).toMatchObject({ enabled: true });
+    expect(JSON.parse(await subjectFile(app.root, "yoga")).settings.assessments).toEqual({});
+  });
+
+  it("shows a subject's own pass mark over the home default, which it names", async () => {
+    const { page, app } = await openSettings();
+    const spanish = page.getByRole("group", { name: "Spanish" });
+    expect(await spanish.getByLabel("Pass mark").getAttribute("placeholder")).toBe("70");
+    expect(await spanish.getByLabel("Quiz frequency").locator("option").first().innerText()).toBe("Home default (every 5 lessons)");
+
+    await spanish.getByLabel("Pass mark").fill("90");
+    await spanish.getByRole("button", { name: "Save" }).click();
+
+    await expect.poll(() => resolved(app.url, "spanish")).toMatchObject({ passMark: 90 });
+    const home = page.locator('[data-setting="assessments"]');
+    await home.getByLabel("Pass mark").fill("60");
+    await home.getByRole("button", { name: "Save" }).click();
+
+    await expect.poll(() => spanish.getByLabel("Pass mark").getAttribute("placeholder")).toBe("60");
+    expect(await spanish.getByLabel("Pass mark").inputValue()).toBe("90");
+    expect(await resolved(app.url, "spanish")).toMatchObject({ passMark: 90 });
+    expect(await resolved(app.url, "yoga")).toMatchObject({ passMark: 60 });
+  });
+
+  it("shows why a save was refused and leaves the file alone", async () => {
+    const { page, file } = await openSettings();
+    const home = page.locator('[data-setting="assessments"]');
+
+    await home.getByLabel("Pass mark").fill("150");
+    await home.getByRole("button", { name: "Save" }).click();
+
+    await expect.poll(() => home.innerText()).toMatch(/passMark/);
+    expect(await file()).toBe(FIXTURE_CONFIG);
+  });
+});
+
 describe("the settings page", () => {
   it.each(["phone", "desktop"] as const)("fits a %s screen and uses only the theme contract's dashboard classes", async (width) => {
     const { page, pageErrors } = await openSettings(width);

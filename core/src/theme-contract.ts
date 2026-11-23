@@ -50,7 +50,7 @@ export const appClasses: readonly string[] = [
   "tome-chart-plot", "tome-chart-x", "tome-chart-y", "tome-charts", "tome-check", "tome-copy", "tome-curriculum",
   "tome-drill-go", "tome-drill-name", "tome-drill-sub", "tome-drills", "tome-due", "tome-due-how", "tome-due-what",
   "tome-exam", "tome-explanation", "tome-explanation-feedback", "tome-explanation-from", "tome-explanation-text",
-  "tome-explanations", "tome-glossary", "tome-goal", "tome-goal-bar", "tome-goal-num", "tome-goal-week", "tome-header",
+  "tome-explanations", "tome-field", "tome-field-name", "tome-fields", "tome-glossary", "tome-goal", "tome-goal-bar", "tome-goal-num", "tome-goal-week", "tome-header",
   "tome-hear", "tome-heat-days", "tome-heat-legend", "tome-heatmap", "tome-heatmap-wrap", "tome-hint",
   "tome-home-link", "tome-kicker", "tome-lede", "tome-lessons", "tome-look-again", "tome-look-item", "tome-look-why",
   "tome-mark", "tome-mark-letter", "tome-meta", "tome-meta-narrow", "tome-meta-wide", "tome-milestone",
@@ -60,7 +60,7 @@ export const appClasses: readonly string[] = [
   "tome-reference", "tome-row", "tome-runner", "tome-runner-bar", "tome-runner-summary", "tome-score",
   "tome-score-sub", "tome-section", "tome-section-head", "tome-settings", "tome-settings-actions",
   "tome-settings-cancel", "tome-settings-save", "tome-side", "tome-stage", "tome-start", "tome-stats", "tome-status",
-  "tome-streak", "tome-streak-num", "tome-streak-text", "tome-subject", "tome-subject-ask", "tome-subject-name",
+  "tome-streak", "tome-streak-num", "tome-streak-text", "tome-subject", "tome-subject-ask", "tome-subject-name", "tome-subject-settings",
   "tome-subjects", "tome-summary-head", "tome-tab", "tome-tabs", "tome-term", "tome-term-when", "tome-term-word",
   "tome-terms", "tome-title", "tome-totals", "tome-unit", "tome-view",
 ];

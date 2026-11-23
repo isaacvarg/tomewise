@@ -17,7 +17,7 @@ import {
   unknownDrillTags,
 } from "./references.ts";
 import { NO_PAYLOAD, payloadSchemaIssues, type PayloadSchemaVersion } from "./payload.ts";
-import { type Goal, SubjectFile, type TomewiseConfig } from "./schemas.ts";
+import { type AssessmentOverrides, type AssessmentSettings, type Goal, SubjectFile, type TomewiseConfig } from "./schemas.ts";
 
 export const SUBJECTS_DIR = "subjects";
 
@@ -25,6 +25,7 @@ export interface SubjectSettingsResolved {
   timezone: string;
   weekStart: TomewiseConfig["weekStart"];
   minimumSessionSeconds: number;
+  assessments: AssessmentSettings;
 }
 
 export interface ItemSet {
@@ -109,8 +110,14 @@ export function withSettings({ file, ...content }: SubjectContent, config: Tomew
       timezone: config.timezone,
       weekStart: config.weekStart,
       minimumSessionSeconds: file.settings.minimumSessionSeconds ?? config.minimumSessionSeconds,
+      assessments: resolveAssessments(config.assessments, file.settings.assessments),
     },
   };
+}
+
+export function resolveAssessments(defaults: AssessmentSettings, overrides: AssessmentOverrides = {}): AssessmentSettings {
+  const set = Object.entries(overrides).filter(([, value]) => value !== undefined);
+  return { ...defaults, ...Object.fromEntries(set) };
 }
 
 const ItemList = z.array(z.unknown(), { error: "An item set must be an array of items" });

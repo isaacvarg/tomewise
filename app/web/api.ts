@@ -1,6 +1,19 @@
-import type { Activity, AgentPrompt, AppSetting, ChartSeries, DueItem, Explanation, ScheduledItem, StartMode, Subject } from "@tomewise/core";
+import type {
+  Activity,
+  AgentPrompt,
+  AppSetting,
+  AssessmentOverrides,
+  AssessmentSettings,
+  ChartSeries,
+  DueItem,
+  Explanation,
+  QuizFrequency,
+  ScheduledItem,
+  StartMode,
+  Subject,
+} from "@tomewise/core";
 
-export type { Activity, AgentPrompt, ChartSeries, DueItem, Explanation, ScheduledItem, StartMode, Subject };
+export type { Activity, AgentPrompt, AssessmentOverrides, AssessmentSettings, ChartSeries, DueItem, Explanation, QuizFrequency, ScheduledItem, StartMode, Subject };
 
 export interface SubjectStats {
   totals: { durationMs: number; sessions: number; accuracy: number | null };
@@ -24,6 +37,8 @@ export interface Settings {
   theme: string;
   start: StartMode;
   subjects: string[];
+  assessments: AssessmentSettings;
+  subjectAssessments: Record<string, AssessmentOverrides>;
   themes: ThemeChoice[];
 }
 
@@ -53,6 +68,12 @@ export const api = {
   settings: () => getJson<Settings>("/api/settings"),
   saveSetting: (key: AppSetting, value: unknown) =>
     getJson<Settings>(`/api/settings/${key}`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ value }),
+    }),
+  saveSubjectAssessments: (id: string, value: AssessmentOverrides) =>
+    getJson<Settings>(`/api/settings/subjects/${encodeURIComponent(id)}/assessments`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ value }),

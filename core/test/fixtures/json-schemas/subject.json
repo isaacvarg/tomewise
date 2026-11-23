@@ -1,5 +1,8 @@
 {
   "valid": {
+    "assessments off": { "name": "Yoga", "settings": { "assessments": { "enabled": false } } },
+    "every assessment override": { "name": "Spanish", "settings": { "assessments": { "enabled": true, "quizFrequency": { "every": 3 }, "quizLength": 12, "exams": true, "timed": { "minutes": 20 }, "scoreDisplay": "pass-fail", "passMark": 80 } } },
+    "no overrides": { "name": "Spanish", "settings": { "assessments": {} } },
     "only a name": { "name": "Spanish" },
     "minimum session override": { "name": "Spanish", "settings": { "minimumSessionSeconds": 30 } },
     "payload with every field shape": {
@@ -38,6 +41,9 @@
     }
   },
   "invalid": {
+    "unknown assessment override": { "name": "Spanish", "settings": { "assessments": { "retakes": 2 } } },
+    "bad quiz frequency override": { "name": "Spanish", "settings": { "assessments": { "quizFrequency": "monthly" } } },
+    "pass mark override over 100": { "name": "Spanish", "settings": { "assessments": { "passMark": 150 } } },
     "not an object": "Spanish",
     "no name": {},
     "empty name": { "name": "" },

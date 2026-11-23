@@ -138,6 +138,24 @@
   }
   .tome-settings-save { border: 0; background: var(--t-accent); color: var(--t-accent-ink); }
   .tome-settings-cancel { border: 1px solid var(--t-rule); background: transparent; color: var(--t-ink); }
+  .tome-fields {
+    display: flex; flex-direction: column; padding: .1rem .9rem;
+    background: var(--t-surface); border-radius: var(--t-radius);
+  }
+  .tome-field {
+    display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .6rem;
+    padding: .55rem 0; border-top: 1px solid var(--t-rule);
+  }
+  .tome-field:first-child { border-top: 0; }
+  .tome-field-name { flex: 1 1 8rem; font-weight: 600; font-size: .9rem; }
+  .tome-field select, .tome-field input {
+    min-width: 0; padding: .35rem .5rem; border: 1px solid var(--t-rule); border-radius: var(--t-radius);
+    background: var(--t-bg); color: var(--t-ink); font: .88rem var(--t-ui);
+  }
+  .tome-field input { width: 5rem; }
+  .tome-field select:focus-visible, .tome-field input:focus-visible { outline: 2px solid var(--t-accent); outline-offset: 1px; }
+  .tome-subject-settings { display: flex; flex-direction: column; gap: .5rem; }
+  .tome-subject-settings h4 { margin: .4rem 0 0; font-size: .9rem; }
   .tome-order-row { display: flex; align-items: center; gap: .6rem; padding: .45rem 0; border-top: 1px solid var(--t-rule); background: var(--t-surface); }
   .tome-order-row[data-dragging] { opacity: .7; }
   .tome-order-handle { color: var(--t-muted); cursor: grab; touch-action: none; user-select: none; padding: .2rem .1rem; font-size: 1.1rem; line-height: 1; }
