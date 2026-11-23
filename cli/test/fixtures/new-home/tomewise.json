@@ -1,0 +1,6 @@
+{
+  "formatVersion": 1,
+  "timezone": "Asia/Tokyo",
+  "weekStart": "monday",
+  "minimumSessionSeconds": 60
+}

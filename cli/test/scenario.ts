@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import { appendFile, cp, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { tempDir } from "../../core/test/helpers.ts";
 import { run } from "../src/main.ts";
 
@@ -23,8 +24,15 @@ export interface Upstream {
   write?: Record<string, string>;
 }
 
+export interface Imported {
+  dir: URL;
+  slug: string;
+}
+
 export interface ScenarioOptions {
   example?: string;
+  home?: URL;
+  imports?: Imported[];
   upstream?: Upstream[];
 }
 
@@ -73,17 +81,35 @@ async function pushUpstream(remote: string, change: Upstream): Promise<void> {
   await git(clone, ["push", "--quiet", "origin", "main"]);
 }
 
+async function importWorkspace(home: string, { dir, slug }: Imported): Promise<void> {
+  await mkdir(join(home, "subjects"), { recursive: true });
+  const err: string[] = [];
+  const code = await run(["import", fileURLToPath(dir), "--slug", slug], {
+    cwd: home,
+    env: { HOME: await tempDir() },
+    machine: "scenario",
+    stdout: () => {},
+    stderr: (line) => err.push(line),
+  });
+  if (code !== 0) throw new Error(`tome import ${slug}: ${err.join("\n")}`);
+  await git(home, ["add", "--all"]);
+  await git(home, ["commit", "--quiet", "--message", `feat(${slug}): import teach workspace`]);
+  await git(home, ["push", "--quiet"]);
+}
+
 export async function startScenario(options: ScenarioOptions = {}): Promise<Scenario> {
   const remote = await tempDir();
   await git(remote, ["init", "--quiet", "--bare", "--initial-branch=main"]);
 
   const home = await tempDir();
-  await cp(new URL(`../../examples/${options.example ?? "morse"}/`, import.meta.url), home, { recursive: true });
+  await cp(options.home ?? new URL(`../../examples/${options.example ?? "morse"}/`, import.meta.url), home, { recursive: true });
   await git(home, ["init", "--quiet", "--initial-branch=main"]);
   await git(home, ["remote", "add", "origin", remote]);
   await git(home, ["add", "--all"]);
   await git(home, ["commit", "--quiet", "--message", "chore(home): start learning home"]);
   await git(home, ["push", "--quiet", "--set-upstream", "origin", "main"]);
+
+  for (const imported of options.imports ?? []) await importWorkspace(home, imported);
 
   for (const change of options.upstream ?? []) await pushUpstream(remote, change);
 

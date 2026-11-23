@@ -125,6 +125,10 @@ The app pulls the push. Tell the learner the lesson is ready at `/s/<subject>/le
 
 Done when `git push` succeeds.
 
+## Imported workspaces
+
+When the learner asks to convert a subject they brought in with `tome import`, follow [IMPORT-CONVERSION.md](./IMPORT-CONVERSION.md) instead of a teaching session.
+
 ## Philosophy
 
 To learn at a deep level, the learner needs three things:
