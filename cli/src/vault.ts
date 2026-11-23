@@ -32,7 +32,7 @@ export async function vault(io: Io, args: string[]): Promise<number> {
     }
     throw error;
   }
-  io.stdout(`Wrote ${plural(result.written.length, "session note")}.`);
+  io.stdout(`Wrote ${plural(result.written.length, "vault file")}.`);
   for (const path of result.leftAlone) io.stdout(`Left ${path} alone: it has no generatedBy: tomewise marker.`);
   return 0;
 }

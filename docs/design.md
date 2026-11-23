@@ -158,6 +158,7 @@ Scaffolds into a vault subfolder, writes a Markdown note per session (frontmatte
 - **Setting**: `vault` in `tomewise.json`, with `enabled` and `notesFolder` (a folder inside the learning home, default `sessions`). Leaving the block out keeps vault mode off; a block turns it on unless `enabled` is `false`.
 - **Init**: `tome init` asks "Using Obsidian?", then the vault folder and a subfolder of it (default `Tomewise`), and puts the learning home there with vault mode on. `--vault <vault> [--vault-folder <subfolder>]` gives the same answers without prompts; `--no-vault` skips the question.
 - **Session notes**: one note per session at `<notesFolder>/<subject>/<YYYY-MM-DD>-<session id>.md`, frontmatter summary plus a short body, marked `generatedBy: tomewise`. `tome vault rebuild` regenerates them from history and never touches files without the marker. See [`docs/cli/vault.md`](cli/vault.md).
+- **Bases**: `sessions.base` at the learning home root lists the session notes, with a view by subject and a view by week. Written at init in vault mode and on `tome vault rebuild`, and left alone once its `# generatedBy: tomewise` first line is gone.
 
 ## Still open
 

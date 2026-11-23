@@ -164,7 +164,7 @@ describe("owning event files", () => {
       }
     }
 
-    const notEvents = ["core/src/json-schemas.ts", "core/src/init.ts", "core/src/settings.ts", "core/src/session-notes.ts", "cli/src/import.ts", "cli/src/service.ts"];
+    const notEvents = ["core/src/json-schemas.ts", "core/src/init.ts", "core/src/settings.ts", "core/src/session-notes.ts", "core/src/sessions-base.ts", "cli/src/import.ts", "cli/src/service.ts"];
     expect(writers.filter((file) => !notEvents.includes(file))).toEqual(["core/src/event-store.ts"]);
   });
 });

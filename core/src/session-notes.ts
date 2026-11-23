@@ -6,6 +6,7 @@ import { readEvents } from "./event-store.ts";
 import { parseRef, type LearningEvent, type Ref } from "./events.ts";
 import { loadSubject, type LearningHome } from "./load.ts";
 import { CONFIG_FILE } from "./find.ts";
+import { writeSessionsBase } from "./sessions-base.ts";
 
 export const GENERATED_MARKER = "generatedBy: tomewise";
 
@@ -151,5 +152,7 @@ export async function rebuildVault(home: LearningHome): Promise<WrittenNotes> {
   assertVaultMode(home);
   const notes: SessionNote[] = [];
   for (const subject of home.subjects) notes.push(...(await sessionNotes(home, subject)));
-  return writeSessionNotes(home, notes);
+  const written = await writeSessionNotes(home, notes);
+  const base = await writeSessionsBase(home);
+  return { written: [...written.written, ...base.written], leftAlone: [...written.leftAlone, ...base.leftAlone] };
 }

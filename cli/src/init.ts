@@ -12,9 +12,11 @@ import {
   type InitProblem,
   type InitSetting,
   type InitSettings,
+  loadLearningHome,
   type QuizFrequency,
   SCORE_DISPLAYS,
   type Timed,
+  writeSessionsBase,
 } from "@tomewise/core";
 import { GIT_REMOTE, setUpGit } from "./git.ts";
 import { APP_CHOICES, handOff, isAppChoice, listenFor, type AppChoice, type Launch } from "./handoff.ts";
@@ -438,6 +440,7 @@ export async function init(io: Io, args: string[], usage: string): Promise<numbe
     case "created": {
       io.stdout(`Created a learning home in ${result.root}.`);
       io.stdout(`Saved it as your learning home in ${result.globalConfig}.`);
+      if (answers.vault) await writeSessionsBase(await loadLearningHome(result.root));
       if (answers.settings.git) {
         const git = await setUpGit(result.root, answers.remoteUrl);
         if (!git.ok) {
