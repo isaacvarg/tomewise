@@ -1,10 +1,9 @@
-import type { Activity, Subject } from "../api.ts";
+import type { Activity, MilestoneStatus, Subject } from "../api.ts";
 import { dateOf, dayOf, type HeatCell, heatmapCells, WEEKDAYS, type WeekStart, weekdayOf, weekStartOf } from "../home/model.ts";
 
 type Item = Subject["items"][number];
 type Drill = Subject["drills"][number];
 type Goal = Subject["goals"][number];
-type Milestone = NonNullable<Subject["curriculum"]>["units"][number]["milestones"][number];
 
 export const TABS = [
   { view: "overview", label: "Overview" },
@@ -107,7 +106,7 @@ export interface LessonRow {
 export interface MilestoneView {
   id: string;
   title: string;
-  status: Milestone["status"];
+  status: MilestoneStatus;
   lessons: LessonRow[];
   exam?: { title: string; href?: string };
 }
@@ -124,7 +123,11 @@ export interface CurriculumView {
   total: number;
 }
 
-export function curriculumView(subject: Subject, completed: readonly string[]): CurriculumView {
+export function curriculumView(
+  subject: Subject,
+  completed: readonly string[],
+  statuses: Readonly<Record<string, MilestoneStatus>> = {},
+): CurriculumView {
   const done = new Set(completed);
   const itemCount = (lesson: string) => subject.items.filter((item) => item.unlockedBy === lesson && !item.retired).length;
   const row = (id: string, later?: string): LessonRow => ({
@@ -142,13 +145,14 @@ export function curriculumView(subject: Subject, completed: readonly string[]): 
     milestones: unit.milestones.map((milestone): MilestoneView => {
       const after = !previous ? "later" : previous.unit === u ? `after ${previous.title}` : `after Unit ${previous.unit + 1}`;
       previous = { unit: u, title: milestone.title };
-      const later = milestone.status === "upcoming" ? after : undefined;
+      const status = statuses[milestone.id] ?? milestone.status;
+      const later = status === "upcoming" ? after : undefined;
       const lessons = milestone.lessons.filter((id) => subject.lessons.includes(id));
       lessons.forEach((id) => placed.add(id));
       return {
         id: milestone.id,
         title: milestone.title,
-        status: milestone.status,
+        status,
         lessons: lessons.map((id) => row(id, later)),
         ...(milestone.exam !== undefined && {
           exam: {

@@ -182,7 +182,7 @@
     if (url.pathname === "/api/subjects/morse-code/prompts") {
       return json({ prompts: [demoPrompts.unwritten, demoPrompts.ungraded], explanations: morseExplanations });
     }
-    if (url.pathname === "/api/subjects/morse-code/progress") return json({ completedLessons: morseLessons.slice(0, 4) });
+    if (url.pathname === "/api/subjects/morse-code/progress") return json({ completedLessons: morseLessons.slice(0, 4), milestones: { "first-five": "current", "next-five": "upcoming" } });
     if (url.pathname === "/api/subjects") return json({ subjects: homeSubjects.map(({ due, ...subject }) => subject) });
     const homeSubject = homeSubjects.find((candidate) => url.pathname === `/api/subjects/${candidate.id}/due`);
     if (homeSubject) return json({ due: dueFor(homeSubject) });

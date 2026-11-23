@@ -63,7 +63,7 @@ Finding the learning home: walk up from the current directory to `tomewise.json`
 - **Assessment settings**: assessments on/off, quiz frequency (every N lessons / weekly / on demand), quiz length, exams on/off, timed or untimed, score display (number / pass-fail / hidden). Hidden scores are still recorded. Defaults are chosen during `init` and stored in `tomewise.json`; each subject can override them in `subject.json`.
 - **Results** feed the agent's choice of next lesson, are suggested as evidence for learning records (the learner confirms), and missed items move forward in the review schedule.
 - **Curriculum** (optional): units and milestones with statuses. The agent drafts it from real syllabi in `RESOURCES.md`. It's a compass: changes are proposed and confirmed, and each gets a learning record.
-- **Exams and milestones**: when a milestone's lessons are done it shows "exam ready" (or "ask your agent to prepare it"). Passing marks the milestone done; failing locks nothing. With exams off, the learner or the agent marks milestones done.
+- **Exams and milestones**: when a milestone's lessons are done it shows "exam ready" (or "ask your agent to prepare it"). Passing marks the milestone done; failing locks nothing. With exams off, the learner or the agent marks milestones done. A milestone's status is the `data.status` of its latest `milestone.status` event, falling back to the status in `curriculum.json`.
 - **Feynman-lite**: `<tome-explain>` saves a free-text explanation as `ungraded`. Next time the learner talks to their agent, the skill grades it and writes feedback back as an event (`explanation.graded`, its `data.feedback` required), which the app shows next to the explanation.
 
 ## Metrics

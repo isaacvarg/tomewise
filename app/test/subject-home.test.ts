@@ -283,6 +283,30 @@ describe("curriculum", () => {
     expect(await page.locator("h1").innerText()).toBe("A");
   });
 
+  it("follows milestone.status events as they arrive", async () => {
+    const { app, page } = await openSubject("/s/morse-code/curriculum");
+    const mark = (n: number, milestone: string, status: string) =>
+      app.post({
+        id: `01KAZ0000000000000000000M${n}`,
+        ts: `2026-11-21T1${n}:00:00.000Z`,
+        subject: "morse-code",
+        kind: "milestone.status",
+        ref: `milestone:${milestone}`,
+        schemaVersion: 2,
+        data: { status },
+      });
+    const statuses = () => page.locator(".tome-status").evaluateAll((els) => els.map((el) => el.getAttribute("data-status")));
+    const later = () => lessonRows(page).then((rows) => rows.filter((row) => row.later).map((row) => row.id));
+    expect(await later()).toEqual(["0005-a"]);
+
+    expect((await mark(1, "first-five", "done")).status).toBe(201);
+    expect((await mark(2, "next-five", "current")).status).toBe(201);
+
+    await expect.poll(statuses).toEqual(["done", "current"]);
+    expect(await texts(page, ".tome-milestone-head")).toEqual(["Copy K, M, R, S and U\nDone", "Copy the next five letters\nCurrent"]);
+    expect(await later()).toEqual([]);
+  });
+
   it("shows every lesson as unlocked in a subject with no curriculum", async () => {
     const { page } = await openSubject("/s/spanish/curriculum", "phone", async (root) => {
       await write(root, {

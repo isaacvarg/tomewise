@@ -1,3 +1,4 @@
+import { milestoneStatus } from "./curriculum.ts";
 import type { LearningEvent, Ref } from "./events.ts";
 import { parseRef } from "./events.ts";
 import { issuesFrom, type ValidationIssue } from "./issues.ts";
@@ -66,7 +67,9 @@ export function checkAgainstSubject(event: LearningEvent, subject: SubjectRefs, 
           ? declared.extend({ text: explanationText })
           : event.kind === "explanation.graded"
             ? declared.extend({ feedback: gradeFeedback })
-            : declared;
+            : event.kind === "milestone.status"
+              ? declared.extend({ status: milestoneStatus })
+              : declared;
     const data = schema.safeParse(event.data);
     if (!data.success) issues.push(...issuesFrom("", data.error, ["data"]).map(({ file: _, ...issue }) => issue));
   }
