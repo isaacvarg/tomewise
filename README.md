@@ -29,5 +29,3 @@ For other agents, the skills are on [skills.sh](https://skills.sh). Install them
 ```bash
 npx skills add isaacvarg/tomewise
 ```
-
-Add `--skill teach` to pick one skill, `-a <agent>` to pick the agent, and `--rename tomewise-teach` to install it under a prefixed name.
