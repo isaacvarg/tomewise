@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { appendFile, cp, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { appendFile, cp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { tempDir } from "../../core/test/helpers.ts";
 import { run } from "../src/main.ts";
@@ -21,6 +21,7 @@ export interface Upstream {
   message: string;
   append?: Record<string, string>;
   write?: Record<string, string>;
+  remove?: string[];
 }
 
 export interface ScenarioOptions {
@@ -68,6 +69,7 @@ async function pushUpstream(remote: string, change: Upstream): Promise<void> {
     await mkdir(dirname(join(clone, path)), { recursive: true });
     await appendFile(join(clone, path), content);
   }
+  for (const path of change.remove ?? []) await rm(join(clone, path));
   await git(clone, ["add", "--all"]);
   await git(clone, ["commit", "--quiet", "--message", change.message]);
   await git(clone, ["push", "--quiet", "origin", "main"]);

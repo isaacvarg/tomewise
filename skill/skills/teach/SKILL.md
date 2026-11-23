@@ -94,6 +94,7 @@ The lesson ships with what it unlocks:
 
 - **Items** in `items/NNNN-<name>.json`, named after the lesson. Every item the lesson teaches has `"unlockedBy": "NNNN-<name>"`, and the lesson's widgets name them by ref (`item:letter-a`).
 - **A drill** that draws the lesson's items by a tag they carry, run from the lesson with `<tome-drill drill="<id>">`. Write a new `drills/<id>.json`, or run an existing drill when its tags already cover the new items.
+- **A quiz**, when the subject's assessment settings put one after this lesson. Read [WRITING-ASSESSMENTS.md](./WRITING-ASSESSMENTS.md) first; it also covers preparing a milestone's exam.
 
 Done when every item the lesson shows is unlocked by it and the lesson runs a drill that draws them.
 
