@@ -154,6 +154,15 @@ describe("ask-your-agent prompts", () => {
     expect(agentPrompts(subject, events, now)).toEqual([]);
   });
 
+  it("asks for no quiz when a written one fills the due slot", async () => {
+    const lessons = [completed("0001-k-and-m"), completed("0002-r")];
+    const quiz = `<head><meta name="tome-after" content="lesson:0002-r"></head><h1>Quiz</h1>`;
+    const { subject, events } = await state(lessons, { lessons: ["0003-s"] }, { "quizzes/after-r.html": quiz });
+    const every2 = { ...subject, settings: { ...subject.settings, assessments: { ...subject.settings.assessments, quizFrequency: { every: 2 } } } };
+
+    expect(agentPrompts(every2, events, new Date("2026-11-05T12:00:00.000Z"))).toEqual([]);
+  });
+
   it("lists milestone prompts in curriculum order, then explanations", async () => {
     const events = [completed("0001-k-and-m"), completed("0002-r"), completed("0003-s"), saved("lesson:0003-s", "S is dit-dit-dit")];
     expect((await promptsFor(events)).map((prompt) => prompt.kind)).toEqual(["milestone-done", "milestone-done", "ungraded-explanations"]);

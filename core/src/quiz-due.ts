@@ -7,6 +7,7 @@ import type { Subject } from "./subject.ts";
 export interface QuizSlot {
   opened: string;
   after?: string;
+  quiz?: string;
 }
 
 const timeOf = (event: LearningEvent) => Date.parse(event.ts);
@@ -41,12 +42,42 @@ function weeklySlots(subject: Subject, events: readonly LearningEvent[], now: nu
   return slots;
 }
 
+interface Written {
+  id: string;
+  ready: number;
+  taken: number[];
+}
+
+function writtenQuizzes(subject: Subject, events: readonly LearningEvent[]): Written[] {
+  const completedAt = new Map<string, number>();
+  for (const event of events) {
+    if (event.kind === "lesson.completed" && event.ref !== undefined && !completedAt.has(event.ref)) completedAt.set(event.ref, timeOf(event));
+  }
+  return Object.entries(subject.quizAfter)
+    .flatMap(([id, after]) => {
+      const ready = completedAt.get(after);
+      if (ready === undefined) return [];
+      const taken = events.filter((event) => isQuizTaken(event) && event.ref === `quiz:${id}`).map(timeOf);
+      return [{ id, ready, taken }];
+    })
+    .sort((a, b) => a.ready - b.ready || a.id.localeCompare(b.id));
+}
+
+function fillSlots(slots: readonly QuizSlot[], written: readonly Written[]): QuizSlot[] {
+  return slots.map((slot) => {
+    const opened = Date.parse(slot.opened);
+    const quiz = written.find((quiz) => quiz.ready <= opened && !quiz.taken.some((at) => at < opened));
+    return quiz ? { ...slot, quiz: quiz.id } : slot;
+  });
+}
+
 export function quizSlots(subject: Subject, events: readonly LearningEvent[], now: Date): QuizSlot[] {
   const { enabled, quizFrequency } = subject.settings.assessments;
   if (!enabled || quizFrequency === "onDemand") return [];
   const at = now.getTime();
   const past = events.filter((event) => timeOf(event) <= at).sort((a, b) => timeOf(a) - timeOf(b));
-  return quizFrequency === "weekly" ? weeklySlots(subject, past, at) : lessonSlots(past, quizFrequency.every);
+  const slots = quizFrequency === "weekly" ? weeklySlots(subject, past, at) : lessonSlots(past, quizFrequency.every);
+  return fillSlots(slots, writtenQuizzes(subject, past));
 }
 
 export function dueQuiz(subject: Subject, events: readonly LearningEvent[], now: Date): QuizSlot | undefined {

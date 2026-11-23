@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { Locator, Page } from "playwright";
@@ -14,6 +14,23 @@ async function weeklyQuizzes(root: string) {
   const attempt = { ...latest.kinds.attempt, required: latest.kinds.attempt.required.filter((name: string) => name !== "wpm") };
   subject.payloadSchemas.push({ version: latest.version + 1, kinds: { attempt } });
   await writeFile(file, JSON.stringify({ ...subject, settings: { assessments: { quizFrequency: "weekly", quizLength: 3 } } }));
+}
+
+const WRITTEN = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="tome-after" content="lesson:0002-r"><title>After R</title></head><body>
+<h1>After R</h1>
+<tome-exam-question id="k" tests="item:letter-k"><p>Which is dah-di-dah?</p><tome-choice answer="K"><option>K</option><option>R</option></tome-choice></tome-exam-question>
+<tome-exam-question id="r" tests="item:letter-r"><p>Which is di-dah-dit?</p><tome-choice answer="R"><option>K</option><option>R</option></tome-choice></tome-exam-question>
+<tome-done></tome-done>
+</body></html>`;
+
+async function writtenWeekly(root: string) {
+  await weeklyQuizzes(root);
+  const file = join(root, MORSE);
+  const subject = JSON.parse(await readFile(file, "utf8"));
+  subject.payloadSchemas.at(-1).kinds.attempt.required = [];
+  await writeFile(file, JSON.stringify(subject));
+  await mkdir(join(root, "subjects/morse-code/quizzes"), { recursive: true });
+  await writeFile(join(root, "subjects/morse-code/quizzes/after-r.html"), WRITTEN);
 }
 
 const dueRows = (page: Page) => page.locator(".tome-due li").allInnerTexts();
@@ -100,4 +117,37 @@ describe.each(["phone", "desktop"] as const)("a weekly quiz for a Morse learner 
     expect(await page.locator(".tome-prompts").count()).toBe(0);
     expect(await page.locator(".tome-quiz-me").count()).toBe(1);
   }, 30_000);
+});
+
+describe.each(["phone", "desktop"] as const)("a written Morse quiz at %s width", (width: Width) => {
+  it("fills the due slot after its lesson: what's due opens it, records its session and score, and asks for none", async () => {
+    const { app, page, pageErrors, open } = await startDashboard({ width, prepare: writtenWeekly });
+
+    expect((await app.get("/api/subjects/morse-code/quiz/due")).body).toEqual({ quiz: { opened: "2026-11-16T00:00:00.000Z", quiz: "after-r" } });
+    await open("/s/morse-code");
+    await ready(page);
+    expect(await dueRows(page)).toEqual(["Review\n3 items · 2 min", "Morse code quiz\nwritten by your agent"]);
+    expect(await page.locator(".tome-prompts").count()).toBe(0);
+    expect(await page.locator(".tome-quiz-me").count()).toBe(0);
+
+    await open("/");
+    await ready(page);
+    expect(await page.locator(".tome-subject-ask").count()).toBe(0);
+    await page.locator(".tome-due-quiz").click();
+    await page.waitForURL(/\/s\/morse-code\/quizzes\/after-r\.html$/);
+    for (const [id, choice] of [["k", "K"], ["r", "K"]] as const) {
+      await expect.poll(() => page.locator(`#${id} .tome-exam-question`).getAttribute("data-state")).toBe("ready");
+      await page.locator(`#${id}`).getByRole("button", { name: new RegExp(choice) }).click();
+      await expect.poll(() => page.locator(`#${id} .tome-exam-question`).getAttribute("data-state")).toBe("answered");
+    }
+    await page.getByRole("button", { name: "Finish quiz" }).click();
+    await expect.poll(() => page.locator(".tome-done .tome-score").count()).toBe(1);
+    expect(await page.locator(".tome-done .tome-score").innerText()).toBe("50%");
+
+    const recorded = (await app.lines("2026-11.jsonl")).filter((event) => event.ref === "quiz:after-r");
+    expect(recorded.map((event) => event.kind)).toEqual(["session.start", "session.end"]);
+    expect(recorded[1]).toMatchObject({ sessionId: recorded[0].id, score: 50 });
+    expect((await app.get("/api/subjects/morse-code/quiz/due")).body).toEqual({ quiz: null });
+    expect(pageErrors).toEqual([]);
+  }, 40_000);
 });

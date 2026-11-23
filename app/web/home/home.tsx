@@ -78,9 +78,9 @@ function Due({ due }: { due: DueToday }) {
               </span>
             </li>
           ))}
-          {due.quizzes.map((subject) => (
+          {due.quizzes.map(({ subject, quiz }) => (
             <li key={`quiz ${subject.id}`}>
-              <DueQuiz subject={subject} />
+              <DueQuiz subject={subject} quiz={quiz} />
             </li>
           ))}
         </ul>
