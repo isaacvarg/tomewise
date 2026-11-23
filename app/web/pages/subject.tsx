@@ -369,7 +369,7 @@ function Due({ data }: { data: SubjectData }) {
           )}
           {quiz && (
             <li>
-              <DueQuiz subject={subject} />
+              <DueQuiz subject={subject} quiz={quiz} />
             </li>
           )}
         </ul>

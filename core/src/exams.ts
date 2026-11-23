@@ -16,9 +16,16 @@ export interface ExamResult extends ScoreResult {
   milestone?: string;
 }
 
+export interface QuizResult extends ScoreResult {
+  subject: string;
+  quiz: string;
+  sessionId: string;
+}
+
 export interface ClosedExams {
   inputs: unknown[];
   exams: ExamResult[];
+  quizzes: QuizResult[];
 }
 
 const QUESTION = /<tome-exam-question\b[^>]*?\sid\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi;
@@ -53,6 +60,16 @@ export function examResult(
   };
 }
 
+export function quizResult(
+  subject: Pick<Subject, "id" | "settings">,
+  events: readonly LearningEvent[],
+  sessionId: string,
+  quiz: string,
+  questions: readonly string[] = [],
+): QuizResult {
+  return { subject: subject.id, quiz, sessionId, ...judged(sessionScore(events, sessionId, questions), subject.settings.assessments.passMark) };
+}
+
 export function examEvents(subject: Pick<Subject, "curriculum">, events: readonly LearningEvent[], end: Record<string, unknown>, result: ExamResult): Record<string, unknown>[] {
   const closed = [{ ...end, score: result.score }];
   if (!result.passed || result.milestone === undefined) return closed;
@@ -70,30 +87,31 @@ export function examEvents(subject: Pick<Subject, "curriculum">, events: readonl
   ];
 }
 
-async function readQuestions(home: LearningHome, subject: string, exam: string): Promise<string[]> {
+async function readQuestions(home: LearningHome, subject: string, folder: "exams" | "quizzes", page: string): Promise<string[]> {
   try {
-    return examQuestions(await readFile(join(home.root, subjectPath(subject, "exams", `${exam}.html`)), "utf8"));
+    return examQuestions(await readFile(join(home.root, subjectPath(subject, folder, `${page}.html`)), "utf8"));
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
     throw error;
   }
 }
 
-interface ExamEnd {
+interface ScoredEnd {
   input: Record<string, unknown>;
   subject: string;
   sessionId: string;
-  exam: string;
+  kind: "exam" | "quiz";
+  page: string;
 }
 
-function examEnd(input: unknown, home: LearningHome): ExamEnd | undefined {
+function scoredEnd(input: unknown, home: LearningHome): ScoredEnd | undefined {
   if (typeof input !== "object" || input === null || Array.isArray(input)) return undefined;
   const fields = input as Record<string, unknown>;
   const { kind, subject, sessionId, ref } = fields;
   if (kind !== "session.end" || typeof subject !== "string" || typeof sessionId !== "string" || typeof ref !== "string") return undefined;
   const parsed = parseRef(ref);
-  if (parsed?.kind !== "exam" || !home.subjects.includes(subject)) return undefined;
-  return { input: fields, subject, sessionId, exam: parsed.id };
+  if ((parsed?.kind !== "exam" && parsed?.kind !== "quiz") || !home.subjects.includes(subject)) return undefined;
+  return { input: fields, subject, sessionId, kind: parsed.kind, page: parsed.id };
 }
 
 export async function closeExams(home: LearningHome, inputs: readonly unknown[]): Promise<ClosedExams> {
@@ -108,20 +126,27 @@ export async function closeExams(home: LearningHome, inputs: readonly unknown[])
   };
   const closed: unknown[] = [];
   const exams: ExamResult[] = [];
+  const quizzes: QuizResult[] = [];
   for (const input of inputs) {
-    const end = examEnd(input, home);
+    const end = scoredEnd(input, home);
     if (!end) {
       closed.push(input);
       continue;
     }
     const { subject, events } = await load(end.subject);
-    if (!subject.exams.includes(end.exam)) {
+    if (!(end.kind === "exam" ? subject.exams : subject.quizzes).includes(end.page)) {
       closed.push(input);
       continue;
     }
-    const result = examResult(subject, events, end.sessionId, end.exam, await readQuestions(home, end.subject, end.exam));
+    if (end.kind === "quiz") {
+      const result = quizResult(subject, events, end.sessionId, end.page, await readQuestions(home, end.subject, "quizzes", end.page));
+      closed.push({ ...end.input, score: result.score });
+      quizzes.push(result);
+      continue;
+    }
+    const result = examResult(subject, events, end.sessionId, end.page, await readQuestions(home, end.subject, "exams", end.page));
     closed.push(...examEvents(subject, events, end.input, result));
     exams.push(result);
   }
-  return { inputs: closed, exams };
+  return { inputs: closed, exams, quizzes };
 }

@@ -76,7 +76,7 @@ export interface DueRow {
 
 export interface DueToday {
   rows: DueRow[];
-  quizzes: Subject[];
+  quizzes: { subject: Subject; quiz: QuizSlot }[];
   items: number;
   minutes: number;
 }
@@ -90,7 +90,7 @@ export function dueToday(subjects: { subject: Subject; due: DueItem[]; quiz?: Qu
     .map((row) => ({ ...row, minutes: minutesFor(row.items) }));
   return {
     rows,
-    quizzes: subjects.filter(({ quiz }) => quiz).map(({ subject }) => subject),
+    quizzes: subjects.flatMap(({ subject, quiz }) => (quiz ? [{ subject, quiz }] : [])),
     items: rows.reduce((sum, row) => sum + row.items, 0),
     minutes: rows.reduce((sum, row) => sum + row.minutes, 0),
   };
@@ -99,6 +99,8 @@ export function dueToday(subjects: { subject: Subject; due: DueItem[]; quiz?: Qu
 export const count = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 export const quizPath = (subject: string) => `/run/quiz?subject=${encodeURIComponent(subject)}`;
+
+export const writtenQuizPath = (subject: string, quiz: string) => `/s/${encodeURIComponent(subject)}/quizzes/${encodeURIComponent(quiz)}.html`;
 
 export function dueMeta(items: number, quizzes: number): string {
   const quizCount = count(quizzes, "quiz", "quizzes");

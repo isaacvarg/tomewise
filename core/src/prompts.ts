@@ -72,7 +72,7 @@ export function agentPrompts(subject: Subject, events: readonly LearningEvent[],
     .filter((milestone) => !FINISHED.has(statuses[milestone.id]!) && milestone.lessons.length > 0 && milestone.lessons.every((id) => done.has(id)))
     .map((milestone) => milestonePrompt(subject, milestone));
   const quiz = dueQuiz(subject, events, now);
-  if (quiz) prompts.push({ kind: "quiz-unwritten", quiz, say: `Write the ${subject.name} quiz that's due.` });
+  if (quiz && quiz.quiz === undefined) prompts.push({ kind: "quiz-unwritten", quiz, say: `Write the ${subject.name} quiz that's due.` });
   const ungraded = explanations(events)
     .filter((explanation) => explanation.grade === undefined)
     .reverse();
