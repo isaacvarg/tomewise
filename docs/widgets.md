@@ -46,7 +46,7 @@ The session ref is `<kind>:<id>`, such as `quiz:week-1`. A page with no context 
 - The first `pointerdown` or `keydown` on the page posts `session.start` with `ref` set to the page (`lesson:0001-greetings`). So does the first attempt, if it comes first.
 - `pagehide` posts `session.end` with the session's duration in whole ms, through `navigator.sendBeacon`. Attempts are posted as they happen, so a crash keeps them.
 - A page restored from the back/forward cache starts a new session on its next interaction.
-- Completing the lesson (`<tome-done>`, a `final` widget or `tome.complete()`) ends the session; later interaction starts no new one, so leaving posts no second `session.end`.
+- Completing the lesson (`<tome-done>`, a `final` widget or `tome.complete()`) ends the session; later interaction starts no new one, so leaving posts no second `session.end`. Finishing an exam (`<tome-done>` on an exam page, or `tome.finish()`) does the same.
 
 ## The `tome` API
 
@@ -370,6 +370,14 @@ An exam question on an exam page. Write the question inside the tag, then one `<
 
 `id` names the question within the exam and `tests` lists the items it tests. The answer is graded as in `<tome-choice>` and `<tome-typed>`, then posted as one attempt per tested item: `ref` is the item, the outcome, grade and duration are the same for each, and `data.question` is the question's `id`. A miss is a wrong attempt on each of those items, so they come due sooner. The exam question itself is never scheduled. On an exam page the session's `ref` is the exam.
 
+End the exam with a `<tome-done>`: on an exam page it reads "Finish exam" and shows the score.
+
+### Exam scores
+
+When an exam's `session.end` reaches the app, by "Finish exam" or by the learner leaving the page, the app scores the session and writes the score into that event's `score`: the percentage of the exam's questions whose latest answer was right, rounded down to two decimals. Every `<tome-exam-question>` in the exam file counts, so one left unanswered counts as missed. A score the page sends is replaced. The score is recorded whatever `scoreDisplay` says, so the agent can read it.
+
+The exam passes when the score is at or above the pass mark: the `passMark` of the milestone that names the exam in `curriculum.json`, otherwise the subject's resolved `passMark` setting. A pass appends `milestone.status` with `data.status` `done` for that milestone, in the same session, unless it is already done. A fail appends nothing and locks nothing. The response to that `POST /api/events` carries `exams`: one `{ subject, exam, sessionId, milestone, right, total, score, passMark, passed }` per exam it closed.
+
 `question` is reserved in attempt payloads for this id, so a subject's payload schema can't define an attempt field with that name.
 
 A question with no `id`, no `tests`, an unknown item in `tests` or no answer control shows a notice and can't be answered. If a save fails, "Save again" posts only the attempts that didn't save. Keyboard and touch work as in the answer control.
@@ -393,9 +401,11 @@ A question with no `id`, no `tests`, an unknown item in `tests` or no answer con
 
 | Attribute | Meaning                                  |
 | --------- | ---------------------------------------- |
-| `label`   | Button text; `Done` if absent            |
+| `label`   | Button text; `Done` if absent, `Finish exam` on an exam page |
 
 Marks the end of a lesson. Pressing the button calls `tome.complete(this)`: it posts `lesson.completed` (ref = the lesson) and `session.end`, then shows "Lesson complete" and disables itself. If the post fails, it shows the notice and stays pressable.
+
+On an exam page it finishes the exam instead. Pressing it calls `tome.finish(this)`, which posts `session.end`. The app scores the session and records the score on that `session.end` (see [exam scores](#exam-scores)). The widget then makes the exam questions inert and shows the score as the subject's `scoreDisplay` says: the percentage (`number`), "Passed" or "Not passed" (`pass-fail`), or no score at all (`hidden`).
 
 Keyboard: Tab to the button, Enter or Space. Touch: tap it.
 
@@ -403,7 +413,12 @@ Keyboard: Tab to the button, Enter or Space. Touch: tap it.
 <tome-done>
   <div class="tome-done" data-state="ready | saving | done">
     <button class="tome-done-button">Done</button>
-    <p class="tome-verdict" role="status">Lesson complete</p>   <!-- once done -->
+    <p class="tome-verdict" role="status">Lesson complete</p>   <!-- once done, on a lesson -->
+    <div class="tome-exam-score" role="status" data-display="number | pass-fail | hidden" data-passed="true | false">  <!-- once done, on an exam; no data-passed when hidden -->
+      <p class="tome-verdict">Exam finished</p>
+      <span class="tome-score">80%</span>                          <!-- "Passed" or "Not passed" for pass-fail; absent when hidden -->
+      <span class="tome-score-sub">8 of 10 right · pass mark 70%</span>
+    </div>
   </div>
   <p class="tome-notice" role="alert" data-state="unsaved">…</p>  <!-- failed save -->
 </tome-done>

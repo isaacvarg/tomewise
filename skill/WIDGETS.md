@@ -43,6 +43,8 @@ On an exam page, write each question in the page and name the items it tests. A 
 
 Use `<tome-typed answer="…">` with `<option>`s for other accepted answers in place of `<tome-choice>`.
 
+End every exam with `<tome-done></tome-done>`: it reads "Finish exam" and shows the score as the learner's score display setting says. The app scores the session over every question on the page and records it as `score` on the exam's `session.end`, even when the score is hidden from the learner. A score at or above the pass mark (the milestone's `passMark`, else the subject's) marks the milestone that names the exam done; a fail changes nothing. To go over results, read the latest `session.end` with `ref` `exam:<id>` and its session's attempts (`data.question` names the question).
+
 ## Custom widgets
 
 When no widget above fits, write one in the subject's `./assets/` as a plain JavaScript module:

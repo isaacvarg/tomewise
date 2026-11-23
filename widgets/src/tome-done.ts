@@ -1,5 +1,6 @@
 import { html, nothing } from "lit";
-import { tome } from "./api.ts";
+import { type ScoreView, scoreView } from "@tomewise/core/score";
+import { readPageContext, tome } from "./api.ts";
 import { adoptStyles, TomeElement } from "./element.ts";
 
 type State = "ready" | "saving" | "done";
@@ -10,20 +11,25 @@ const CSS = `
 .tome-done .tome-done-button:disabled { cursor: default; background: var(--t-surface); color: var(--t-muted); border-color: var(--t-rule); }
 .tome-done .tome-done-button:focus-visible { outline: 2px solid var(--t-accent); outline-offset: 2px; }
 .tome-done .tome-verdict { margin: 0; font-size: .85rem; font-weight: 600; padding: .2rem .7rem; border-radius: 99px; color: var(--t-good); background: var(--t-good-bg); }
+.tome-done .tome-exam-score { display: flex; flex-direction: column; gap: .2rem; flex-basis: 100%; }
+.tome-done .tome-score { font-family: var(--t-display); font-size: 2.2rem; line-height: 1.1; }
+.tome-done .tome-exam-score[data-passed="true"] .tome-score { color: var(--t-good); }
+.tome-done .tome-score-sub { color: var(--t-muted); font-size: .9rem; }
 `;
 
 export class TomeDone extends TomeElement {
   static override properties = {
     label: { type: String },
     state: { state: true },
+    score: { state: true },
   };
 
-  declare label: string;
+  declare label: string | undefined;
   declare state: State;
+  declare score: ScoreView | undefined;
 
   constructor() {
     super();
-    this.label = "Done";
     this.state = "ready";
   }
 
@@ -32,24 +38,45 @@ export class TomeDone extends TomeElement {
     adoptStyles("tome-done", CSS);
   }
 
+  get #exam(): boolean {
+    return readPageContext(document)?.kind === "exam";
+  }
+
   async #complete(): Promise<void> {
     if (this.state !== "ready") return;
     this.state = "saving";
     try {
-      await tome.complete(this);
+      if (this.#exam) await this.#finish();
+      else await tome.complete(this);
       this.state = "done";
     } catch {
       this.state = "ready";
     }
   }
 
+  async #finish(): Promise<void> {
+    const [{ result }, subject] = await Promise.all([tome.finish(this), tome.subject()]);
+    for (const question of document.querySelectorAll("tome-exam-question")) question.setAttribute("inert", "");
+    this.score = scoreView(result, subject.settings.assessments.scoreDisplay);
+  }
+
+  #verdict() {
+    const score = this.score;
+    if (!score) return html`<p class="tome-verdict" role="status">Lesson complete</p>`;
+    return html`<div class="tome-exam-score" role="status" data-display=${score.display} data-passed=${score.passed === undefined ? nothing : String(score.passed)}>
+      <p class="tome-verdict">Exam finished</p>
+      ${score.headline ? html`<span class="tome-score">${score.headline}</span>` : nothing}
+      <span class="tome-score-sub">${score.detail}</span>
+    </div>`;
+  }
+
   protected override render() {
     return html`
       <div class="tome-done" data-state=${this.state} aria-busy=${this.state === "saving" ? "true" : "false"}>
         <button type="button" class="tome-done-button" ?disabled=${this.state !== "ready"} @click=${() => this.#complete()}>
-          ${this.label}
+          ${this.label ?? (this.#exam ? "Finish exam" : "Done")}
         </button>
-        ${this.state === "done" ? html`<p class="tome-verdict" role="status">Lesson complete</p>` : nothing}
+        ${this.state === "done" ? this.#verdict() : nothing}
       </div>
     `;
   }
