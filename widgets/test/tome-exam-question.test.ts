@@ -15,8 +15,13 @@ async function openExam(options?: Parameters<typeof startWidgetApp>[0]) {
   return { ...widgets, page, colours, thanks, missing };
 }
 
-const dueIds = async (app: { get(path: string): Promise<{ body: any }> }) =>
-  ((await app.get(`/api/subjects/${SUBJECT}/due`)).body.due as { item: { id: string } }[]).map((due) => due.item.id);
+const HOUR = 60 * 60 * 1000;
+const inTwoDays = () => new Date(Date.now() + 48 * HOUR).toISOString().slice(0, 10);
+
+const dueSoon = async (app: { get(path: string): Promise<{ body: any }> }) =>
+  (await app.get(`/api/subjects/${SUBJECT}/due?date=${inTwoDays()}`)).body.due as { item: { id: string }; due: string | null }[];
+
+const dueIds = async (app: { get(path: string): Promise<{ body: any }> }) => (await dueSoon(app)).map((due) => due.item.id);
 
 describe("<tome-exam-question>", () => {
   it("shows the question and its own choices", async () => {
@@ -72,7 +77,9 @@ describe("<tome-exam-question>", () => {
       expect.objectContaining({ outcome: "wrong", grade: 1, data: { question: "colours" } }),
       expect.objectContaining({ outcome: "wrong", grade: 1, data: { question: "colours" } }),
     ]);
-    expect(await dueIds(app)).toEqual(expect.arrayContaining(["rojo", "gracias"]));
+    const forward = (await dueSoon(app)).filter((due) => ["rojo", "gracias"].includes(due.item.id));
+    expect(forward.map((due) => due.item.id)).toEqual(expect.arrayContaining(["rojo", "gracias"]));
+    for (const due of forward) expect(Date.parse(due.due!)).toBeLessThan(Date.now() + HOUR);
     await expect.poll(() => colours.locator(".tome-verdict").getAttribute("data-state")).toBe("wrong");
     expect(await colours.locator(".tome-verdict").textContent()).toContain("rojo");
   });
