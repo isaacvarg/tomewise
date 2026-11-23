@@ -78,12 +78,14 @@ export function sessionsOf(events: readonly LearningEvent[], timezone: string): 
   return events
     .filter((event) => event.kind === "session.start")
     .map((start) => {
-      const startTime = Date.parse(start.ts);
-      const inSession = bySession.get(start.id) ?? [];
-      const end = inSession.find((event) => event.kind === "session.end");
-      const last = Math.max(...inSession.map((event) => Date.parse(event.ts)));
-      return { day: localDay(startTime, timezone), ms: end?.duration ?? last - startTime };
+      return { day: localDay(Date.parse(start.ts), timezone), ms: sessionMs(start, bySession.get(start.id) ?? []) };
     });
+}
+
+export function sessionMs(start: LearningEvent, inSession: readonly LearningEvent[]): number {
+  const end = inSession.find((event) => event.kind === "session.end");
+  const last = Math.max(Date.parse(start.ts), ...inSession.map((event) => Date.parse(event.ts)));
+  return end?.duration ?? last - Date.parse(start.ts);
 }
 
 class RulesByDay<T> {

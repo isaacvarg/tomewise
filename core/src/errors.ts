@@ -48,3 +48,7 @@ export class InvalidEventError extends IssuesError {
 export class InvalidSettingError extends Error {
   override name = "InvalidSettingError";
 }
+
+export class VaultDisabledError extends Error {
+  override name = "VaultDisabledError";
+}

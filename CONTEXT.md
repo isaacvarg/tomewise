@@ -16,6 +16,10 @@ _Avoid_: workspace, vault, data repo
 A learning home placed inside an Obsidian (or compatible) vault, with extra notes written so the vault can show the learning.
 _Avoid_: Obsidian integration, PKM mode
 
+**Session note**:
+A Markdown note per session that vault mode generates from history: a frontmatter summary and a short body. Regenerated, never edited; history stays the source of truth.
+_Avoid_: session log, journal entry
+
 ## Learning content
 
 **Subject**:
