@@ -787,11 +787,13 @@ describe("tome init handoffs", () => {
     expect(await readdir(flagged.root)).toEqual([]);
   });
 
-  it("prints how to install the skill", async () => {
+  it("prints how to install the plugin", async () => {
     const result = await handoff({ args: [] });
 
-    expect(result.stdout).toContain("skill");
-    expect(result.stdout).toContain("~/.claude/skills/teach");
+    expect(result.stdout).toContain("claude plugin marketplace add isaacvarg/tomewise");
+    expect(result.stdout).toContain("claude plugin install tomewise@tomewise");
+    expect(result.stdout).toContain("npx skills add isaacvarg/tomewise");
+    expect(result.stdout).not.toContain("~/.claude/skills");
   });
 
   it("prints the agent prompt for the first subject, naming what to learn", async () => {
@@ -801,7 +803,7 @@ describe("tome init handoffs", () => {
     for (const result of [asked, flagged]) {
       expect(result.code).toBe(0);
       expect(result.stdout).toContain("Give your agent this message to create your first subject:");
-      expect(result.stdout).toContain(`/teach Set up a new subject in ${result.root}: Morse code`);
+      expect(result.stdout).toContain(`/tomewise:teach Set up a new subject in ${result.root}: Morse code`);
     }
   });
 
@@ -810,7 +812,7 @@ describe("tome init handoffs", () => {
     const skippedByFlag = await handoff({ args: ["--no-subject"] });
     const skippedByAnswer = await handoff({ args: [], lines: ["", "", "", "", "none", ""] });
 
-    expect(generic.stdout).toContain(`/teach Set up a new subject in ${generic.root}.`);
+    expect(generic.stdout).toContain(`/tomewise:teach Set up a new subject in ${generic.root}.`);
     expect(skippedByFlag.stdout).not.toContain("first subject");
     expect(skippedByAnswer.shown()).toContain("What do you want to learn first? (blank to skip)");
     expect(skippedByAnswer.stdout).not.toContain("first subject");
