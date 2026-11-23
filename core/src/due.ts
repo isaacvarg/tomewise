@@ -1,4 +1,5 @@
 import { DefaultScheduler, type Grade } from "ts-fsrs";
+import { isoDate, localDay as dayNumber } from "./activity.ts";
 import { readEvents } from "./event-store.ts";
 import { parseRef, type LearningEvent } from "./events.ts";
 import type { Item } from "./items.ts";
@@ -7,6 +8,10 @@ import { loadSubject, type LearningHome } from "./load.ts";
 export interface DueItem {
   item: Item;
   due: string | null;
+}
+
+export interface ScheduledItem extends DueItem {
+  dueOn: string | null;
 }
 
 let scheduler: ReturnType<typeof DefaultScheduler> | undefined;
@@ -58,9 +63,10 @@ function refId(event: LearningEvent, kind: string): string | undefined {
   return ref?.kind === kind ? ref.id : undefined;
 }
 
-export async function dueItems(home: LearningHome, subjectId: string, on: Date | string): Promise<DueItem[]> {
+async function schedule(home: LearningHome, subjectId: string, on: Date | string) {
   const subject = await loadSubject(home, subjectId);
-  const cutoff = endOfDay(on, subject.settings.timezone);
+  const timezone = subject.settings.timezone;
+  const cutoff = endOfDay(on, timezone);
   const events = uniqueById(await readEvents(home, subjectId, { to: new Date(cutoff) }));
   const fsrs = await (scheduler ??= DefaultScheduler());
 
@@ -76,24 +82,39 @@ export async function dueItems(home: LearningHome, subjectId: string, on: Date |
     }
   }
 
-  const due: { item: Item; at: number | null }[] = [];
+  const scheduled: { item: Item; at: number | null }[] = [];
   for (const item of subject.items) {
     if (item.type === "routine" || item.retired) continue;
     const unlockedAt = item.unlockedBy === undefined ? null : completed.get(item.unlockedBy);
     if (unlockedAt === undefined) continue;
     const history = attempts.get(item.id) ?? [];
     if (history.length === 0) {
-      due.push({ item, at: unlockedAt });
+      scheduled.push({ item, at: unlockedAt });
       continue;
     }
     const replayed = fsrs.forward({
       history: history.map((attempt) => ({ rating: attempt.grade as Grade, reviewTime: new Date(attempt.ts) })),
     });
-    const at = replayed.at(-1)!.card.dueAt.getTime();
-    if (at < cutoff) due.push({ item, at });
+    scheduled.push({ item, at: replayed.at(-1)!.card.dueAt.getTime() });
   }
+  return { scheduled, cutoff, timezone };
+}
 
-  return due
+const isoOf = (at: number | null) => (at === null ? null : new Date(at).toISOString());
+
+export async function nextDue(home: LearningHome, subjectId: string, on: Date | string): Promise<ScheduledItem[]> {
+  const { scheduled, timezone } = await schedule(home, subjectId, on);
+  return scheduled.map(({ item, at }) => ({
+    item,
+    due: isoOf(at),
+    dueOn: at === null ? null : isoDate(dayNumber(at, timezone)),
+  }));
+}
+
+export async function dueItems(home: LearningHome, subjectId: string, on: Date | string): Promise<DueItem[]> {
+  const { scheduled, cutoff } = await schedule(home, subjectId, on);
+  return scheduled
+    .filter(({ at }) => at === null || at < cutoff)
     .sort((a, b) => (a.at ?? Number.MIN_SAFE_INTEGER) - (b.at ?? Number.MIN_SAFE_INTEGER))
-    .map(({ item, at }) => ({ item, due: at === null ? null : new Date(at).toISOString() }));
+    .map(({ item, at }) => ({ item, due: isoOf(at) }));
 }

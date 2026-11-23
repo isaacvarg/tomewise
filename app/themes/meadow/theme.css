@@ -34,6 +34,12 @@ h1, h2, h3, h4 { font-weight: 500; }
 .tome-totals b { font-weight: 500; }
 .tome-chart-bar { rx: 3px; }
 .tome-chart-line { stroke-width: 3; }
+.tome-term { border: 0; box-shadow: 0 2px 0 var(--t-rule); }
+.tome-term-word { font-weight: 500; }
+.tome-hear { border: 0; background: var(--t-accent); color: var(--t-accent-ink); box-shadow: 0 3px 0 color-mix(in srgb, var(--t-accent) 60%, #000); }
+.tome-hear:active { transform: translateY(2px); box-shadow: 0 1px 0 color-mix(in srgb, var(--t-accent) 60%, #000); }
+.tome-hear[data-playing] { color: var(--t-accent-ink); }
+.tome-hear[data-playing]::after { border-color: var(--t-petal); }
 
 .tome-start, .tome-again, .tome-reveal, .tome-submit, .tome-done-button, .tome-save, .tome-next {
   border-radius: 99px;
@@ -65,5 +71,5 @@ h1, h2, h3, h4 { font-weight: 500; }
 }
 @media (prefers-reduced-motion: reduce) {
   .meadow-leaf { display: none; }
-  .tome-play[data-playing]::after { animation: none; }
+  .tome-play[data-playing]::after, .tome-hear[data-playing]::after { animation: none; }
 }

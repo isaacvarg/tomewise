@@ -1,4 +1,5 @@
 import { Route, Routes } from "react-router";
+import { Glossary } from "./pages/glossary.tsx";
 import { Home } from "./home/home.tsx";
 import { NotFound } from "./pages/not-found.tsx";
 import { RunDrill, RunDue } from "./pages/run.tsx";
@@ -9,6 +10,7 @@ export function App() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
+      <Route path="/s/:subject/glossary" element={<Glossary />} />
       <Route path="/s/:subject/:tab?" element={<SubjectHome />} />
       <Route path="/run/due" element={<RunDue />} />
       <Route path="/run" element={<RunDrill />} />

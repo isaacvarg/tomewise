@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dueItems, loadLearningHome } from "@tomewise/core";
+import { dueItems, loadLearningHome, nextDue } from "@tomewise/core";
 import { buildHome, snapshot } from "./helpers.ts";
 
 let counter = 0;
@@ -216,5 +216,44 @@ describe("what's due", () => {
     expect(second).toEqual(first);
     expect(first.map(([id]) => id)).toEqual(["letter-m", "letter-k"]);
     expect(await snapshot(root)).toEqual(before);
+  });
+});
+
+describe("when each unlocked item is next due", () => {
+  it("gives every unlocked, unretired item its next due time and its date in the home's timezone", async () => {
+    const review = sessionStart("2026-11-01T08:59:00.000Z", "drill:review");
+    const root = await home(
+      {
+        "2026-10": jsonl(completed("2026-10-31T12:00:00.000Z", "0001-k-and-m")),
+        "2026-11": jsonl(
+          review,
+          attempt("2026-11-01T09:00:00.000Z", "letter-k", 3, review.id),
+          attempt("2026-11-01T09:00:10.000Z", "letter-m", 4, review.id),
+        ),
+      },
+      [
+        { id: "letter-e", type: "timed-audio", prompt: "E", answer: "E" },
+        letter("letter-k-old", "0001-k-and-m", { retired: true }),
+        { id: "warm-up", type: "routine", name: "Warm-up", steps: [{ text: "Breathe" }] },
+      ],
+      "America/New_York",
+    );
+
+    const items = await nextDue(await loadLearningHome(root), SUBJECT, "2026-11-05");
+
+    expect(items.map(({ item, due, dueOn }) => [item.id, due, dueOn])).toEqual([
+      ["letter-k", "2026-11-06T03:39:55.164Z", "2026-11-05"],
+      ["letter-m", "2026-12-25T05:52:15.937Z", "2026-12-25"],
+      ["letter-e", null, null],
+    ]);
+  });
+
+  it("leaves out items whose lesson isn't completed by the end of the date", async () => {
+    const root = await home({ "2026-11": jsonl(completed("2026-11-03T18:10:00.000Z", "0002-r")) });
+
+    const ids = async (on: string) => (await nextDue(await loadLearningHome(root), SUBJECT, on)).map(({ item }) => item.id);
+
+    expect(await ids("2026-11-02")).toEqual([]);
+    expect(await ids("2026-11-03")).toEqual(["letter-r"]);
   });
 });

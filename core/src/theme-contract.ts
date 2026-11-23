@@ -47,11 +47,11 @@ export const appClasses: readonly string[] = [
   "tome-actions", "tome-activity", "tome-again", "tome-app", "tome-back", "tome-break", "tome-break-continue",
   "tome-break-done", "tome-break-next", "tome-break-skip", "tome-cell", "tome-chart", "tome-chart-area",
   "tome-chart-bar", "tome-chart-dot", "tome-chart-grid", "tome-chart-line", "tome-chart-plot", "tome-chart-x",
-  "tome-chart-y", "tome-charts", "tome-check", "tome-curriculum",
-  "tome-drill-go", "tome-drill-name", "tome-drill-sub", "tome-drills", "tome-due", "tome-due-how", "tome-due-what",
-  "tome-exam", "tome-goal", "tome-goal-bar", "tome-goal-num", "tome-goal-week", "tome-header", "tome-heat-days",
-  "tome-heat-legend", "tome-heatmap", "tome-heatmap-wrap", "tome-hint", "tome-home-link", "tome-kicker",
-  "tome-lessons", "tome-look-again", "tome-look-item", "tome-look-why", "tome-mark", "tome-mark-letter", "tome-meta",
+  "tome-chart-y", "tome-charts", "tome-check", "tome-curriculum", "tome-drill-go", "tome-drill-name", "tome-drill-sub",
+  "tome-drills", "tome-due", "tome-due-how", "tome-due-what", "tome-exam", "tome-glossary", "tome-goal",
+  "tome-goal-bar", "tome-goal-num", "tome-goal-week", "tome-header", "tome-hear", "tome-heat-days", "tome-heat-legend",
+  "tome-heatmap", "tome-heatmap-wrap", "tome-hint", "tome-home-link", "tome-kicker", "tome-lede", "tome-lessons",
+  "tome-look-again", "tome-look-item", "tome-look-why", "tome-mark", "tome-mark-letter", "tome-meta",
   "tome-meta-narrow", "tome-meta-wide", "tome-milestone", "tome-milestone-head", "tome-milestone-plain", "tome-notice",
   "tome-num", "tome-option", "tome-option-name", "tome-option-text", "tome-options", "tome-order", "tome-order-handle",
   "tome-order-move", "tome-order-name", "tome-order-row", "tome-overview", "tome-pick", "tome-pick-how",
@@ -59,9 +59,8 @@ export const appClasses: readonly string[] = [
   "tome-runner-summary", "tome-score", "tome-score-sub", "tome-section", "tome-section-head", "tome-settings",
   "tome-settings-actions", "tome-settings-cancel", "tome-settings-save", "tome-side", "tome-stage", "tome-start",
   "tome-stats", "tome-status", "tome-streak", "tome-streak-num", "tome-streak-text", "tome-subject",
-  "tome-subject-name", "tome-subjects", "tome-summary-head", "tome-tab", "tome-tabs", "tome-title", "tome-totals",
-  "tome-unit",
-  "tome-view",
+  "tome-subject-name", "tome-subjects", "tome-summary-head", "tome-tab", "tome-tabs", "tome-term", "tome-term-when",
+  "tome-term-word", "tome-terms", "tome-title", "tome-totals", "tome-unit", "tome-view",
 ];
 
 export const requiredTokenNames = (kind?: TokenKind): string[] =>

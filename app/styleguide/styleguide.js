@@ -38,7 +38,24 @@
 
   const settingsOf = homeSubjects[0].settings;
   const morseLessons = ["0001-k-and-m", "0002-r", "0003-s", "0004-the-late-bump", "0005-a-the-short-pair", "0006-n-a-turned-round", "0007-why-the-gaps-are-long"];
-  const letter = (answer, unlockedBy, tag) => ({ id: `letter-${answer.toLowerCase()}`, type: "timed-audio", prompt: answer, answer, unlockedBy, tags: [tag], retired: false });
+  const letter = (answer, unlockedBy, tag) => ({
+    id: `letter-${answer.toLowerCase()}`,
+    type: "timed-audio",
+    audio: `assets/audio/${answer.toLowerCase()}.wav`,
+    answer,
+    unlockedBy,
+    tags: [tag],
+    retired: false,
+  });
+  const inDays = (days) => new Date(Date.parse(TODAY) + days * DAY_MS).toISOString().slice(0, 10);
+  const morseUnlocked = () => ({
+    today: TODAY,
+    items: [[0, 0], [1, 6], [2, -1], [3, 3], [4, 0]].map(([index, days]) => ({
+      item: morseSubject.items[index],
+      due: `${inDays(days)}T09:00:00.000Z`,
+      dueOn: inDays(days),
+    })),
+  });
   const morseSubject = {
     id: "morse-code",
     name: "Morse code",
@@ -144,6 +161,7 @@
     if (url.pathname === "/api/activity") return json(url.searchParams.get("subject") === "morse-code" ? morseActivity() : homeActivity());
     if (url.pathname === "/api/subjects/morse-code") return json(morseSubject);
     if (url.pathname === "/api/subjects/morse-code/stats") return json(morseStats());
+    if (url.pathname === "/api/subjects/morse-code/unlocked") return json(morseUnlocked());
     if (url.pathname === "/api/subjects/morse-code/progress") return json({ completedLessons: morseLessons.slice(0, 4) });
     if (url.pathname === "/api/subjects") return json({ subjects: homeSubjects.map(({ due, ...subject }) => subject) });
     const homeSubject = homeSubjects.find((candidate) => url.pathname === `/api/subjects/${candidate.id}/due`);

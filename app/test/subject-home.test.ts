@@ -345,11 +345,25 @@ describe("reference", () => {
   it("lists the agent's reference sheets, each opening its page", async () => {
     const { page } = await openSubject("/s/morse-code/reference");
 
-    expect(await texts(page, ".tome-reference li")).toEqual(["Wpm timing\nSheet from your agent\nOpen"]);
+    expect(await texts(page, ".tome-reference li")).toEqual([
+      "Glossary\n3 items · hear each one · built in\nOpen",
+      "Wpm timing\nSheet from your agent\nOpen",
+    ]);
     await page.locator('[data-sheet="wpm-timing"] .tome-row').click();
 
     await page.waitForURL(/\/s\/morse-code\/reference\/wpm-timing\.html$/);
     expect(await page.locator("h1").innerText()).toBe("How WPM timing works");
+  });
+
+  it("lists the glossary first, opening it in the SPA", async () => {
+    const { page } = await openSubject("/s/morse-code/reference");
+    await page.evaluate(() => ((window as any).stayed = true));
+
+    await page.locator('.tome-reference li:first-child[data-sheet="glossary"] .tome-row').click();
+
+    await page.waitForURL(/\/s\/morse-code\/glossary$/);
+    await page.locator(".tome-glossary").waitFor();
+    expect(await page.evaluate(() => (window as any).stayed)).toBe(true);
   });
 
   it("says when there are none", async () => {

@@ -5,17 +5,19 @@ export interface ScreenProps {
   back?: ReactNode;
   kicker?: ReactNode;
   title: ReactNode;
+  lede?: ReactNode;
   state?: Loaded<unknown>["state"];
   children?: ReactNode;
 }
 
-export function Screen({ back, kicker, title, state = "ready", children }: ScreenProps) {
+export function Screen({ back, kicker, title, lede, state = "ready", children }: ScreenProps) {
   return (
     <div className="tome-app" data-state={state}>
       <header className="tome-header">
         {back}
         {kicker && <p className="tome-kicker">{kicker}</p>}
         <h2 className="tome-title">{title}</h2>
+        {lede && <p className="tome-lede">{lede}</p>}
       </header>
       {children}
     </div>
