@@ -32,7 +32,7 @@ Every lesson ends in `<tome-done>` or a `final` widget, or the app never learns 
 
 ## Exam questions
 
-On an exam page, write each question in the page and name the items it tests. A miss brings those items forward; the question itself is never scheduled.
+On a quiz or exam page, write each question in the page and name the items it tests. A miss brings those items forward; the question itself is never scheduled.
 
 ```html
 <tome-exam-question id="q1" tests="item:letter-k item:letter-r">
@@ -41,19 +41,7 @@ On an exam page, write each question in the page and name the items it tests. A 
 </tome-exam-question>
 ```
 
-Use `<tome-typed answer="…">` with `<option>`s for other accepted answers in place of `<tome-choice>`.
-
-End every exam with `<tome-done></tome-done>`: it reads "Finish exam" and shows the score as the learner's score display setting says. The app scores the session over every question on the page and records it as `score` on the exam's `session.end`, even when the score is hidden from the learner. A score at or above the pass mark (the milestone's `passMark`, else the subject's) marks the milestone that names the exam done; a fail changes nothing. To go over results, read the latest `session.end` with `ref` `exam:<id>` and its session's attempts (`data.question` names the question).
-
-## Written quizzes
-
-Write a quiz in `quizzes/` together with the lesson after which it comes due, and name that lesson in the quiz's `<head>`:
-
-```html
-<meta name="tome-after" content="lesson:0002-r">
-```
-
-The quiz fills the first quiz slot that opens once that lesson is completed, so the learner gets it instead of the app-built one. Until it is taken it carries to later slots; once taken it fills none. Build it from `<tome-exam-question>`s (and item widgets if you like) and end it with `<tome-done></tome-done>`, which reads "Finish quiz". The app scores the session against the subject's `passMark` and records it as `score` on the `session.end` with `ref` `quiz:<id>`.
+Use `<tome-typed answer="…">` with `<option>`s for other accepted answers in place of `<tome-choice>`. Read [ASSESSMENTS-FORMAT.md](./ASSESSMENTS-FORMAT.md) before writing a quiz or exam page: where it goes, when it comes due, and how it is scored.
 
 ## Custom widgets
 

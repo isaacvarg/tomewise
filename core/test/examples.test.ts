@@ -40,6 +40,15 @@ describe("the Morse example learning home", () => {
     expect(subject.drills.map((drill) => drill.id)).toEqual(["review", "listen-kmrsu"]);
   });
 
+  it("has a quiz after lesson 0002-r and the exam its first milestone names", async () => {
+    const subject = await loadSubject(await loadLearningHome(await copyExample("morse")), "morse-code");
+
+    expect(subject.quizzes).toEqual(["k-m-r"]);
+    expect(subject.quizAfter).toEqual({ "k-m-r": "lesson:0002-r" });
+    expect(subject.exams).toEqual(["first-five"]);
+    expect(subject.curriculum?.units[0]?.milestones[0]?.exam).toBe("first-five");
+  });
+
   it("records response times and wpm in its attempt payload, with units", async () => {
     const subject = await loadSubject(await loadLearningHome(await copyExample("morse")), "morse-code");
 

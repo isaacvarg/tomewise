@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { dueItems, loadLearningHome, loadSubject, nextDue, readActivity, readEvents } from "@tomewise/core";
@@ -335,6 +335,7 @@ describe("ask-your-agent prompts", () => {
     exam: "first-five",
     say: "Prepare the exam for “Copy K, M, R, S and U”.",
   };
+  const examUnwritten = (root: string) => rm(join(root, "subjects/morse-code/exams/first-five.html"));
   const gradePrompt = { kind: "ungraded-explanations", count: 1, refs: ["lesson:0004-the-late-bump"], say: "Grade my Morse code explanation." };
 
   it("are empty while nothing needs the agent", async () => {
@@ -345,7 +346,7 @@ describe("ask-your-agent prompts", () => {
   });
 
   it("come and go with the events, and explanations carry the agent's feedback", async () => {
-    const app = await startTestApp();
+    const app = await startTestApp(examUnwritten);
 
     expect((await app.post([...lessonsDone, saved])).status).toBe(201);
     const waiting = await app.get("/api/subjects/morse-code/prompts");
@@ -379,6 +380,7 @@ describe("GET /api/subjects/:subject/quiz/due", () => {
     const file = join(root, "subjects/morse-code/subject.json");
     const subject = JSON.parse(await readFile(file, "utf8"));
     await writeFile(file, JSON.stringify({ ...subject, settings: { assessments: { quizFrequency: "weekly" } } }));
+    await rm(join(root, "subjects/morse-code/quizzes/k-m-r.html"));
   };
 
   it("gives the due quiz slot by the app's clock, and none once a quiz is taken", async () => {
