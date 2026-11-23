@@ -184,8 +184,9 @@
   .tome-lessons [data-done] .tome-check { background: var(--t-good); border-color: var(--t-good); color: var(--t-bg); }
   .tome-num { font-family: var(--t-mono); font-size: .72rem; color: var(--t-muted); margin-right: .45rem; font-variant-numeric: tabular-nums; }
   .tome-side { font-size: .75rem; color: var(--t-muted); text-align: right; }
-  .tome-lessons [data-later] .tome-row { opacity: .5; }
-  .tome-lessons [data-later] .tome-row:hover { opacity: .8; }
+  .tome-lessons [data-later] .tome-row { color: var(--t-muted); }
+  .tome-lessons [data-later] .tome-row:hover { color: var(--t-ink); }
+  .tome-lessons [data-later] .tome-check { border-style: dotted; }
   .tome-exam .tome-check { border-style: dashed; }
   .tome-exam .tome-side { color: var(--t-accent); font-weight: 600; }
 
@@ -197,7 +198,7 @@
   .tome-drills .tome-drill-name, .tome-reference .tome-drill-name { font-weight: 600; font-size: .9rem; }
   .tome-drill-sub { display: block; font-size: .75rem; color: var(--t-muted); font-weight: 400; }
   .tome-drill-go { font-size: .8rem; font-weight: 600; color: var(--t-accent); white-space: nowrap; }
-  .tome-drills [data-locked] .tome-row { opacity: .5; cursor: default; }
+  .tome-drills [data-locked] .tome-row { color: var(--t-muted); cursor: default; }
   .tome-drills [data-locked] .tome-drill-go { color: var(--t-muted); font-weight: 400; }
 
   @container (min-width: 720px) {
