@@ -4,6 +4,7 @@ import { useLoad } from "../load.ts";
 import { Heatmap } from "../heatmap.tsx";
 import { Failed, Screen } from "../screen.tsx";
 import { loadToday } from "../today.ts";
+import { Sync } from "./sync.tsx";
 import { bySubjectsPractised, count, type DueToday, heatmapCells, longDate, type WeekStart } from "./model.ts";
 
 async function loadHome() {
@@ -36,6 +37,7 @@ export function Home() {
       <Due due={due} />
       <Streak activity={activity} />
       <Start due={due} />
+      <Sync />
     </Screen>
   );
 }

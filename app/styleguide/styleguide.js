@@ -153,6 +153,15 @@
       : [...demoThemes, { name: settings.theme, label: settings.theme, stylesheets: ["tokens.css"] }],
   });
 
+  const demoSync = {
+    enabled: true,
+    stopped: false,
+    lastPull: "2026-11-21T08:10:00.000Z",
+    lastCommit: "2026-11-20T21:00:00.000Z",
+    lastPush: "2026-11-20T21:00:00.000Z",
+    lastError: null,
+  };
+
   const dueFor = (subject) =>
     Array.from({ length: subject.due }, (_, index) => ({ item: { id: `${subject.id}-${index + 1}`, type: "flashcard" }, due: null }));
 
@@ -166,6 +175,10 @@
       const events = Array.isArray(body) ? body : [body];
       if (events.some((event) => event.ref === UNREACHABLE)) throw new TypeError("Failed to fetch");
       return json({ events: events.map((event) => ({ id: eventId(), ts: new Date().toISOString(), ...event })) }, 201);
+    }
+    if (url.pathname === "/api/sync") {
+      if (method === "POST") demoSync.lastPull = new Date().toISOString();
+      return json(demoSync);
     }
     const setting = /^\/api\/settings\/(theme|start|subjects)$/.exec(url.pathname);
     if (method === "PUT" && setting) {

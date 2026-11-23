@@ -3,6 +3,10 @@ import { type ChangeKind, onChange } from "./changes.ts";
 
 export type Loaded<T> = { state: "loading" } | { state: "ready"; data: T } | { state: "error"; error: Error };
 
+export function errorOf(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
+}
+
 export interface LoadOptions {
   refetchOn?: readonly ChangeKind[];
 }
@@ -19,7 +23,7 @@ export function useLoad<T>(load: () => Promise<T>, deps: readonly unknown[] = []
         (error: unknown) =>
           run === latest &&
           setLoaded((previous) =>
-            previous.state === "ready" ? previous : { state: "error", error: error instanceof Error ? error : new Error(String(error)) },
+            previous.state === "ready" ? previous : { state: "error", error: errorOf(error) },
           ),
       );
     }

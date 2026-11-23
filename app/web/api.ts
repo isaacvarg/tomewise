@@ -20,6 +20,15 @@ export interface ThemeChoice {
   script?: string;
 }
 
+export interface SyncStatus {
+  enabled: boolean;
+  stopped: boolean;
+  lastPull: string | null;
+  lastCommit: string | null;
+  lastPush: string | null;
+  lastError: { at: string; message: string } | null;
+}
+
 export interface Settings {
   theme: string;
   start: StartMode;
@@ -50,6 +59,8 @@ export const api = {
   prompts: (id: string) => getJson<SubjectPrompts>(`${subjectPath(id)}/prompts`),
   allPrompts: () =>
     getJson<{ subjects: { subject: string; prompts: AgentPrompt[] }[] }>("/api/prompts").then((body) => body.subjects),
+  sync: () => getJson<SyncStatus>("/api/sync"),
+  syncNow: () => getJson<SyncStatus>("/api/sync", { method: "POST" }),
   settings: () => getJson<Settings>("/api/settings"),
   saveSetting: (key: AppSetting, value: unknown) =>
     getJson<Settings>(`/api/settings/${key}`, {

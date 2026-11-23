@@ -5,7 +5,7 @@ import type { Page } from "playwright";
 import { appClasses } from "@tomewise/core";
 import { startDashboard, type Width } from "./browser.ts";
 
-const SECTIONS = ["tome-header", "tome-activity", "tome-subjects", "tome-due", "tome-streak", "tome-start"];
+const SECTIONS = ["tome-header", "tome-activity", "tome-subjects", "tome-due", "tome-streak", "tome-start", "tome-sync"];
 
 async function openHome(width: Width = "phone", prepare?: (root: string) => Promise<void>) {
   const dashboard = await startDashboard({ width, prepare });
@@ -66,13 +66,12 @@ describe("the dashboard SPA", () => {
 });
 
 describe.each(["phone", "desktop"] as const)("home at %s width", (width) => {
-  it("keeps the mockup's order: heatmap, subjects, due today, streak, Start", async () => {
+  it("keeps the mockup's order: heatmap, subjects, due today, streak, Start, then sync", async () => {
     const { page } = await openHome(width);
 
-    const order = await page.locator(".tome-app > *").evaluateAll((els, names) =>
-      els.map((el) => names.find((name) => el.classList.contains(name))),
-    SECTIONS);
-    expect(order).toEqual(SECTIONS);
+    const order = () =>
+      page.locator(".tome-app > *").evaluateAll((els, names) => els.map((el) => names.find((name) => el.classList.contains(name))), SECTIONS);
+    await expect.poll(order).toEqual(SECTIONS);
   });
 
   it("dates the page with the learning home's today", async () => {

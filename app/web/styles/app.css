@@ -65,6 +65,16 @@
   .tome-start small { font-weight: 400; opacity: .85; }
   .tome-start[aria-disabled="true"] { cursor: default; opacity: .6; }
 
+  .tome-sync { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem .8rem; }
+  .tome-sync .tome-notice { flex-basis: 100%; font-size: .85rem; overflow-wrap: anywhere; }
+  .tome-sync .tome-hint { font-size: .78rem; }
+  .tome-sync-now {
+    margin-left: auto; padding: .3rem .75rem; border: 1px solid var(--t-rule); border-radius: var(--t-radius);
+    background: transparent; color: var(--t-ink); font: 600 .78rem var(--t-ui); cursor: pointer;
+  }
+  .tome-sync-now:disabled { cursor: default; opacity: .6; }
+  .tome-sync-now:focus-visible { outline: 2px solid var(--t-accent); outline-offset: 2px; }
+
   .tome-runner {
     flex: 1; display: flex; flex-direction: column; background: var(--t-bg); color: var(--t-ink); font-family: var(--t-ui);
     font-size: .9375rem; line-height: 1.5; padding-inline: max(0px, calc((100% - 36rem) / 2));
@@ -295,7 +305,7 @@
     .tome-app {
       display: grid; align-content: start; gap: 1.6rem 2rem;
       grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-      grid-template-areas: "header header" "activity activity" "subjects subjects" "due streak" "start streak";
+      grid-template-areas: "header header" "activity activity" "subjects subjects" "due streak" "start streak" "sync sync";
       padding: 2rem max(2.5rem, calc((100% - 62rem) / 2));
     }
     .tome-header { grid-area: header; }
@@ -308,6 +318,7 @@
     }
     .tome-streak-num { font-size: 3.4rem; }
     .tome-start { grid-area: start; margin-top: 0; }
+    .tome-sync { grid-area: sync; }
     .tome-heatmap { grid-template-columns: repeat(52, 1fr); }
     .tome-cell[data-old] { display: block; }
     .tome-meta-narrow { display: none; }
