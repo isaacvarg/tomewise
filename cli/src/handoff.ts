@@ -24,7 +24,7 @@ function shellQuote(value: string): string {
 function printSkillInstall(io: Io): void {
   io.stdout("");
   io.stdout("Install the Tomewise skill so your agent knows the format. It isn't published as a plugin yet; until it is,");
-  io.stdout("copy the skill/ folder of https://github.com/isaacvarg/tomewise into your agent's skills folder,");
+  io.stdout("copy the skill/skills/teach/ folder of https://github.com/isaacvarg/tomewise into your agent's skills folder,");
   io.stdout("such as ~/.claude/skills/teach for Claude Code.");
 }
 

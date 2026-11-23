@@ -16,8 +16,9 @@ tomewise/                        the tool (what gets published)
   app/       Hono server + Vite/React dashboard
   cli/       init, stats, query, due, log, validate, import, serve, service
   widgets/   tome.js + web components (quiz, flashcard, timer, audio, explain, ...)
-  skill/     the forked teach skill + format docs
-  .claude-plugin/
+  skill/     the tomewise plugin
+    .claude-plugin/plugin.json
+    skills/teach/  the forked teach skill + format docs
 
 ~/learning/                    a learning home (the learner's own git repo)
   tomewise.json                   formatVersion, global defaults, timezone, week start, streak rules, git settings, theme, Start mode, subject order
