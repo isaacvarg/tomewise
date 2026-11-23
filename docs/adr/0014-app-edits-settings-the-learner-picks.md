@@ -1,8 +1,8 @@
 # The app edits the settings the learner picks in it, one key at a time
 
-The dashboard's settings page lets the learner choose a theme, the Start mode and the order of their subjects. Telling the learner to edit `tomewise.json` by hand for these would be the only place the app sends them to a file, and the theme needs a live preview to choose well. So the app writes these settings itself.
+The dashboard's settings page lets the learner choose a theme, the Start mode, the order of their subjects, and how quizzes and exams work, for the whole home and per subject. Telling the learner to edit `tomewise.json` by hand for these would be the only place the app sends them to a file, and the theme needs a live preview to choose well. So the app writes these settings itself.
 
-ADR 0011 makes the agent the only writer of content. This is a narrow exception: when the learner saves a setting in the app, the app rewrites `tomewise.json` changing only that key, keeping the rest of the file (other keys, key order, formatting) as it was. The settings the app may write are `theme`, `start` and `subjects`. Everything else stays a file edit. The app never edits history this way; history stays events (ADR 0011).
+ADR 0011 makes the agent the only writer of content. This is a narrow exception: when the learner saves a setting in the app, the app rewrites `tomewise.json` changing only that key, keeping the rest of the file (other keys, key order, formatting) as it was. The settings the app may write are `theme`, `start`, `subjects` and `assessments` in `tomewise.json`, and `settings.assessments` in a subject's `subject.json`, which it rewrites the same way. Everything else stays a file edit. The app never edits history this way; history stays events (ADR 0011).
 
 ## Considered options
 

@@ -5,12 +5,16 @@ import {
   CONFIG_FILE,
   checkInitSettings,
   DEFAULT_APP_URL,
+  DEFAULT_ASSESSMENTS,
   DEFAULT_GIT_CADENCE,
   GIT_CADENCES,
   initLearningHome,
   type InitProblem,
   type InitSetting,
   type InitSettings,
+  type QuizFrequency,
+  SCORE_DISPLAYS,
+  type Timed,
 } from "@tomewise/core";
 import { GIT_REMOTE, setUpGit } from "./git.ts";
 import { APP_CHOICES, handOff, isAppChoice, listenFor, type AppChoice, type Launch } from "./handoff.ts";
@@ -20,6 +24,8 @@ import { createPrompter, PromptCancelled, type Prompter } from "./prompt.ts";
 export const INIT_USAGE = [
   "  tome init [<dir>] [--timezone <IANA zone>] [--week-start <weekday>] [--rest-days <0-6>] [--app-url <url>]",
   "            [--git [--remote <url>] [--cadence <session|hourly|daily>] [--push | --no-push] | --no-git]",
+  "            [--assessments | --no-assessments] [--quiz-frequency <lessons|weekly|on-demand>] [--quiz-length <n>]",
+  "            [--exams | --no-exams] [--timed <minutes|off>] [--score-display <number|pass-fail|hidden>] [--pass-mark <0-100>]",
   "            [--app <now|service|docker|none>] [--subject <topic> | --no-subject]",
 ].join("\n");
 
@@ -30,6 +36,11 @@ const flagFor: Record<InitSetting, string> = {
   appUrl: "--app-url",
   cadence: "--cadence",
   push: "--push",
+  quizFrequency: "--quiz-frequency",
+  quizLength: "--quiz-length",
+  timed: "--timed",
+  scoreDisplay: "--score-display",
+  passMark: "--pass-mark",
 };
 
 interface Answers {
@@ -59,6 +70,13 @@ function parseInitArgs(args: string[]): Parsed | string {
         remote: { type: "string" },
         cadence: { type: "string" },
         push: { type: "boolean" },
+        assessments: { type: "boolean" },
+        "quiz-frequency": { type: "string" },
+        "quiz-length": { type: "string" },
+        exams: { type: "boolean" },
+        timed: { type: "string" },
+        "score-display": { type: "string" },
+        "pass-mark": { type: "string" },
         app: { type: "string" },
         subject: { type: "string" },
       },
@@ -86,6 +104,14 @@ function parseInitArgs(args: string[]): Parsed | string {
     if (typeof parsed === "number") restDaysPerWeek = parsed;
     else problems.push({ setting: "restDaysPerWeek", message: parsed.message });
   }
+  const flagged = <K extends InitSetting>(setting: K, flag: string, parse: (raw: string) => InitSettings[K] | Problem) => {
+    const raw = values[flag] as string | undefined;
+    if (raw === undefined) return undefined;
+    const parsed = parse(raw);
+    if (!isProblem(parsed)) return parsed;
+    problems.push({ setting, message: parsed.message });
+    return undefined;
+  };
 
   return {
     answers: {
@@ -98,6 +124,13 @@ function parseInitArgs(args: string[]): Parsed | string {
         git: gitFlags.length > 0 ? true : (values.git as boolean | undefined),
         cadence: values.cadence as string | undefined,
         push: values.push as boolean | undefined,
+        assessments: values.assessments as boolean | undefined,
+        quizFrequency: flagged("quizFrequency", "quiz-frequency", parseQuizFrequency),
+        quizLength: flagged("quizLength", "quiz-length", parseQuizLength),
+        exams: values.exams as boolean | undefined,
+        timed: flagged("timed", "timed", parseTimed),
+        scoreDisplay: flagged("scoreDisplay", "score-display", (raw) => raw.toLowerCase()),
+        passMark: flagged("passMark", "pass-mark", parsePassMark),
       },
       remoteUrl: values.remote as string | undefined,
       app,
@@ -107,8 +140,43 @@ function parseInitArgs(args: string[]): Parsed | string {
   };
 }
 
-function parseRestDays(raw: string): number | { message: string } {
+interface Problem {
+  message: string;
+}
+
+function isProblem(parsed: unknown): parsed is Problem {
+  return typeof parsed === "object" && parsed !== null && "message" in parsed;
+}
+
+function parseRestDays(raw: string): number | Problem {
   return /^\d+$/.test(raw) ? Number(raw) : { message: `Use a whole number from 0 to 6, not "${raw}"` };
+}
+
+function parseQuizFrequency(raw: string): QuizFrequency | Problem {
+  const answer = raw.trim().toLowerCase();
+  if (/^[1-9]\d*$/.test(answer)) return { every: Number(answer) };
+  if (answer === "weekly") return "weekly";
+  if (answer === "on-demand" || answer === "ondemand") return "onDemand";
+  return { message: `Use a number of lessons such as 5, "weekly" or "on-demand", not "${raw}"` };
+}
+
+function parseQuizLength(raw: string): number | Problem {
+  return /^[1-9]\d*$/.test(raw.trim()) ? Number(raw) : { message: `Use a whole number of questions from 1, not "${raw}"` };
+}
+
+function parseTimed(raw: string): Timed | Problem {
+  const answer = raw.trim().toLowerCase();
+  if (answer === "off" || answer === "no" || answer === "none") return false;
+  const minutes = Number(answer);
+  if (/^\d+(\.\d+)?$/.test(answer) && minutes > 0) return { minutes };
+  return { message: `Use a time limit in minutes, such as 20, or "off", not "${raw}"` };
+}
+
+function parsePassMark(raw: string): number | Problem {
+  const answer = raw.trim().replace(/%$/, "");
+  return /^\d+(\.\d+)?$/.test(answer) && Number(answer) <= 100
+    ? Number(answer)
+    : { message: `Use a percentage from 0 to 100, such as 70, not "${raw}"` };
 }
 
 function coreSettings(answers: Answers): InitSettings {
@@ -125,11 +193,11 @@ async function askSetting<K extends InitSetting>(
   setting: K,
   question: string,
   fallback: string,
-  parse: (raw: string) => InitSettings[K] | { message: string },
+  parse: (raw: string) => InitSettings[K] | Problem,
 ): Promise<InitSettings[K]> {
   for (;;) {
     const parsed = parse(await prompter.ask(question, fallback));
-    if (typeof parsed === "object" && parsed !== null) {
+    if (isProblem(parsed)) {
       prompter.say(parsed.message);
       continue;
     }
@@ -180,6 +248,7 @@ async function ask(io: Io, prompter: Prompter, answers: Answers): Promise<Answer
   settings.weekStart ??= await askSetting(prompter, "weekStart", "Week starts on", "monday", (raw) => raw.toLowerCase());
   settings.restDaysPerWeek ??= await askSetting(prompter, "restDaysPerWeek", "Rest days per week", "0", parseRestDays);
   settings.appUrl ??= await askSetting(prompter, "appUrl", "App URL", DEFAULT_APP_URL, (raw) => raw);
+  await askAssessments(prompter, settings);
 
   settings.git ??= await askYesNo(prompter, "Set up git?", true);
   let remoteUrl = answers.remoteUrl;
@@ -201,6 +270,33 @@ async function ask(io: Io, prompter: Prompter, answers: Answers): Promise<Answer
     subject = answer === "" ? false : answer;
   }
   return { dir, settings, remoteUrl, app, subject };
+}
+
+const ASSESSMENT_MODES = ["defaults", "off", "choose"] as const;
+
+function frequencyText(frequency: QuizFrequency): string {
+  if (frequency === "onDemand") return "on-demand";
+  return typeof frequency === "string" ? frequency : String(frequency.every);
+}
+
+async function askAssessments(prompter: Prompter, settings: InitSettings): Promise<void> {
+  const flagged = [settings.assessments, settings.quizFrequency, settings.quizLength, settings.exams, settings.timed, settings.scoreDisplay, settings.passMark];
+  if (flagged.some((value) => value !== undefined)) return;
+  const mode = await askChoice(prompter, "Quizzes and exams: use the defaults, turn them off, or choose each setting?", ASSESSMENT_MODES, "defaults");
+  if (mode === "off") settings.assessments = false;
+  if (mode !== "choose") return;
+  settings.quizFrequency = await askSetting(
+    prompter,
+    "quizFrequency",
+    "Quiz every how many lessons? (a number, weekly or on-demand)",
+    frequencyText(DEFAULT_ASSESSMENTS.quizFrequency),
+    parseQuizFrequency,
+  );
+  settings.quizLength = await askSetting(prompter, "quizLength", "Questions per quiz", String(DEFAULT_ASSESSMENTS.quizLength), parseQuizLength);
+  settings.exams = await askYesNo(prompter, "Exams at milestones?", DEFAULT_ASSESSMENTS.exams);
+  settings.timed = await askSetting(prompter, "timed", "Time limit in minutes (or off)", "off", parseTimed);
+  settings.scoreDisplay = await askChoice(prompter, "Show scores as a number, pass or fail, or hide them?", SCORE_DISPLAYS, DEFAULT_ASSESSMENTS.scoreDisplay);
+  settings.passMark = await askSetting(prompter, "passMark", "Pass mark (%)", String(DEFAULT_ASSESSMENTS.passMark), parsePassMark);
 }
 
 function report(io: Io, problems: InitProblem[]): void {

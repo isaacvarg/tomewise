@@ -9,12 +9,13 @@
 
   const TODAY = "2026-11-21";
   const DAY_MS = 86_400_000;
+  const demoAssessments = { enabled: true, quizFrequency: { every: 5 }, quizLength: 10, exams: true, timed: false, scoreDisplay: "number", passMark: 70 };
   const homeSubjects = [
     { id: "morse-code", name: "Morse code", due: 9 },
     { id: "spanish", name: "Spanish", due: 4 },
     { id: "yoga", name: "Yoga", due: 0 },
     { id: "cube", name: "3x3 cube", due: 0 },
-  ].map((subject) => ({ ...subject, settings: { timezone: "UTC", weekStart: "monday", minimumSessionSeconds: 60 } }));
+  ].map((subject) => ({ ...subject, settings: { timezone: "UTC", weekStart: "monday", minimumSessionSeconds: 60, assessments: demoAssessments } }));
 
   const seeded = (n) => {
     const x = Math.sin(n * 9301 + 49297) * 233280;
@@ -145,7 +146,13 @@
     { name: "meadow", label: "Meadow", description: "Playful and green, with leaves that rise when you start.", stylesheets: ["tokens.css", "theme.css"], script: "leaves.js" },
     { name: "paper", label: "Paper", description: "Calm and bookish: warm paper, serif headings, one rust accent.", stylesheets: ["tokens.css", "theme.css"] },
   ];
-  const settings = { theme: data.themeName || "paper", start: "sequence", subjects: [] };
+  const settings = {
+    theme: data.themeName || "paper",
+    start: "sequence",
+    subjects: [],
+    assessments: demoAssessments,
+    subjectAssessments: { "morse-code": { passMark: 80, timed: { minutes: 10 } }, spanish: {}, yoga: { enabled: false }, cube: {} },
+  };
   const settingsBody = () => ({
     ...settings,
     themes: demoThemes.some((theme) => theme.name === settings.theme)
@@ -183,6 +190,15 @@
     const setting = /^\/api\/settings\/(theme|start|subjects)$/.exec(url.pathname);
     if (method === "PUT" && setting) {
       settings[setting[1]] = JSON.parse(init.body).value;
+      return json(settingsBody());
+    }
+    if (method === "PUT" && url.pathname === "/api/settings/assessments") {
+      settings.assessments = { ...demoAssessments, ...JSON.parse(init.body).value };
+      return json(settingsBody());
+    }
+    const overrides = /^\/api\/settings\/subjects\/([^/]+)\/assessments$/.exec(url.pathname);
+    if (method === "PUT" && overrides) {
+      settings.subjectAssessments = { ...settings.subjectAssessments, [decodeURIComponent(overrides[1])]: JSON.parse(init.body).value };
       return json(settingsBody());
     }
     if (method !== "GET") return json({ error: "Not found" }, 404);

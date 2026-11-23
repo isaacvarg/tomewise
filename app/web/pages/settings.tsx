@@ -4,6 +4,7 @@ import { api, type Settings as SavedSettings, type StartMode, type Subject, type
 import { inSavedOrder } from "../home/model.ts";
 import { useLoad } from "../load.ts";
 import { Failed, Screen } from "../screen.tsx";
+import { AssessmentSettingsSections } from "../settings/assessments.tsx";
 import { needsReload, previewTheme } from "../settings/theme-preview.ts";
 
 interface SettingsData {
@@ -37,6 +38,7 @@ export function Settings({ reloadForThemeScripts = true }: { reloadForThemeScrip
       <ThemeSetting saved={settings.theme} themes={settings.themes} reloadForScripts={reloadForThemeScripts} />
       <StartSetting saved={settings.start} />
       <SubjectOrder initial={subjects} />
+      <AssessmentSettingsSections defaults={settings.assessments} overrides={settings.subjectAssessments} subjects={subjects} />
     </Screen>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { loadLearningHome, loadSubject } from "@tomewise/core";
+import { DEFAULT_ASSESSMENTS, loadLearningHome, loadSubject } from "@tomewise/core";
 import { buildHome } from "./helpers.ts";
 
 const config = { formatVersion: 1, timezone: "Europe/London" };
@@ -19,7 +19,39 @@ describe("loading a subject", () => {
       timezone: "Europe/London",
       weekStart: "sunday",
       minimumSessionSeconds: 30,
+      assessments: DEFAULT_ASSESSMENTS,
     });
+  });
+
+  it("resolves a relaxed subject's assessment settings, its overrides over the tomewise.json defaults", async () => {
+    const root = await buildHome({
+      "tomewise.json": { formatVersion: 1, assessments: { quizFrequency: "weekly", passMark: 80 } },
+      "subjects/yoga/subject.json": { name: "Yoga", settings: { assessments: { enabled: false, exams: false } } },
+      "subjects/spanish/subject.json": { name: "Spanish", settings: { assessments: { passMark: 60 } } },
+      "subjects/chess/subject.json": { name: "Chess" },
+    });
+    const home = await loadLearningHome(root);
+
+    const [yoga, spanish, chess] = await Promise.all(["yoga", "spanish", "chess"].map((id) => loadSubject(home, id)));
+
+    const defaults = { ...DEFAULT_ASSESSMENTS, quizFrequency: "weekly", passMark: 80 };
+    expect(yoga!.settings.assessments).toEqual({ ...defaults, enabled: false, exams: false });
+    expect(spanish!.settings.assessments).toEqual({ ...defaults, passMark: 60 });
+    expect(chess!.settings.assessments).toEqual(defaults);
+  });
+
+  it("reads a milestone's own pass mark from curriculum.json", async () => {
+    const root = await buildHome({
+      "tomewise.json": config,
+      "subjects/spanish/subject.json": subjectFile,
+      "subjects/spanish/curriculum.json": {
+        units: [{ title: "Basics", milestones: [{ id: "greet", title: "Greet someone", status: "current", passMark: 90 }, { id: "count", title: "Count", status: "upcoming" }] }],
+      },
+    });
+
+    const subject = await loadSubject(await loadLearningHome(root), "spanish");
+
+    expect(subject.curriculum?.units[0]?.milestones.map((milestone) => milestone.passMark)).toEqual([90, undefined]);
   });
 
   it("loads item sets holding every built-in item type", async () => {

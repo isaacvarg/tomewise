@@ -2,7 +2,7 @@ import { access, mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { AppUrl, CONFIG_FILE, globalConfigPath } from "./find.ts";
 import { readJson } from "./json.ts";
-import { DEFAULT_GIT_CADENCE, SUPPORTED_FORMAT_VERSION, systemTimezone, TomewiseConfig } from "./schemas.ts";
+import { DEFAULT_ASSESSMENTS, DEFAULT_GIT_CADENCE, type QuizFrequency, SUPPORTED_FORMAT_VERSION, systemTimezone, type Timed, TomewiseConfig } from "./schemas.ts";
 
 export const DEFAULT_APP_URL = "http://127.0.0.1:4777";
 
@@ -15,9 +15,16 @@ export interface InitSettings {
   cadence?: string;
   remote?: string;
   push?: boolean;
+  assessments?: boolean;
+  quizFrequency?: QuizFrequency;
+  quizLength?: number;
+  exams?: boolean;
+  timed?: Timed;
+  scoreDisplay?: string;
+  passMark?: number;
 }
 
-export type InitSetting = Exclude<keyof InitSettings, "git" | "remote">;
+export type InitSetting = Exclude<keyof InitSettings, "git" | "remote" | "assessments" | "exams">;
 
 export interface InitProblem {
   setting: InitSetting;
@@ -46,7 +53,24 @@ const settingAt: Record<string, InitSetting> = {
   "streak.restDaysPerWeek": "restDaysPerWeek",
   "git.cadence": "cadence",
   "git.push": "push",
+  "assessments.quizFrequency": "quizFrequency",
+  "assessments.quizLength": "quizLength",
+  "assessments.timed": "timed",
+  "assessments.scoreDisplay": "scoreDisplay",
+  "assessments.passMark": "passMark",
 };
+
+function assessmentsBlock(settings: InitSettings): Record<string, unknown> {
+  return {
+    enabled: settings.assessments ?? DEFAULT_ASSESSMENTS.enabled,
+    quizFrequency: settings.quizFrequency ?? DEFAULT_ASSESSMENTS.quizFrequency,
+    quizLength: settings.quizLength ?? DEFAULT_ASSESSMENTS.quizLength,
+    exams: settings.exams ?? DEFAULT_ASSESSMENTS.exams,
+    timed: settings.timed ?? DEFAULT_ASSESSMENTS.timed,
+    scoreDisplay: settings.scoreDisplay ?? DEFAULT_ASSESSMENTS.scoreDisplay,
+    passMark: settings.passMark ?? DEFAULT_ASSESSMENTS.passMark,
+  };
+}
 
 function gitBlock(settings: InitSettings): Record<string, unknown> {
   if (!settings.git) return { enabled: false };
@@ -64,6 +88,7 @@ export function checkInitSettings(settings: InitSettings): { ok: true; checked: 
     timezone: settings.timezone ?? systemTimezone(),
     weekStart: settings.weekStart ?? "monday",
     streak: { restDaysPerWeek: settings.restDaysPerWeek ?? 0 },
+    assessments: assessmentsBlock(settings),
     git: gitBlock(settings),
   };
   const appUrl = settings.appUrl ?? DEFAULT_APP_URL;

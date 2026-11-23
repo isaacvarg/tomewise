@@ -1,5 +1,10 @@
 {
   "valid": {
+    "empty assessments block": { "formatVersion": 1, "assessments": {} },
+    "every assessment setting": { "formatVersion": 1, "assessments": { "enabled": true, "quizFrequency": { "every": 3 }, "quizLength": 12, "exams": true, "timed": { "minutes": 20 }, "scoreDisplay": "pass-fail", "passMark": 80 } },
+    "weekly quizzes, score hidden": { "formatVersion": 1, "assessments": { "quizFrequency": "weekly", "scoreDisplay": "hidden", "passMark": 0 } },
+    "quizzes on demand, pass mark 100": { "formatVersion": 1, "assessments": { "quizFrequency": "onDemand", "passMark": 100, "timed": false } },
+    "assessments off": { "formatVersion": 1, "assessments": { "enabled": false, "exams": false } },
     "only formatVersion": { "formatVersion": 1 },
     "every setting": { "formatVersion": 1, "timezone": "Europe/London", "weekStart": "sunday", "minimumSessionSeconds": 0, "theme": "meadow" },
     "a learner's own theme": { "formatVersion": 1, "theme": "My_Theme.2" },
@@ -13,6 +18,19 @@
     "every git setting": { "formatVersion": 1, "git": { "enabled": true, "cadence": "hourly", "remote": "origin", "branch": "feature/history", "push": true, "pullIntervalMinutes": 10 } }
   },
   "invalid": {
+    "assessments not an object": { "formatVersion": 1, "assessments": true },
+    "unknown assessment setting": { "formatVersion": 1, "assessments": { "quizzes": true } },
+    "quiz every 0 lessons": { "formatVersion": 1, "assessments": { "quizFrequency": { "every": 0 } } },
+    "quiz every fractional lessons": { "formatVersion": 1, "assessments": { "quizFrequency": { "every": 2.5 } } },
+    "unknown quiz frequency": { "formatVersion": 1, "assessments": { "quizFrequency": "daily" } },
+    "quiz frequency with extra key": { "formatVersion": 1, "assessments": { "quizFrequency": { "every": 3, "weekly": true } } },
+    "quiz length 0": { "formatVersion": 1, "assessments": { "quizLength": 0 } },
+    "timed true": { "formatVersion": 1, "assessments": { "timed": true } },
+    "timed zero minutes": { "formatVersion": 1, "assessments": { "timed": { "minutes": 0 } } },
+    "unknown score display": { "formatVersion": 1, "assessments": { "scoreDisplay": "letter" } },
+    "pass mark over 100": { "formatVersion": 1, "assessments": { "passMark": 101 } },
+    "negative pass mark": { "formatVersion": 1, "assessments": { "passMark": -1 } },
+    "pass mark as a string": { "formatVersion": 1, "assessments": { "passMark": "70%" } },
     "not an object": [],
     "no formatVersion": { "timezone": "Europe/London" },
     "formatVersion as a string": { "formatVersion": "1" },

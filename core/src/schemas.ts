@@ -140,6 +140,84 @@ const SubjectId = z.string().regex(/^[A-Za-z0-9][\w.-]*$/, {
 
 export const SubjectOrder = z.array(SubjectId);
 
+export const QUIZ_FREQUENCIES = ["weekly", "onDemand"] as const;
+
+export const SCORE_DISPLAYS = ["number", "pass-fail", "hidden"] as const;
+
+export type ScoreDisplay = (typeof SCORE_DISPLAYS)[number];
+
+export const PassMark = z
+  .number()
+  .min(0)
+  .max(100)
+  .meta({ description: "Lowest score, as a percentage, that passes. Passing means score ≥ pass mark." });
+
+const QuizFrequency = z
+  .union([z.strictObject({ every: z.int().min(1).meta({ description: "Completed lessons between quizzes." }) }), z.enum(QUIZ_FREQUENCIES)], {
+    error: 'Use { "every": N } lessons, "weekly" or "onDemand"',
+  })
+  .meta({ description: 'When a quiz is due: every N completed lessons ({ "every": N }), weekly from weekStart, or only when asked ("onDemand").' });
+
+export type QuizFrequency = z.output<typeof QuizFrequency>;
+
+const Timed = z
+  .union([z.literal(false), z.strictObject({ minutes: z.number().positive().meta({ description: "Time limit in minutes." }) })], {
+    error: 'Use false or { "minutes": N }',
+  })
+  .meta({ description: 'Whether quizzes and exams have a time limit: false, or { "minutes": N }.' });
+
+export type Timed = z.output<typeof Timed>;
+
+const assessmentFields = {
+  enabled: z.boolean().meta({ description: "Whether the subject has quizzes and exams at all." }),
+  quizFrequency: QuizFrequency,
+  quizLength: z.int().min(1).meta({ description: "Questions in an app-built quiz." }),
+  exams: z.boolean().meta({ description: "Whether milestones have exams. With exams off, milestones are marked done by hand." }),
+  timed: Timed,
+  scoreDisplay: z
+    .enum(SCORE_DISPLAYS, { error: `Use ${SCORE_DISPLAYS.map((display) => `"${display}"`).join(", ")}` })
+    .meta({ description: "How a score is shown: the number, pass or fail only, or not at all." }),
+  passMark: PassMark,
+};
+
+export const DEFAULT_ASSESSMENTS = {
+  enabled: true,
+  quizFrequency: { every: 5 },
+  quizLength: 10,
+  exams: true,
+  timed: false,
+  scoreDisplay: "number",
+  passMark: 70,
+} as const satisfies { [K in keyof typeof assessmentFields]: z.input<(typeof assessmentFields)[K]> };
+
+export const AssessmentSettings = z
+  .strictObject({
+    enabled: assessmentFields.enabled.default(DEFAULT_ASSESSMENTS.enabled),
+    quizFrequency: assessmentFields.quizFrequency.default(DEFAULT_ASSESSMENTS.quizFrequency),
+    quizLength: assessmentFields.quizLength.default(DEFAULT_ASSESSMENTS.quizLength),
+    exams: assessmentFields.exams.default(DEFAULT_ASSESSMENTS.exams),
+    timed: assessmentFields.timed.default(DEFAULT_ASSESSMENTS.timed),
+    scoreDisplay: assessmentFields.scoreDisplay.default(DEFAULT_ASSESSMENTS.scoreDisplay),
+    passMark: assessmentFields.passMark.default(DEFAULT_ASSESSMENTS.passMark),
+  })
+  .meta({ description: "Quiz and exam settings for every subject. A subject can override any of them in subject.json." });
+
+export type AssessmentSettings = z.output<typeof AssessmentSettings>;
+
+export const AssessmentOverrides = z
+  .strictObject({
+    enabled: assessmentFields.enabled.optional(),
+    quizFrequency: assessmentFields.quizFrequency.optional(),
+    quizLength: assessmentFields.quizLength.optional(),
+    exams: assessmentFields.exams.optional(),
+    timed: assessmentFields.timed.optional(),
+    scoreDisplay: assessmentFields.scoreDisplay.optional(),
+    passMark: assessmentFields.passMark.optional(),
+  })
+  .meta({ description: "This subject's quiz and exam settings. Each one left out comes from assessments in tomewise.json." });
+
+export type AssessmentOverrides = z.output<typeof AssessmentOverrides>;
+
 export const TomewiseConfig = z.strictObject({
   formatVersion: z.int().min(1).max(SUPPORTED_FORMAT_VERSION, {
     error: (issue) => formatVersionTooNew(issue.input as number),
@@ -156,6 +234,7 @@ export const TomewiseConfig = z.strictObject({
     description: "Subject ids in the order the home shows them. Unlisted subjects follow alphabetically.",
   }),
   git: GitSettings.prefault({ enabled: false }),
+  assessments: AssessmentSettings.prefault({}),
 });
 
 export type TomewiseConfig = z.output<typeof TomewiseConfig>;
@@ -165,6 +244,7 @@ const homeWide = (name: string) =>
 
 export const SubjectSettings = z.strictObject({
   minimumSessionSeconds: z.number().min(0).optional(),
+  assessments: AssessmentOverrides.optional(),
   timezone: homeWide("timezone"),
   weekStart: homeWide("weekStart"),
 });

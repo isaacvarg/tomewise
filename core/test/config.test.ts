@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { InvalidLearningHomeError, loadLearningHome, UnsupportedFormatVersionError } from "@tomewise/core";
+import { DEFAULT_ASSESSMENTS, InvalidLearningHomeError, loadLearningHome, UnsupportedFormatVersionError } from "@tomewise/core";
 import { buildHome, snapshot } from "./helpers.ts";
 
 describe("loading tomewise.json", () => {
@@ -18,7 +18,16 @@ describe("loading tomewise.json", () => {
       start: "sequence",
       subjects: [],
       git: { enabled: false, cadence: "session", push: false, pullIntervalMinutes: 5 },
+      assessments: DEFAULT_ASSESSMENTS,
     });
+  });
+
+  it("fills assessment settings left out of an assessments block", async () => {
+    const home = await buildHome({ "tomewise.json": { formatVersion: 1, assessments: { quizFrequency: "onDemand", passMark: 85 } } });
+
+    const { config } = await loadLearningHome(home);
+
+    expect(config.assessments).toEqual({ ...DEFAULT_ASSESSMENTS, quizFrequency: "onDemand", passMark: 85 });
   });
 
   it("turns git sync on with defaults for an empty git block", async () => {
@@ -30,6 +39,7 @@ describe("loading tomewise.json", () => {
   });
 
   it("keeps the values the learner set", async () => {
+    const assessments = { enabled: true, quizFrequency: { every: 3 }, quizLength: 15, exams: false, timed: { minutes: 30 }, scoreDisplay: "hidden", passMark: 60 };
     const home = await buildHome({
       "tomewise.json": {
         formatVersion: 1,
@@ -41,6 +51,7 @@ describe("loading tomewise.json", () => {
         start: "ask",
         subjects: ["yoga", "spanish"],
         git: { enabled: true, cadence: "daily", remote: "origin", branch: "main", push: true, pullIntervalMinutes: 15 },
+        assessments,
       },
     });
 
@@ -56,6 +67,7 @@ describe("loading tomewise.json", () => {
       start: "ask",
       subjects: ["yoga", "spanish"],
       git: { enabled: true, cadence: "daily", remote: "origin", branch: "main", push: true, pullIntervalMinutes: 15 },
+      assessments,
     });
   });
 });

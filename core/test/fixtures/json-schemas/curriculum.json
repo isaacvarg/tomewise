@@ -1,5 +1,6 @@
 {
   "valid": {
+    "milestone with its own pass mark": { "units": [{ "title": "Basics", "milestones": [{ "id": "one", "title": "One", "status": "current", "exam": "one", "passMark": 90 }] }] },
     "no units": { "units": [] },
     "units with milestones": {
       "units": [
@@ -15,6 +16,8 @@
     }
   },
   "invalid": {
+    "milestone pass mark over 100": { "units": [{ "title": "Basics", "milestones": [{ "id": "one", "title": "One", "status": "done", "passMark": 120 }] }] },
+    "milestone pass mark as a string": { "units": [{ "title": "Basics", "milestones": [{ "id": "one", "title": "One", "status": "done", "passMark": "high" }] }] },
     "no units": {},
     "unit without title": { "units": [{ "milestones": [] }] },
     "unknown status": { "units": [{ "title": "Basics", "milestones": [{ "id": "one", "title": "One", "status": "started" }] }] },
