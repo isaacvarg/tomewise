@@ -12,6 +12,7 @@ import {
   type LessonRow,
   type MilestoneView,
   sheetRows,
+  subjectPath,
   subjectHeatmap,
   TABS,
   tabPath,
@@ -19,6 +20,7 @@ import {
   viewOf,
   weekdayName,
 } from "../subject/model.ts";
+import { glossaryDetail } from "../subject/glossary.ts";
 import { NotFound } from "./not-found.tsx";
 
 interface SubjectData {
@@ -412,8 +414,12 @@ function Drills({ data }: { data: SubjectData }) {
   );
 }
 
-function Glossary() {
-  return null;
+function Glossary({ data }: { data: SubjectData }) {
+  return (
+    <li data-sheet="glossary">
+      <Card name="Glossary" detail={glossaryDetail(data.subject, data.completed)} action="Open" to={subjectPath(data.subject.id, "glossary")} />
+    </li>
+  );
 }
 
 function Reference({ data }: { data: SubjectData }) {
@@ -422,10 +428,10 @@ function Reference({ data }: { data: SubjectData }) {
     <section className="tome-section tome-reference">
       <div className="tome-section-head">
         <h3>Reference</h3>
-        <span className="tome-meta">{sheets.length}</span>
+        <span className="tome-meta">{sheets.length + 1}</span>
       </div>
       <ul>
-        <Glossary />
+        <Glossary data={data} />
         {sheets.map((sheet) => (
           <li key={sheet.id} data-sheet={sheet.id}>
             <Card name={sheet.name} detail="Sheet from your agent" action="Open" href={sheet.href} />

@@ -1,5 +1,14 @@
 import { type Context, Hono } from "hono";
-import { completedLessons, dueItems, readActivity, readEvents, SubjectNotFoundError } from "@tomewise/core";
+import {
+  completedLessons,
+  dueItems,
+  isoDate,
+  localDay,
+  nextDue,
+  readActivity,
+  readEvents,
+  SubjectNotFoundError,
+} from "@tomewise/core";
 import type { HomeView } from "./watcher.ts";
 
 function query(c: Context, name: string): string | undefined {
@@ -28,6 +37,15 @@ export function readRoutes(view: () => HomeView, now: () => Date = () => new Dat
   routes.get("/subjects/:subject/due", async (c) =>
     c.json({ due: await dueItems(view().home, c.req.param("subject"), query(c, "date") ?? now()) }),
   );
+
+  routes.get("/subjects/:subject/unlocked", async (c) => {
+    const id = c.req.param("subject");
+    const date = query(c, "date");
+    const at = now();
+    const items = await nextDue(view().home, id, date ?? at);
+    const today = date ?? isoDate(localDay(at.getTime(), subjectOf(view(), id).settings.timezone));
+    return c.json({ today, items });
+  });
 
   routes.get("/subjects/:subject/progress", async (c) =>
     c.json({ completedLessons: await completedLessons(view().home, c.req.param("subject")) }),

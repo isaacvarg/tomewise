@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { dueItems, loadLearningHome, loadSubject, readActivity, readEvents } from "@tomewise/core";
+import { dueItems, loadLearningHome, loadSubject, nextDue, readActivity, readEvents } from "@tomewise/core";
 import { startTestApp } from "./harness.ts";
 
 function json(value: unknown) {
@@ -120,6 +120,42 @@ describe("GET /api/subjects/:subject/due", () => {
     const response = await app.get("/api/subjects/klingon/due?date=2026-11-21");
 
     expect(response.status).toBe(404);
+  });
+});
+
+describe("GET /api/subjects/:subject/unlocked", () => {
+  it("returns each unlocked item with when it's next due, dated in the home's timezone", async () => {
+    const app = await startTestApp();
+    const home = await loadLearningHome(app.root);
+
+    const response = await app.get("/api/subjects/morse-code/unlocked?date=2026-11-21");
+
+    expect(response.status).toBe(200);
+    expect(response.body.today).toBe("2026-11-21");
+    expect(response.body.items.map((entry: any) => entry.item.id)).toEqual(["letter-k", "letter-m", "letter-r"]);
+    expect(response.body.items.every((entry: any) => entry.dueOn === entry.due.slice(0, 10))).toBe(true);
+    expect(response.body).toEqual({ today: "2026-11-21", items: json(await nextDue(home, "morse-code", "2026-11-21")) });
+  });
+
+  it("uses today by the app's clock without a date", async () => {
+    const clock = { now: () => new Date("2026-11-21T23:30:00Z"), every: () => () => {} };
+    const app = await startTestApp(
+      (root) =>
+        writeFile(join(root, "tomewise.json"), JSON.stringify({ formatVersion: 1, timezone: "Asia/Tokyo", weekStart: "monday" })),
+      undefined,
+      { clock },
+    );
+
+    const response = await app.get("/api/subjects/morse-code/unlocked");
+
+    expect(response.body.today).toBe("2026-11-22");
+  });
+
+  it("gives 400 for a malformed date and 404 for an unknown subject", async () => {
+    const app = await startTestApp();
+
+    expect((await app.get("/api/subjects/morse-code/unlocked?date=soon")).status).toBe(400);
+    expect((await app.get("/api/subjects/klingon/unlocked")).status).toBe(404);
   });
 });
 

@@ -1,6 +1,6 @@
-import type { Activity, AppSetting, DueItem, StartMode, Subject } from "@tomewise/core";
+import type { Activity, AppSetting, DueItem, ScheduledItem, StartMode, Subject } from "@tomewise/core";
 
-export type { Activity, DueItem, StartMode, Subject };
+export type { Activity, DueItem, ScheduledItem, StartMode, Subject };
 
 export interface ThemeChoice {
   name: string;
@@ -31,6 +31,7 @@ export const api = {
   subject: (id: string) => getJson<Subject>(subjectPath(id)),
   due: (id: string, date: string) =>
     getJson<{ due: DueItem[] }>(`${subjectPath(id)}/due?date=${encodeURIComponent(date)}`).then((body) => body.due),
+  unlocked: (id: string) => getJson<{ today: string; items: ScheduledItem[] }>(`${subjectPath(id)}/unlocked`),
   activity: (subject?: string) =>
     getJson<Activity>(subject === undefined ? "/api/activity" : `/api/activity?subject=${encodeURIComponent(subject)}`),
   completedLessons: (id: string) =>

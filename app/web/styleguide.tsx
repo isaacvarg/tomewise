@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import type { Subject } from "./api.ts";
 import { dueToday } from "./home/model.ts";
 import { Home } from "./home/home.tsx";
+import { Glossary } from "./pages/glossary.tsx";
 import { Settings } from "./pages/settings.tsx";
 import { SubjectHome } from "./pages/subject.tsx";
 import { RunSummary, Runner } from "./run/runner.tsx";
@@ -62,6 +63,13 @@ for (const tab of ["overview", "curriculum", "drills", "reference", "stats"]) {
     tab === "overview" ? "/s/morse-code" : `/s/morse-code/${tab}`,
   );
 }
+mount(
+  "[data-styleguide-glossary]",
+  <Routes>
+    <Route path="/s/:subject/glossary" element={<Glossary />} />
+  </Routes>,
+  "/s/morse-code/glossary",
+);
 mount("[data-styleguide-settings]", <Settings reloadForThemeScripts={false} />);
 mount("[data-styleguide-runner]", <Runner subject={subject} drill="vocab" ownsPage={false} />);
 mount(

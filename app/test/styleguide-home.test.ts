@@ -64,7 +64,7 @@ describe("home in /styleguide", () => {
     expect(await page.locator(`${tab("curriculum")} .tome-lessons [data-done]`).count()).toBe(4);
     expect(await page.locator(`${tab("curriculum")} .tome-lessons [data-later]`).count()).toBe(2);
     expect(await page.locator(`${tab("drills")} [data-locked]`).count()).toBe(1);
-    expect(await page.locator(`${tab("reference")} .tome-reference li`).count()).toBe(2);
+    expect(await page.locator(`${tab("reference")} .tome-reference li`).count()).toBe(3);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect(pageErrors).toEqual([]);
   }, 20_000);
@@ -83,6 +83,21 @@ describe("home in /styleguide", () => {
     expect(await texts(page, "#home .styleguide-unbuilt")).toEqual(["The dashboard isn't built. Run pnpm build:app to see it here."]);
     expect(pageErrors).toEqual([]);
   });
+});
+
+describe("the glossary in /styleguide", () => {
+  it.each(["phone", "desktop"] as const)("shows the glossary with demo data at %s width", async (width) => {
+    const { page, pageErrors } = await openStyleguide(width);
+
+    expect(await page.evaluate(() => document.documentElement.dataset.styleguideErrors ?? "")).toBe("");
+    expect(await texts(page, "#glossary .tome-lede")).toEqual(["5 items from 4 lessons"]);
+    expect(await texts(page, "#glossary .tome-term-word")).toEqual(["K", "M", "R", "S", "U"]);
+    expect(await texts(page, "#glossary .tome-term-when")).toEqual(["due today", "in 6 days", "due today", "in 3 days", "due today"]);
+    expect(await page.locator("#glossary .tome-hear").count()).toBe(5);
+    expect(await page.locator('.styleguide-nav a[href="#glossary"]').innerText()).toBe("Glossary");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect(pageErrors).toEqual([]);
+  }, 20_000);
 });
 
 describe("the runner in /styleguide", () => {
