@@ -268,11 +268,13 @@ describe("curriculum", () => {
     expect(await texts(page, ".tome-exam")).toEqual(["Exam · first five\nAsk your agent"]);
   });
 
-  it("dims an upcoming lesson but still opens it", async () => {
+  it("mutes an upcoming lesson but still opens it", async () => {
     const { page } = await openSubject("/s/morse-code/curriculum");
 
     const later = page.locator('[data-lesson="0005-a"] .tome-row');
-    expect(Number(await later.evaluate((el) => getComputedStyle(el).opacity))).toBeLessThan(1);
+    const colour = (selector: string) => page.locator(selector).first().evaluate((el) => getComputedStyle(el).color);
+    expect(await colour('[data-lesson="0005-a"] .tome-row')).toBe(await colour(".tome-curriculum .tome-meta"));
+    expect(await colour('[data-lesson="0003-s"] .tome-row')).not.toBe(await colour(".tome-curriculum .tome-meta"));
     await later.click();
 
     await page.waitForURL(/\/s\/morse-code\/lessons\/0005-a\.html$/);
