@@ -44,20 +44,20 @@ export const widgetClasses: Readonly<Record<string, readonly string[]>> = {
 };
 
 export const appClasses: readonly string[] = [
-  "tome-actions", "tome-activity", "tome-again", "tome-app", "tome-back", "tome-break", "tome-break-continue",
-  "tome-break-done", "tome-break-next", "tome-break-skip", "tome-cell", "tome-check", "tome-curriculum",
+  "tome-actions", "tome-activity", "tome-again", "tome-app", "tome-ask", "tome-ask-go", "tome-ask-say", "tome-back", "tome-break", "tome-break-continue",
+  "tome-break-done", "tome-break-next", "tome-break-skip", "tome-cell", "tome-check", "tome-copy", "tome-curriculum",
   "tome-drill-go", "tome-drill-name", "tome-drill-sub", "tome-drills", "tome-due", "tome-due-how", "tome-due-what",
-  "tome-exam", "tome-goal", "tome-goal-bar", "tome-goal-num", "tome-goal-week", "tome-header", "tome-heat-days",
+  "tome-exam", "tome-explanation", "tome-explanation-feedback", "tome-explanation-from", "tome-explanation-text", "tome-explanations", "tome-goal", "tome-goal-bar", "tome-goal-num", "tome-goal-week", "tome-header", "tome-heat-days",
   "tome-heat-legend", "tome-heatmap", "tome-heatmap-wrap", "tome-hint", "tome-home-link", "tome-kicker",
   "tome-lessons", "tome-look-again", "tome-look-item", "tome-look-why", "tome-mark", "tome-mark-letter", "tome-meta",
   "tome-meta-narrow", "tome-meta-wide", "tome-milestone", "tome-milestone-head", "tome-milestone-plain", "tome-notice",
   "tome-num", "tome-option", "tome-option-name", "tome-option-text", "tome-options", "tome-order", "tome-order-handle",
   "tome-order-move", "tome-order-name", "tome-order-row", "tome-overview", "tome-pick", "tome-pick-how",
-  "tome-pick-name", "tome-picks", "tome-reference", "tome-row", "tome-runner", "tome-runner-bar",
+  "tome-pick-name", "tome-picks", "tome-prompts", "tome-reference", "tome-row", "tome-runner", "tome-runner-bar",
   "tome-runner-summary", "tome-score", "tome-score-sub", "tome-section", "tome-section-head", "tome-settings",
   "tome-settings-actions", "tome-settings-cancel", "tome-settings-save", "tome-side", "tome-stage", "tome-start",
   "tome-stats", "tome-status", "tome-streak", "tome-streak-num", "tome-streak-text", "tome-subject",
-  "tome-subject-name", "tome-subjects", "tome-summary-head", "tome-tab", "tome-tabs", "tome-title", "tome-unit",
+  "tome-subject-ask", "tome-subject-name", "tome-subjects", "tome-summary-head", "tome-tab", "tome-tabs", "tome-title", "tome-unit",
   "tome-view",
 ];
 

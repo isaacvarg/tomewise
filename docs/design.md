@@ -64,7 +64,7 @@ Finding the learning home: walk up from the current directory to `tomewise.json`
 - **Results** feed the agent's choice of next lesson, are suggested as evidence for learning records (the learner confirms), and missed items move forward in the review schedule.
 - **Curriculum** (optional): units and milestones with statuses. The agent drafts it from real syllabi in `RESOURCES.md`. It's a compass: changes are proposed and confirmed, and each gets a learning record.
 - **Exams and milestones**: when a milestone's lessons are done it shows "exam ready" (or "ask your agent to prepare it"). Passing marks the milestone done; failing locks nothing. With exams off, the learner or the agent marks milestones done.
-- **Feynman-lite**: `<tome-explain>` saves a free-text explanation as `ungraded`. Next time the learner talks to their agent, the skill grades it and writes feedback back as an event, which the app shows.
+- **Feynman-lite**: `<tome-explain>` saves a free-text explanation as `ungraded`. Next time the learner talks to their agent, the skill grades it and writes feedback back as an event (`explanation.graded`, its `data.feedback` required), which the app shows next to the explanation.
 
 ## Metrics
 
@@ -89,7 +89,7 @@ Finding the learning home: walk up from the current directory to `tomewise.json`
   - subject home, a dashboard for one subject with tabs. Overview, top to bottom: goal progress; that subject's activity heatmap; "ask your agent" prompts (only when there are any); what's due here, with a Start for this subject. The other tabs: Curriculum (the roadmap with lessons under their milestones, and "Other lessons" for the rest), Drills, Reference (the glossary first, then the agent's reference sheets) and Stats (totals, then charts). Each tab has its own address (`/s/morse-code/curriculum`). Wide screens: the Overview puts goal and heatmap side by side, then prompts and due; Drills and Reference go two across; Stats shows charts two across;
   - glossary, built by the app for every subject: each unlocked item grouped under the lesson that unlocked it, in curriculum order, with when it is next due and a play button for audio items. Explanations such as how WPM timing works stay in the agent's reference sheets;
   - review/drill runner, a centred column at every width, ending in a summary: score, time, and items to look at again (wrong, rated Again, or timed out), each linked to the lesson that unlocked it. After a sequence the summary covers every subject;
-  - prompts, derived from state: a milestone whose lessons are done, an exam that's ready, an explanation waiting to be graded. The "quiz due with none written" prompt belongs to assessments;
+  - prompts, derived from state: a milestone whose lessons are done, an exam that's ready, an explanation waiting to be graded. A milestone counts once every lesson it lists is completed and its status isn't `done` or `skipped`; its prompt asks for the exam when it names one with no file yet, links the exam when the file exists, and otherwise asks to mark the milestone done. The subject home lists them; home shows how many each subject has. The "quiz due with none written" prompt belongs to assessments;
   - settings: theme (previewed live, then saved or cancelled), Start mode, and subject order (drag, or up and down buttons on each row).
 
 ## CLI

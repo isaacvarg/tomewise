@@ -264,3 +264,72 @@ describe("an event posted to the app", () => {
     expect(activity.body.days).toEqual([{ date: "2026-11-22", subjects: ["morse-code"], minutes: 2 }]);
   });
 });
+
+describe("ask-your-agent prompts", () => {
+  const base = { subject: "morse-code", schemaVersion: 2, data: {} };
+  const lessonsDone = ["0003-s", "0004-the-late-bump"].map((lesson, index) => ({
+    ...base,
+    id: `01KAM0000000000000000000C${index}`,
+    ts: "2026-11-22T09:00:00.000Z",
+    kind: "lesson.completed",
+    ref: `lesson:${lesson}`,
+  }));
+  const saved = {
+    ...base,
+    id: "01KAM0000000000000000000X1",
+    ts: "2026-11-22T09:01:00.000Z",
+    kind: "explanation.saved",
+    ref: "lesson:0004-the-late-bump",
+    data: { text: "The late bump is a short gap" },
+  };
+  const graded = {
+    ...base,
+    id: "01KAM0000000000000000000G1",
+    ts: "2026-11-22T10:00:00.000Z",
+    kind: "explanation.graded",
+    ref: `event:${saved.id}`,
+    data: { feedback: "Close: it's a longer gap" },
+  };
+  const examPrompt = {
+    kind: "exam-unwritten",
+    milestone: { id: "first-five", title: "Copy K, M, R, S and U" },
+    exam: "first-five",
+    say: "Prepare the exam for “Copy K, M, R, S and U”.",
+  };
+  const gradePrompt = { kind: "ungraded-explanations", count: 1, refs: ["lesson:0004-the-late-bump"], say: "Grade my Morse code explanation." };
+
+  it("are empty while nothing needs the agent", async () => {
+    const app = await startTestApp();
+
+    expect((await app.get("/api/subjects/morse-code/prompts")).body).toEqual({ prompts: [], explanations: [] });
+    expect((await app.get("/api/prompts")).body).toEqual({ subjects: [] });
+  });
+
+  it("come and go with the events, and explanations carry the agent's feedback", async () => {
+    const app = await startTestApp();
+
+    expect((await app.post([...lessonsDone, saved])).status).toBe(201);
+    const waiting = await app.get("/api/subjects/morse-code/prompts");
+    expect(waiting.status).toBe(200);
+    expect(waiting.body).toEqual({
+      prompts: [examPrompt, gradePrompt],
+      explanations: [{ id: saved.id, ts: saved.ts, ref: saved.ref, text: saved.data.text }],
+    });
+    expect((await app.get("/api/prompts")).body).toEqual({ subjects: [{ subject: "morse-code", prompts: [examPrompt, gradePrompt] }] });
+
+    expect((await app.post([graded])).status).toBe(201);
+    const after = await app.get("/api/subjects/morse-code/prompts");
+    expect(after.body).toEqual({
+      prompts: [examPrompt],
+      explanations: [
+        { id: saved.id, ts: saved.ts, ref: saved.ref, text: saved.data.text, grade: { id: graded.id, ts: graded.ts, feedback: graded.data.feedback } },
+      ],
+    });
+  });
+
+  it("give 404 for an unknown subject", async () => {
+    const app = await startTestApp();
+
+    expect((await app.get("/api/subjects/klingon/prompts")).status).toBe(404);
+  });
+});

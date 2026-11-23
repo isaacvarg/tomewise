@@ -78,6 +78,10 @@ export type ThemeManifest = z.output<typeof ThemeManifest>;
 
 export const explanationText = z.string().trim().min(1, { error: "An explanation needs some text" });
 
+const feedbackError = { error: "A grade needs the agent's feedback" };
+
+export const gradeFeedback = z.string(feedbackError).trim().min(1, feedbackError);
+
 export const GIT_CADENCES = ["session", "hourly", "daily"] as const;
 
 export type GitCadence = (typeof GIT_CADENCES)[number];

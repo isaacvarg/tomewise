@@ -1,12 +1,13 @@
 import { StrictMode, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { MemoryRouter, Route, Routes } from "react-router";
-import type { Subject } from "./api.ts";
+import type { AgentPrompt, Explanation, Subject } from "./api.ts";
 import { dueToday } from "./home/model.ts";
 import { Home } from "./home/home.tsx";
 import { Settings } from "./pages/settings.tsx";
-import { SubjectHome } from "./pages/subject.tsx";
+import { Feedback, Prompts, SubjectHome } from "./pages/subject.tsx";
 import { RunSummary, Runner } from "./run/runner.tsx";
+import { Screen } from "./screen.tsx";
 import { RunBreak, StartList } from "./run/start.tsx";
 import { summarize } from "./run/summary.ts";
 import "./styles/app.css";
@@ -40,6 +41,32 @@ const demoDue = dueToday(
   })),
 );
 
+const firstFive = { id: "first-five", title: "Copy K, M, R, S and U" };
+
+const demoPrompts: AgentPrompt[] = [
+  { kind: "milestone-done", milestone: { id: "koch", title: "Hear the Koch rhythm" }, say: "Mark the “Hear the Koch rhythm” milestone done." },
+  { kind: "exam-unwritten", milestone: firstFive, exam: "first-five", say: "Prepare the exam for “Copy K, M, R, S and U”." },
+  { kind: "exam-ready", milestone: firstFive, exam: "first-five", say: "Go over my exam results for “Copy K, M, R, S and U”." },
+  { kind: "ungraded-explanations", count: 2, refs: ["lesson:0004-the-late-bump", "item:letter-k"], say: "Grade my Morse code explanations." },
+];
+
+const demoExplanations: Explanation[] = [
+  {
+    id: "01STYLEGUIDEEXPLAIN0000003",
+    ts: "2026-11-20T18:10:00.000Z",
+    ref: "lesson:0002-r",
+    text: "R is short, long, short: dit-dah-dit.",
+    grade: { id: "01STYLEGUIDEGRADE000000003", ts: "2026-11-21T08:00:00.000Z", feedback: "Right. Next, say how it differs from K, the same rhythm flipped." },
+  },
+  {
+    id: "01STYLEGUIDEEXPLAIN0000002",
+    ts: "2026-11-18T18:10:00.000Z",
+    ref: "lesson:0001-k-and-m",
+    text: "M is two long beeps, and K is long, short, long.",
+    grade: { id: "01STYLEGUIDEGRADE000000002", ts: "2026-11-19T08:00:00.000Z", feedback: "Yes. Try saying them out loud before you write them." },
+  },
+];
+
 const nothing = () => {};
 
 function mount(selector: string, page: ReactNode, path = "/") {
@@ -62,6 +89,15 @@ for (const tab of ["overview", "curriculum", "drills", "reference", "stats"]) {
     tab === "overview" ? "/s/morse-code" : `/s/morse-code/${tab}`,
   );
 }
+mount(
+  "[data-styleguide-prompts]",
+  <Screen kicker="Morse code" title="Ask your agent">
+    <div className="tome-view" style={{ gridColumn: "1 / -1" }}>
+      <Prompts subject={{ ...subject, id: "morse-code", name: "Morse code" }} prompts={demoPrompts} />
+      <Feedback explanations={demoExplanations} />
+    </div>
+  </Screen>,
+);
 mount("[data-styleguide-settings]", <Settings reloadForThemeScripts={false} />);
 mount("[data-styleguide-runner]", <Runner subject={subject} drill="vocab" ownsPage={false} />);
 mount(

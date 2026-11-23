@@ -185,6 +185,32 @@
   .tome-goal-week span[data-today] { color: var(--t-ink); font-weight: 600; }
   .tome-due .tome-start { margin-top: 0; }
 
+  .tome-prompts ul, .tome-explanations ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .5rem; }
+  .tome-ask {
+    padding: .75rem .9rem; border-radius: var(--t-radius); border: 1px solid var(--t-rule); border-left: 3px solid var(--t-accent);
+    display: flex; flex-direction: column; gap: .45rem; font-size: .87rem;
+  }
+  .tome-ask p { margin: 0; }
+  .tome-ask-go { color: var(--t-accent); font-weight: 600; }
+  .tome-ask-say {
+    display: flex; align-items: center; justify-content: space-between; gap: .5rem; font-size: .82rem;
+    padding: .4rem .55rem; background: var(--t-surface); border-radius: calc(var(--t-radius) / 2);
+  }
+  .tome-ask-say > span { font-style: italic; min-width: 0; }
+  .tome-copy {
+    flex: none; min-height: 2rem; border: 1px solid var(--t-rule); background: transparent; color: var(--t-muted);
+    font: 600 .72rem var(--t-ui); padding: .15rem .65rem; border-radius: 99px; cursor: pointer;
+  }
+  .tome-copy:hover { color: var(--t-ink); }
+  .tome-copy:focus-visible, .tome-ask-go:focus-visible { outline: 2px solid var(--t-accent); outline-offset: 2px; }
+  .tome-explanation { padding: .75rem .9rem; border-radius: var(--t-radius); background: var(--t-surface); display: flex; flex-direction: column; gap: .45rem; font-size: .87rem; }
+  .tome-explanation .tome-hint { font-size: .78rem; }
+  .tome-explanation-from { color: var(--t-ink); font-weight: 600; }
+  .tome-explanation-text { margin: 0; padding-left: .7rem; border-left: 2px solid var(--t-rule); font-style: italic; }
+  .tome-explanation-feedback { margin: 0; }
+  .tome-explanation-feedback b { display: block; font-size: .72rem; color: var(--t-accent); letter-spacing: .05em; text-transform: uppercase; }
+  .tome-subject-ask { font-size: .75rem; font-weight: 600; color: var(--t-accent); }
+
   .tome-curriculum { gap: .9rem; }
   .tome-unit { display: flex; flex-direction: column; gap: .5rem; }
   .tome-unit h4 { margin: 0; font-family: inherit; font-size: .75rem; font-weight: 600; color: var(--t-muted); letter-spacing: .05em; text-transform: uppercase; }
@@ -249,8 +275,11 @@
     .tome-overview {
       display: grid; gap: 1.5rem 2.4rem; align-items: start;
       grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
-      grid-template-areas: "goal activity" "prompts due";
+      grid-template-areas: "goal activity" "prompts due" "explanations explanations";
     }
+    .tome-overview > .tome-prompts { grid-area: prompts; }
+    .tome-overview > .tome-explanations { grid-area: explanations; }
+    .tome-explanations ul { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .tome-goal { grid-area: goal; }
     .tome-view[data-view="curriculum"] { max-width: 44rem; }
     .tome-drills ul, .tome-reference ul { grid-template-columns: 1fr 1fr; }

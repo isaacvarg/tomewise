@@ -111,6 +111,33 @@ describe("validating events", () => {
     ]);
   });
 
+  it("checks a grade's feedback, whatever the subject's payload schema", async () => {
+    const saved = {
+      id: "01KAJ0000000000000000000E1",
+      ts: "2026-11-03T18:02:00.000Z",
+      subject: "morse-code",
+      kind: "explanation.saved",
+      ref: "lesson:0001-k-and-m",
+      schemaVersion: 1,
+      data: { text: "K is dah-dit-dah" },
+    };
+    const graded = (id: string, data: Record<string, unknown>) => ({ ...saved, id, kind: "explanation.graded", ref: `event:${saved.id}`, data });
+    const home = await buildHome({
+      ...base,
+      [FILE]: jsonl(
+        saved,
+        graded("01KAJ0000000000000000000G1", { feedback: "Right. Now say why the gap matters." }),
+        graded("01KAJ0000000000000000000G2", {}),
+        graded("01KAJ0000000000000000000G3", { feedback: " " }),
+      ),
+    });
+
+    expect(await validateLearningHome(home)).toEqual([
+      { file: FILE, line: 3, path: "data.feedback", message: "A grade needs the agent's feedback" },
+      { file: FILE, line: 4, path: "data.feedback", message: "A grade needs the agent's feedback" },
+    ]);
+  });
+
   it("reports a file in events that isn't an event file", async () => {
     const home = await buildHome({ ...base, "subjects/morse-code/events/notes.txt": "hello" });
 

@@ -29,6 +29,8 @@ export type { PayloadSchemaVersion } from "./payload.ts";
 export { dueItems } from "./due.ts";
 export { completedLessons } from "./progress.ts";
 export type { DueItem } from "./due.ts";
+export { agentPrompts, explanations } from "./prompts.ts";
+export type { AgentPrompt, Explanation, Grade, PromptMilestone } from "./prompts.ts";
 export { aggregates, queryPayload } from "./query.ts";
 export type { Aggregate, QueryOptions, QueryResult } from "./query.ts";
 export { isoDate, localDay, readActivity } from "./activity.ts";

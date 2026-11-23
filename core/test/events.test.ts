@@ -137,7 +137,7 @@ describe("rejecting an event", () => {
     expect(await rejected(sessionStart({ id: "01KAJ0000000000000000000S2", sessionId: "01KAJ0000000000000000000S2", ref: "drill:sprint" }))).toEqual([
       { file: "event", path: "ref", message: 'No drill "sprint" in subjects/morse-code/drills' },
     ]);
-    expect(await rejected({ ...attempt(), kind: "explanation.graded", ref: "event:01KAJ00000000000000000000Z", outcome: undefined, grade: undefined })).toEqual([
+    expect(await rejected({ ...attempt(), kind: "explanation.graded", ref: "event:01KAJ00000000000000000000Z", outcome: undefined, grade: undefined, data: { feedback: "Good" } })).toEqual([
       { file: "event", path: "ref", message: 'No event "01KAJ00000000000000000000Z" in subjects/morse-code/events' },
     ]);
   });
