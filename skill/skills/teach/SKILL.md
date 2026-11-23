@@ -34,6 +34,8 @@ The app is the one writer of `events/`. Read history through `tome stats`, `tome
 
 ## A teaching session
 
+A new subject, or a change to `curriculum.json`, follows [SUBJECT-SETUP.md](./SUBJECT-SETUP.md) first.
+
 Every session, such as "next Morse lesson", runs these steps in order.
 
 ### 1. Before planning
