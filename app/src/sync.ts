@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { resolve } from "node:path";
 import { Hono } from "hono";
 import {
@@ -11,6 +12,7 @@ import {
   type LearningHome,
   localDay,
   readEvents,
+  regenerateVaultFiles,
 } from "@tomewise/core";
 import { HISTORY_PREFIX, historyMessage } from "./history.ts";
 
@@ -54,12 +56,12 @@ const CADENCE_CHECK_MS = 60_000;
 const REJECTED = /\[rejected\]|non-fast-forward|fetch first/;
 const AUTH_FAILED = /Permission denied \(|Permission to \S+ denied|Host key verification failed|Authentication failed|could not read (Username|Password)|terminal prompts disabled|returned error: 40[13]/i;
 
-function git(cwd: string, args: string[]): Promise<string> {
+function git(cwd: string, args: string[], env: Record<string, string> = {}): Promise<string> {
   return new Promise((resolve, reject) => {
     execFile(
       "git",
       args,
-      { cwd, timeout: GIT_TIMEOUT_MS, maxBuffer: GIT_MAX_BUFFER, env: { ...process.env, GIT_TERMINAL_PROMPT: "0" } },
+      { cwd, timeout: GIT_TIMEOUT_MS, maxBuffer: GIT_MAX_BUFFER, env: { ...process.env, GIT_TERMINAL_PROMPT: "0", ...env } },
       (error, stdout, stderr) => {
         if (!error) return resolve(stdout.trim());
         if ((error as NodeJS.ErrnoException).code === "ENOENT") {
@@ -69,6 +71,18 @@ function git(cwd: string, args: string[]): Promise<string> {
       },
     );
   });
+}
+
+function paths(output: string): string[] {
+  return [...new Set(output.split("\0").filter((path) => path !== ""))];
+}
+
+function literal(paths: readonly string[]): string[] {
+  return paths.map((path) => `:(literal)${path}`);
+}
+
+async function allGenerated(home: LearningHome, paths: readonly string[]): Promise<boolean> {
+  return (await Promise.all(paths.map((path) => isGeneratedFile(home, path)))).every(Boolean);
 }
 
 function periodOf(cadence: Exclude<GitCadence, "session">, time: Date, timezone: string): string {
@@ -159,12 +173,19 @@ export function startSync(home: () => LearningHome, { clock = systemClock, pulle
   async function pull(remote: string): Promise<string> {
     const target = await checkedBranch();
     const before = await git(root, ["rev-parse", "--verify", "--quiet", "HEAD"]).catch(() => undefined);
+    const setAside = new Set(await setAsideGenerated(before !== undefined));
     try {
       await git(root, ["pull", "--rebase", "--autostash", "--quiet", remote, target]);
     } catch (error) {
-      if (await rebasing()) await git(root, ["rebase", "--abort"]);
-      throw error;
+      const resolved = (await rebasing()) ? await resolveGeneratedConflicts().catch(() => undefined) : undefined;
+      if (resolved === undefined) {
+        if (await rebasing()) await git(root, ["rebase", "--abort"]);
+        await regenerateVaultFiles(home(), setAside);
+        throw error;
+      }
+      for (const path of resolved) setAside.add(path);
     }
+    await regenerateVaultFiles(home(), setAside);
     state.lastPull = clock.now().toISOString();
     const pulled = await git(
       root,
@@ -190,15 +211,56 @@ export function startSync(home: () => LearningHome, { clock = systemClock, pulle
     return added;
   }
 
-  async function generatedPathspecs(): Promise<string[]> {
+  function generatedGlobs(current: LearningHome): string[] {
+    return generatedFileGlobs(current).map((glob) => `:(glob)${glob}`);
+  }
+
+  async function generatedChanges(): Promise<{ untracked: string[]; tracked: string[] }> {
     const current = home();
-    if (!current.config.vault.enabled) return [];
-    const globs = generatedFileGlobs(current).map((glob) => `:(glob)${glob}`);
-    const changed = await git(root, ["ls-files", "--modified", "--others", "--exclude-standard", "-z", "--", ...globs]);
+    if (!current.config.vault.enabled) return { untracked: [], tracked: [] };
+    const globs = generatedGlobs(current);
+    const untracked = paths(await git(root, ["ls-files", "--others", "--exclude-standard", "-z", "--", ...globs]));
+    const modified = await git(root, ["ls-files", "--modified", "-z", "--", ...globs]);
     const staged = await git(root, ["diff", "--cached", "--name-only", "--no-renames", "-z", "--", ...globs]);
-    const paths = [...new Set(`${changed}\0${staged}`.split("\0").filter((path) => path !== ""))];
-    const generated = await Promise.all(paths.map((path) => isGeneratedFile(current, path)));
-    return paths.filter((_, index) => generated[index]).map((path) => `:(literal)${path}`);
+    const tracked = paths(`${modified}\0${staged}`);
+    const keep = async (list: string[]) => {
+      const generated = await Promise.all(list.map((path) => isGeneratedFile(current, path)));
+      return list.filter((_, index) => generated[index]);
+    };
+    return { untracked: await keep(untracked), tracked: await keep(tracked) };
+  }
+
+  async function generatedPathspecs(): Promise<string[]> {
+    const { untracked, tracked } = await generatedChanges();
+    return literal([...untracked, ...tracked]);
+  }
+
+  async function setAsideGenerated(hasHead: boolean): Promise<string[]> {
+    const { untracked, tracked } = await generatedChanges();
+    const restorable = hasHead ? tracked : [];
+    if (restorable.length > 0) await git(root, ["restore", "--source=HEAD", "--staged", "--worktree", "--", ...literal(restorable)]);
+    await Promise.all(untracked.map((path) => rm(resolve(root, path))));
+    return [...untracked, ...restorable];
+  }
+
+  async function resolveGeneratedConflicts(): Promise<string[] | undefined> {
+    const current = home();
+    if (!current.config.vault.enabled) return undefined;
+    const resolved: string[] = [];
+    while (await rebasing()) {
+      const unmerged = paths(await git(root, ["diff", "--name-only", "--diff-filter=U", "-z"]));
+      const generated = new Set(paths(await git(root, ["diff", "--name-only", "--diff-filter=U", "-z", "--", ...generatedGlobs(current)])));
+      if (unmerged.length === 0 || unmerged.some((path) => !generated.has(path))) return undefined;
+      for (const side of ["--theirs", "--ours"]) {
+        await git(root, ["restore", side, "--", ...literal(unmerged)]);
+        if (!(await allGenerated(current, unmerged))) return undefined;
+      }
+      await git(root, ["add", "--", ...literal(unmerged)]);
+      resolved.push(...unmerged);
+      const empty = (await git(root, ["diff", "--cached", "--name-only"])) === "";
+      await git(root, ["rebase", empty ? "--skip" : "--continue"], { GIT_EDITOR: "true" }).catch(() => {});
+    }
+    return resolved;
   }
 
   async function commitHistory() {

@@ -777,3 +777,84 @@ describe("history commits in vault mode", () => {
     expect(await untracked(app.root)).toEqual(Object.keys(generatedLooking).map((path) => `?? ${path}`).sort());
   });
 });
+
+describe("pulling generated files from another device", () => {
+  const COPY = `${SUBJECT}/curriculum.md`;
+  const LEARNER = `${SUBJECT}/scratch.md`;
+  const copyOf = (root: string) => readFile(join(root, COPY), "utf8").catch(() => "");
+  const rewritten = (copy: string, device: string) => copy.replace("# ", `# ${device} `);
+
+  async function vaultDevices() {
+    const devices = await cloneSeam({ remote: "origin" }, undefined, { vault: {} });
+    await poll(() => copyOf(devices.app.root)).toContain("generatedBy: tomewise");
+    await writeFiles(devices.app.root, { [LEARNER]: "my own\n" });
+    return devices;
+  }
+
+  async function trackCopy({ app, agent }: { app: { root: string }; agent: string }) {
+    await git(app.root, "add", COPY);
+    await git(app.root, "commit", "--quiet", "-m", "chore: copy");
+    await git(app.root, "push", "--quiet", "origin", "main");
+    await git(agent, "pull", "--quiet");
+  }
+
+  it("pulls over an untracked generated file the other device pushed, even with the same content", async () => {
+    const { app, agentPushes } = await vaultDevices();
+    const copy = await copyOf(app.root);
+    await agentPushes({ [COPY]: copy });
+
+    const response = await app.send("POST", "/api/sync");
+
+    expect(response.body).toMatchObject({ stopped: false, lastError: null });
+    expect(await copyOf(app.root)).toBe(copy);
+    expect(await git(app.root, "status", "--porcelain", "--untracked-files=all")).toBe(`?? ${LEARNER}`);
+  });
+
+  it("pulls over a tracked generated file both devices rewrote, in commits and in the working tree", async () => {
+    const devices = await vaultDevices();
+    const { app, agentPushes } = devices;
+    const copy = await copyOf(app.root);
+    await trackCopy(devices);
+    await writeFiles(app.root, { [COPY]: rewritten(copy, "Laptop"), [`${SUBJECT}/laptop.md`]: "laptop\n" });
+    await git(app.root, "add", COPY, `${SUBJECT}/laptop.md`);
+    await git(app.root, "commit", "--quiet", "-m", "chore: laptop");
+    await writeFiles(app.root, { [COPY]: rewritten(copy, "Desk") });
+    await agentPushes({ [COPY]: rewritten(copy, "Phone") });
+
+    const response = await app.send("POST", "/api/sync");
+
+    expect(response.body).toMatchObject({ stopped: false, lastError: null });
+    expect(await subjects(app.root)).toEqual(["chore: laptop", "feat: content", "chore: copy", "chore: start"]);
+    expect(await git(app.root, "show", "--name-only", "--format=", "HEAD")).toBe(`${SUBJECT}/laptop.md`);
+    expect(await copyOf(app.root)).toBe(copy);
+    expect(await git(app.root, "status", "--porcelain", "--untracked-files=all")).toBe(`M ${COPY}\n?? ${LEARNER}`);
+  });
+
+  it("takes the learner's own file from the other device over a generated one", async () => {
+    const { app, agentPushes } = await vaultDevices();
+    await agentPushes({ [COPY]: "# My own curriculum notes\n" });
+
+    const response = await app.send("POST", "/api/sync");
+
+    expect(response.body).toMatchObject({ stopped: false, lastError: null });
+    expect(await copyOf(app.root)).toBe("# My own curriculum notes\n");
+    expect(await readFile(join(app.root, LEARNER), "utf8")).toBe("my own\n");
+  });
+
+  it("still stops when a conflict involves the learner's own edit of a generated file", async () => {
+    const devices = await vaultDevices();
+    const { app, agentPushes } = devices;
+    const copy = await copyOf(app.root);
+    await trackCopy(devices);
+    await writeFiles(app.root, { [COPY]: "# My own curriculum notes\n" });
+    await git(app.root, "commit", "--quiet", "-am", "docs: my notes");
+    const appHead = await git(app.root, "rev-parse", "HEAD");
+    await agentPushes({ [COPY]: rewritten(copy, "Phone") });
+
+    const response = await app.send("POST", "/api/sync");
+
+    expect(response.body).toMatchObject({ stopped: true, lastError: { message: expect.stringContaining("git pull") } });
+    expect(await git(app.root, "rev-parse", "HEAD")).toBe(appHead);
+    expect(await copyOf(app.root)).toBe("# My own curriculum notes\n");
+  });
+});
