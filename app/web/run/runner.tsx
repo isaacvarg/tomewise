@@ -1,13 +1,13 @@
 import { type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import type { Subject } from "../api.ts";
-import { type Summary, type SubjectRun, summarize } from "./summary.ts";
+import { type QuizSummary, type Summary, type SubjectRun, summarize, summarizeQuiz } from "./summary.ts";
 import { type DrillDone, loadTome, setDrillContext, type Tome } from "./tome.ts";
 
 declare module "react" {
   namespace JSX {
     interface IntrinsicElements {
-      "tome-drill": { key?: React.Key; ref?: React.Ref<HTMLElement>; drill?: string; close?: string; payload?: string };
+      "tome-drill": { key?: React.Key; ref?: React.Ref<HTMLElement>; drill?: string; quiz?: boolean; close?: string; payload?: string };
     }
   }
 }
@@ -15,11 +15,12 @@ declare module "react" {
 export interface RunnerProps {
   subject: Subject;
   drill: string;
+  quiz?: boolean;
   ownsPage?: boolean;
   onDone?: (run: SubjectRun) => void;
 }
 
-export function Runner({ subject, drill, ownsPage = true, onDone }: RunnerProps) {
+export function Runner({ subject, drill, quiz = false, ownsPage = true, onDone }: RunnerProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [tome, setTome] = useState<Tome>();
@@ -94,8 +95,9 @@ export function Runner({ subject, drill, ownsPage = true, onDone }: RunnerProps)
           {error.message}
         </p>
       )}
-      {tome && <tome-drill key={run} ref={element} drill={drill} close="/" />}
-      {done && (
+      {tome && <tome-drill key={run} ref={element} drill={drill} quiz={quiz || undefined} close="/" />}
+      {done && quiz && <QuizRunSummary summary={summarizeQuiz(done, subject.settings.assessments)} focus />}
+      {done && !quiz && (
         <RunSummary summary={summarize([done])} focus>
           {drill !== "review" && (
             <button type="button" className="tome-again" onClick={again}>
@@ -172,6 +174,47 @@ export function RunSummary({ summary, focus = false, children }: RunSummaryProps
       <div className="tome-actions" ref={actions}>
         {children}
         <Link className="tome-back" to="/">
+          Back to today
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+export interface QuizRunSummaryProps {
+  summary: QuizSummary;
+  focus?: boolean;
+}
+
+const MARKS = { correct: "Right", wrong: "Wrong", skipped: "Skipped" } as const;
+
+export function QuizRunSummary({ summary, focus = false }: QuizRunSummaryProps) {
+  const back = useRef<HTMLAnchorElement>(null);
+  useEffect(() => {
+    if (focus) back.current?.focus({ preventScroll: true });
+  }, [focus]);
+  return (
+    <section className="tome-runner-summary" aria-label="Summary" data-mode="quiz">
+      <div className="tome-summary-head">
+        <span className="tome-kicker">{summary.timeUp ? "Time's up" : "Quiz done"}</span>
+        {summary.score !== undefined && <span className="tome-score">{summary.score}</span>}
+        <span className="tome-score-sub">{summary.scoreSub}</span>
+      </div>
+      <section className="tome-quiz-answers" aria-label="Your answers">
+        <h3>Your answers</h3>
+        <ol>
+          {summary.answers.map((answer) => (
+            <li key={answer.key} data-outcome={summary.marked ? answer.outcome : undefined}>
+              <span className="tome-quiz-prompt">{answer.prompt}</span>
+              {summary.marked && <span className="tome-quiz-mark">{MARKS[answer.outcome]}</span>}
+              <span className="tome-quiz-given">You: {answer.given}</span>
+              {answer.answer && <span className="tome-quiz-answer">Answer: {answer.answer}</span>}
+            </li>
+          ))}
+        </ol>
+      </section>
+      <div className="tome-actions">
+        <Link className="tome-back" to="/" ref={back}>
           Back to today
         </Link>
       </div>

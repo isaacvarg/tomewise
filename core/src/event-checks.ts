@@ -1,4 +1,5 @@
 import { milestoneStatus } from "./curriculum.ts";
+import { isQuizDrillId } from "./drills.ts";
 import type { LearningEvent, Ref } from "./events.ts";
 import { parseRef } from "./events.ts";
 import { issuesFrom, type ValidationIssue } from "./issues.ts";
@@ -28,7 +29,7 @@ function missingRef(subject: SubjectRefs, ref: Ref, history: History): string | 
     case "lesson":
       return subject.lessons.includes(ref.id) ? undefined : where("lessons");
     case "drill":
-      return subject.drills.some((drill) => drill.id === ref.id) ? undefined : where("drills");
+      return isQuizDrillId(ref.id) || subject.drills.some((drill) => drill.id === ref.id) ? undefined : where("drills");
     case "quiz":
       return subject.quizzes.includes(ref.id) ? undefined : where("quizzes");
     case "exam":

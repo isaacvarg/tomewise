@@ -128,6 +128,32 @@ describe("the runner in /styleguide", () => {
   });
 });
 
+describe("the quiz in /styleguide", () => {
+  it.each(["phone", "desktop"] as const)("shows the runner in quiz mode and each score display at %s width", async (width) => {
+    const { page, pageErrors } = await openStyleguide(width);
+
+    expect(await page.evaluate(() => document.documentElement.dataset.styleguideErrors ?? "")).toBe("");
+    expect(await page.locator('.styleguide-nav a[href="#quiz"]').innerText()).toBe("Quiz");
+    const runner = page.locator("#quiz [data-styleguide-quiz] .tome-runner");
+    expect(await runner.getAttribute("data-state")).toBe("running");
+    expect(await runner.locator('.tome-drill[data-mode="quiz"] .tome-drill-name').innerText()).toBe("Quiz");
+    expect(await runner.locator(".tome-clock").innerText()).toBe("10:00");
+    expect(await runner.locator("tome-choice").count()).toBe(1);
+    const summary = (display: string) => page.locator(`#quiz [data-styleguide-quiz-summary="${display}"] .tome-runner-summary`);
+    expect(await summary("number").locator(".tome-score").innerText()).toBe("25%");
+    expect(await summary("pass-fail").locator(".tome-score").innerText()).toBe("Not passed");
+    expect(await summary("hidden").locator(".tome-score").count()).toBe(0);
+    expect(await texts(page, '#quiz [data-styleguide-quiz-summary="number"] .tome-quiz-answers li')).toEqual([
+      "Which word means red?\nRight\nYou: rojo\nAnswer: rojo",
+      "hola\nWrong\nYou: Again\nAnswer: hello",
+      "Say thank you\nWrong\nYou: de nada\nAnswer: gracias",
+      "Which letter is dah-di-dah?\nSkipped\nYou: No answer\nAnswer: K",
+    ]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect(pageErrors).toEqual([]);
+  }, 20_000);
+});
+
 describe("Start in /styleguide", () => {
   it.each(["phone", "desktop"] as const)("shows the break between subjects and the Start list at %s width", async (width) => {
     const { page, pageErrors } = await openStyleguide(width);

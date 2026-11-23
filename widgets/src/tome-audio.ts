@@ -233,7 +233,7 @@ export class TomeAudio extends TomeElement {
         new CustomEvent("tome-answered", {
           bubbles: true,
           composed: true,
-          detail: { ref: `item:${this.item.id}`, outcome: result.outcome, grade: result.grade, duration: result.responseTime },
+          detail: { ref: `item:${this.item.id}`, outcome: result.outcome, grade: result.grade, duration: result.responseTime, given: result.given },
         }),
       );
     } catch {

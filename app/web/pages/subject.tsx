@@ -358,6 +358,11 @@ function Due({ data }: { data: SubjectData }) {
           </small>
         </Link>
       )}
+      {subject.settings.assessments.enabled && (
+        <Link className="tome-quiz-me" to={`/run/quiz?subject=${encodeURIComponent(subject.id)}`}>
+          Quiz me
+        </Link>
+      )}
     </section>
   );
 }

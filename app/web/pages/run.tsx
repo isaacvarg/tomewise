@@ -22,6 +22,20 @@ function StartDue({ all }: { all: boolean }) {
   return all || mode.current === "sequence" ? <Sequence due={loaded.data.due} /> : <StartList due={loaded.data.due} />;
 }
 
+export function RunQuiz() {
+  const subject = useSearchParams()[0].get("subject");
+  const loaded = useLoad(() => subjectQuiz(subject), [subject]);
+  if (loaded.state !== "ready") return <NotReady loaded={loaded} />;
+  const { subject: data, drill } = loaded.data;
+  return <Runner key={`${data.id} ${drill}`} subject={data} drill={drill} quiz />;
+}
+
+async function subjectQuiz(id: string | null): Promise<{ subject: Subject; drill: string }> {
+  if (!id) throw new Error("No subject chosen; add ?subject= to the address.");
+  const [subject, quiz] = await Promise.all([api.subject(id), api.quiz(id)]);
+  return { subject, drill: quiz.drill.id };
+}
+
 export function RunDrill() {
   const params = useSearchParams()[0];
   const drill = params.get("drill");

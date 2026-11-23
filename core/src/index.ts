@@ -5,6 +5,7 @@ export type { LearningHome } from "./load.ts";
 export type { ItemSet, Subject, SubjectSettingsResolved } from "./subject.ts";
 export type { Item } from "./items.ts";
 export type { Drill } from "./drills.ts";
+export { quizDrill } from "./drills.ts";
 export type { Curriculum, MilestoneStatus } from "./curriculum.ts";
 export { milestoneStatusesOf } from "./milestones.ts";
 export { validateLearningHome } from "./validate.ts";
@@ -29,7 +30,7 @@ export { appendEvent, appendEvents, machineName, readEvents } from "./event-stor
 export type { AppendedEvent, AppendOptions, EventRange, EventTarget } from "./event-store.ts";
 export type { LearningEvent, EventKind } from "./events.ts";
 export type { PayloadSchemaVersion } from "./payload.ts";
-export { dueItems, nextDue } from "./due.ts";
+export { dueItems, nextDue, quizItems } from "./due.ts";
 export { completedLessons } from "./progress.ts";
 export type { DueItem, ScheduledItem } from "./due.ts";
 export { agentPrompts, explanations } from "./prompts.ts";

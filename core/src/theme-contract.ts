@@ -57,6 +57,7 @@ export const appClasses: readonly string[] = [
   "tome-milestone-head", "tome-milestone-plain", "tome-notice", "tome-num", "tome-option", "tome-option-name",
   "tome-option-text", "tome-options", "tome-order", "tome-order-handle", "tome-order-move", "tome-order-name",
   "tome-order-row", "tome-overview", "tome-pick", "tome-pick-how", "tome-pick-name", "tome-picks", "tome-prompts",
+  "tome-quiz-answer", "tome-quiz-answers", "tome-quiz-given", "tome-quiz-mark", "tome-quiz-me", "tome-quiz-prompt",
   "tome-reference", "tome-row", "tome-runner", "tome-runner-bar", "tome-runner-summary", "tome-score",
   "tome-score-sub", "tome-section", "tome-section-head", "tome-settings", "tome-settings-actions",
   "tome-settings-cancel", "tome-settings-save", "tome-side", "tome-stage", "tome-start", "tome-stats", "tome-status",
