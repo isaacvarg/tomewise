@@ -258,6 +258,28 @@ describe("git sync", () => {
     await poll(() => stream.received).toContainEqual({ event: "events", data: { subjects: ["morse-code"] } });
   });
 
+  it("rewrites the curriculum copy in vault mode after a pull brings a milestone.status event", async () => {
+    const { app, agentPushes } = await cloneSeam();
+    const config = join(app.root, "tomewise.json");
+    await writeFile(config, JSON.stringify({ ...JSON.parse(await readFile(config, "utf8")), vault: {} }));
+    const copy = () => readFile(join(app.root, SUBJECT, "curriculum.md"), "utf8").catch(() => "");
+    await poll(copy).toContain("1. Copy K, M, R, S and U: current\n");
+    const event = {
+      id: "01KAJ0000000000000000MSTAT",
+      ts: "2026-11-22T08:00:00.000Z",
+      subject: "morse-code",
+      kind: "milestone.status",
+      ref: "milestone:first-five",
+      schemaVersion: 2,
+      data: { status: "done" },
+    };
+    await agentPushes({ [`${EVENTS}/2026-11.phone.jsonl`]: `${JSON.stringify(event)}\n` });
+
+    await app.send("POST", "/api/sync");
+
+    await poll(copy).toContain("1. Copy K, M, R, S and U: done\n");
+  });
+
   it("announces the events of a first pull into a home with no commits yet", async () => {
     const remote = await mkdtemp(join(tmpdir(), "tomewise-remote-"));
     const agent = await mkdtemp(join(tmpdir(), "tomewise-agent-"));

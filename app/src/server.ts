@@ -4,6 +4,7 @@ import { createAdaptorServer } from "@hono/node-server";
 import { Hono } from "hono";
 import type { LearningHome } from "@tomewise/core";
 import { changeBus, changeRoutes, type Changes } from "./changes.ts";
+import { copyCurricula, copyCurriculaOnChange } from "./curriculum-copy.ts";
 import { eventRoutes } from "./events.ts";
 import { pageRoutes } from "./pages.ts";
 import { readRoutes } from "./reads.ts";
@@ -64,10 +65,14 @@ export async function startServer(home: LearningHome, { host, port, watch, clock
   const changes = changeBus();
   const sync = startSync(() => watched.current().home, {
     clock,
-    pulledEvents: (subjects) => changes.announce({ kind: "events", subjects }),
+    pulledEvents: (subjects) => {
+      changes.announce({ kind: "events", subjects });
+      void copyCurricula(watched.current().home, subjects, onError);
+    },
   });
   await trackRuleChanges(watched, sync.exclusive, onError);
   watched.onReload(() => changes.announce({ kind: "content" }));
+  await copyCurriculaOnChange(watched, onError);
   const server = createAdaptorServer({ fetch: createApp(watched.current, { ...options, sync, clock, changes, reload: watched.reload }).fetch });
   try {
     await new Promise<void>((resolve, reject) => {
