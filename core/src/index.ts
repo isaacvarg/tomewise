@@ -62,7 +62,7 @@ export { GENERATED_MARKER, isGeneratedFile, writeGeneratedFiles } from "./genera
 export type { GeneratedFile, GeneratedStatus, WrittenFiles } from "./generated-files.ts";
 export { sessionNotes, writeSessionNote } from "./session-notes.ts";
 export type { SessionNote, SessionSummary } from "./session-notes.ts";
-export { generatedFileGlobs, rebuildVault } from "./vault.ts";
+export { generatedFileGlobs, rebuildVault, regenerateVaultFiles } from "./vault.ts";
 export type { VaultRebuild } from "./vault.ts";
 export { curriculumCopy, writeCurriculumCopies } from "./curriculum-copy.ts";
 export { writeSessionsBase } from "./sessions-base.ts";
