@@ -1,5 +1,5 @@
 import { type LearningEvent, parseRef } from "./events.ts";
-import { milestoneStatusesOf } from "./milestones.ts";
+import { examsOn, milestoneStatusesOf } from "./milestones.ts";
 import type { Subject } from "./subject.ts";
 
 export interface PromptMilestone {
@@ -49,7 +49,7 @@ export function explanations(events: readonly LearningEvent[]): Explanation[] {
 
 function milestonePrompt(subject: Subject, milestone: NonNullable<Subject["curriculum"]>["units"][number]["milestones"][number]): AgentPrompt {
   const named = { id: milestone.id, title: milestone.title };
-  if (milestone.exam === undefined) {
+  if (milestone.exam === undefined || !examsOn(subject.settings.assessments)) {
     return { kind: "milestone-done", milestone: named, say: `Mark the “${milestone.title}” milestone done.` };
   }
   if (subject.exams.includes(milestone.exam)) {

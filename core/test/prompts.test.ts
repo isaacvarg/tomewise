@@ -95,6 +95,17 @@ describe("ask-your-agent prompts", () => {
     ]);
   });
 
+  it.each([
+    ["exams are off", { exams: false }],
+    ["assessments are off", { enabled: false }],
+  ])("asks to mark a milestone with an exam done when %s", async (_, assessments) => {
+    const events = [completed("0001-k-and-m"), completed("0002-r")];
+    const files = { "exams/first-letters.html": "<h1>Exam</h1>" };
+    const { subject, events: read } = await state(events, { exam: "first-letters" }, files);
+    const off = { ...subject, settings: { ...subject.settings, assessments: { ...subject.settings.assessments, ...assessments } } };
+    expect(agentPrompts(off, read)).toEqual([{ kind: "milestone-done", milestone: FIRST, say: "Mark the “Copy K, M and R” milestone done." }]);
+  });
+
   it("drops a milestone's prompt once the milestone is done or skipped", async () => {
     const events = [completed("0001-k-and-m"), completed("0002-r")];
     expect(await promptsFor(events, { status: "done", exam: "first-letters" }, { "exams/first-letters.html": "" })).toEqual([]);

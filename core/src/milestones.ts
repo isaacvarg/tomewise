@@ -1,5 +1,6 @@
 import { type MilestoneStatus, milestoneStatus } from "./curriculum.ts";
 import { type LearningEvent, parseRef } from "./events.ts";
+import type { AssessmentSettings } from "./schemas.ts";
 import type { Subject } from "./subject.ts";
 
 export function milestoneStatusesOf(subject: Pick<Subject, "curriculum">, events: readonly LearningEvent[]): Record<string, MilestoneStatus> {
@@ -12,3 +13,5 @@ export function milestoneStatusesOf(subject: Pick<Subject, "curriculum">, events
   }
   return statuses;
 }
+
+export const examsOn = (settings: AssessmentSettings): boolean => settings.enabled && settings.exams;

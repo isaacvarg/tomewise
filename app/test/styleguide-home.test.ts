@@ -53,6 +53,7 @@ describe("home in /styleguide", () => {
     expect(tabs).toEqual([
       ["overview", "Overview"],
       ["curriculum", "Curriculum"],
+      ["curriculum-relaxed", "Curriculum"],
       ["drills", "Drills"],
       ["reference", "Reference"],
       ["stats", "Stats"],
@@ -63,6 +64,8 @@ describe("home in /styleguide", () => {
     expect(await page.locator(`${tab("overview")} .tome-start`).getAttribute("href")).toBe("/run/due?subject=morse-code");
     expect(await page.locator(`${tab("curriculum")} .tome-lessons [data-done]`).count()).toBe(4);
     expect(await page.locator(`${tab("curriculum")} .tome-lessons [data-later]`).count()).toBe(2);
+    expect(await page.locator(`${tab("curriculum")} .tome-milestone-done`).count()).toBe(0);
+    expect(await texts(page, `${tab("curriculum-relaxed")} .tome-milestone-done`)).toEqual(["Mark done"]);
     expect(await page.locator(`${tab("drills")} [data-locked]`).count()).toBe(1);
     expect(await page.locator(`${tab("reference")} .tome-reference li`).count()).toBe(3);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
