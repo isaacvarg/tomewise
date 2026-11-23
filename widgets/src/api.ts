@@ -200,15 +200,15 @@ export class Tome {
     });
   }
 
-  end(): EndedSession | undefined {
+  end(fields: { score?: number } = {}): EndedSession | undefined {
     const session = this.#current;
     this.#ended++;
     this.#current = undefined;
     this.#session = undefined;
-    return session && this.#postEnd(session);
+    return session && this.#postEnd(session, fields);
   }
 
-  #postEnd(session: Session): EndedSession {
+  #postEnd(session: Session, fields: { score?: number } = {}): EndedSession {
     const duration = Math.max(0, Math.round(this.#window.performance.now() - session.startedAt));
     const event = {
       subject: session.subject,
@@ -217,6 +217,7 @@ export class Tome {
       ref: session.ref,
       sessionId: session.id,
       duration,
+      ...fields,
       data: {},
     };
     const body = new Blob([JSON.stringify(event)], { type: "application/json" });

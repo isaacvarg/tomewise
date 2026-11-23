@@ -1,6 +1,7 @@
 import { html, nothing, type PropertyValues } from "lit";
 import type { Drill, Item, Subject } from "@tomewise/core";
 import { type EndedSession, type Grade, type Outcome, tome, TomeError } from "./api.ts";
+import { judged, percent, type ScoreResult } from "@tomewise/core/score";
 import { adoptStyles, messageOf, TomeElement } from "./element.ts";
 import { labelOf, median, planDrill, present, WIDGET_FOR } from "./drill-plan.ts";
 import { widgets } from "./loader.ts";
@@ -20,6 +21,7 @@ export interface DrillDone {
   planned: number;
   timeUp: boolean;
   results: Answered[];
+  score?: ScoreResult;
   session: EndedSession | undefined;
 }
 
@@ -113,6 +115,7 @@ export class TomeDrill extends TomeElement {
   #watcher: MutationObserver | undefined;
   #hostSummary = false;
   #scoreDisplay: Subject["settings"]["assessments"]["scoreDisplay"] = "number";
+  #passMark = 70;
 
   constructor() {
     super();
@@ -175,6 +178,7 @@ export class TomeDrill extends TomeElement {
       if (run !== this.#run) return;
       this.#subjectName = subject.name;
       this.#scoreDisplay = subject.settings.assessments.scoreDisplay;
+      this.#passMark = subject.settings.assessments.passMark;
       this.#definition = drill;
       this.#plan = plan;
       const total = drill.timeLimits?.totalSeconds;
@@ -286,12 +290,16 @@ export class TomeDrill extends TomeElement {
     this.#stopTimers();
     this.timeUp = timeUp;
     this.current = undefined;
+    const planned = this.#plan.length;
+    const right = this.results.filter((result) => result.outcome === "correct").length;
+    const score = this.#quizMode ? judged({ right, total: planned, score: percent(right, planned) }, this.#passMark) : undefined;
     const detail: DrillDone = {
       drill: this.#drillId,
-      planned: this.#plan.length,
+      planned,
       timeUp,
       results: this.results,
-      session: tome.end(),
+      ...(score && { score }),
+      session: tome.end(score ? { score: score.score } : {}),
     };
     this.#hostSummary = !this.dispatchEvent(new CustomEvent("tome-drill-done", { bubbles: true, cancelable: true, detail }));
     this.state = "done";

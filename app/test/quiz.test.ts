@@ -6,7 +6,7 @@ import { appClasses } from "@tomewise/core";
 import { startDashboard, type Width } from "./browser.ts";
 
 type Dashboard = Awaited<ReturnType<typeof startDashboard>>;
-type Event = { id: string; kind: string; ref?: string; sessionId?: string; outcome?: string; grade?: number };
+type Event = { id: string; kind: string; ref?: string; sessionId?: string; outcome?: string; grade?: number; score?: number };
 
 const SPANISH = "subjects/spanish";
 const QUIZ_REF = "drill:quiz-2026-11-21";
@@ -88,7 +88,7 @@ describe.each(["phone", "desktop"] as const)("an app-built quiz at %s width", (w
     const summary = runner.locator(".tome-runner-summary");
     expect(await summary.locator(".tome-kicker").innerText()).toBe("Quiz done");
     expect(await summary.locator(".tome-score").innerText()).toBe("40%");
-    expect(await summary.locator(".tome-score-sub").innerText()).toBe("2 of 5 right");
+    expect(await summary.locator(".tome-score-sub").innerText()).toBe("2 of 5 right · pass mark 70%");
     expect(await texts(page, ".tome-quiz-answers li")).toEqual([
       "hola\nWrong\nYou: Again\nAnswer: hello",
       "adiós\nRight\nYou: Good\nAnswer: goodbye",
@@ -101,6 +101,7 @@ describe.each(["phone", "desktop"] as const)("an app-built quiz at %s width", (w
     expect(events.map((event) => event.kind)).toEqual(["session.start", ...Array(5).fill("attempt"), "session.end"]);
     expect(events[0]!.ref).toBe(QUIZ_REF);
     expect(events.at(-1)!.ref).toBe(QUIZ_REF);
+    expect(events.at(-1)!.score).toBe(40);
     expect(events.slice(1, -1).map((event) => [event.ref, event.grade])).toEqual([
       ["item:hola", 1],
       ["item:adios", 3],
@@ -126,7 +127,7 @@ describe.each(["phone", "desktop"] as const)("an app-built quiz at %s width", (w
 
     await expect.poll(() => runner.getAttribute("data-state")).toBe("done");
     expect(await runner.locator(".tome-score").innerText()).toBe("Passed");
-    expect(await runner.locator(".tome-score-sub").innerText()).toBe("Pass mark 40%");
+    expect(await runner.locator(".tome-score-sub").innerText()).toBe("You reached the pass mark.");
   }, 30_000);
 
   it("hides a hidden score but still records every answer", async () => {
@@ -137,11 +138,12 @@ describe.each(["phone", "desktop"] as const)("an app-built quiz at %s width", (w
     await expect.poll(() => runner.getAttribute("data-state")).toBe("done");
     expect(await runner.locator(".tome-score").count()).toBe(0);
     expect(await runner.locator(".tome-quiz-mark").count()).toBe(0);
-    expect(await runner.locator(".tome-score-sub").innerText()).toBe("Your score is saved for your agent, not shown.");
+    expect(await runner.locator(".tome-score-sub").innerText()).toBe("Your score is saved for your agent.");
     expect(await texts(page, ".tome-quiz-answers li")).toHaveLength(5);
     const events = await eventsAfter(dashboard, before, ended);
     expect(events.filter((event) => event.kind === "attempt").map((event) => event.outcome)).toEqual(["wrong", "correct", "correct", "wrong", "correct"]);
     expect(events[0]!.ref).toBe(QUIZ_REF);
+    expect(events.at(-1)!.score).toBe(60);
   }, 30_000);
 
   it("ends a timed quiz at the limit", async () => {
@@ -153,9 +155,10 @@ describe.each(["phone", "desktop"] as const)("an app-built quiz at %s width", (w
 
     await expect.poll(() => runner.getAttribute("data-state"), { timeout: 6000 }).toBe("done");
     expect(await runner.locator(".tome-runner-summary .tome-kicker").innerText()).toBe("Time's up");
-    expect(await runner.locator(".tome-runner-summary .tome-score-sub").innerText()).toBe("1 of 5 right");
+    expect(await runner.locator(".tome-runner-summary .tome-score-sub").innerText()).toBe("1 of 5 right · pass mark 70%");
     const events = await eventsAfter(dashboard, before, ended);
     expect(events.map((event) => event.kind)).toEqual(["session.start", "attempt", "session.end"]);
+    expect(events.at(-1)!.score).toBe(20);
   }, 30_000);
 });
 

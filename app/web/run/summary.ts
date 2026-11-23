@@ -1,3 +1,4 @@
+import { judged, percent, scoreView } from "@tomewise/core/score";
 import type { AssessmentSettings, Subject } from "../api.ts";
 import type { Answered, DrillDone } from "./tome.ts";
 
@@ -145,12 +146,7 @@ function quizAnswer(item: Item | undefined, result: Answered, index: number): Qu
 export function summarizeQuiz(run: SubjectRun, { scoreDisplay, passMark }: Pick<AssessmentSettings, "scoreDisplay" | "passMark">): QuizSummary {
   const items = new Map(run.subject.items.map((item) => [`item:${item.id}`, item]));
   const right = run.results.filter((result) => result.outcome === "correct").length;
-  const percent = run.planned ? Math.round((right / run.planned) * 100) : 0;
   const answers = run.results.map((result, index) => quizAnswer(items.get(result.ref), result, index));
-  const shown = {
-    number: { score: `${percent}%`, scoreSub: `${right} of ${run.planned} right` },
-    "pass-fail": { score: percent >= passMark ? "Passed" : "Not passed", scoreSub: `Pass mark ${passMark}%` },
-    hidden: { score: undefined, scoreSub: "Your score is saved for your agent, not shown." },
-  }[scoreDisplay];
-  return { timeUp: run.timeUp, ...shown, answers, marked: scoreDisplay !== "hidden" };
+  const view = scoreView(judged({ right, total: run.planned, score: percent(right, run.planned) }, passMark), scoreDisplay);
+  return { timeUp: run.timeUp, score: view.headline, scoreSub: view.detail, answers, marked: scoreDisplay !== "hidden" };
 }
