@@ -109,6 +109,7 @@ export interface MilestoneView {
   status: MilestoneStatus;
   lessons: LessonRow[];
   exam?: { title: string; href?: string };
+  markable: boolean;
 }
 
 export interface UnitView {
@@ -123,12 +124,17 @@ export interface CurriculumView {
   total: number;
 }
 
+const FINISHED = new Set<MilestoneStatus>(["done", "skipped"]);
+
+export const examsOn = (subject: Subject) => subject.settings.assessments.enabled && subject.settings.assessments.exams;
+
 export function curriculumView(
   subject: Subject,
   completed: readonly string[],
   statuses: Readonly<Record<string, MilestoneStatus>> = {},
 ): CurriculumView {
   const done = new Set(completed);
+  const exams = examsOn(subject);
   const itemCount = (lesson: string) => subject.items.filter((item) => item.unlockedBy === lesson && !item.retired).length;
   const row = (id: string, later?: string): LessonRow => ({
     id,
@@ -154,7 +160,8 @@ export function curriculumView(
         title: milestone.title,
         status,
         lessons: lessons.map((id) => row(id, later)),
-        ...(milestone.exam !== undefined && {
+        markable: !exams && !FINISHED.has(status) && milestone.lessons.length > 0 && milestone.lessons.every((id) => done.has(id)),
+        ...(milestone.exam !== undefined && exams && {
           exam: {
             title: `Exam · ${spaced(milestone.exam)}`,
             ...(subject.exams.includes(milestone.exam) && { href: subjectPath(subject.id, "exams", `${milestone.exam}.html`) }),

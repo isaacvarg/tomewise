@@ -91,6 +91,13 @@
     charts: [],
   };
 
+  const RELAXED = "morse-code-relaxed";
+  const relaxedSubject = {
+    ...morseSubject,
+    id: RELAXED,
+    settings: { ...settingsOf, assessments: { ...demoAssessments, exams: false } },
+  };
+
   function morseActivity() {
     const today = Date.parse(TODAY);
     const days = [];
@@ -202,6 +209,9 @@
       return json(settingsBody());
     }
     if (method !== "GET") return json({ error: "Not found" }, 404);
+    if (url.pathname === `/api/subjects/${RELAXED}`) return json(relaxedSubject);
+    if (url.pathname.startsWith(`/api/subjects/${RELAXED}/`)) url.pathname = url.pathname.replace(RELAXED, "morse-code");
+    if (url.searchParams.get("subject") === RELAXED) url.searchParams.set("subject", "morse-code");
     if (url.pathname === "/api/settings") return json(settingsBody());
     if (url.pathname === "/api/activity") return json(url.searchParams.get("subject") === "morse-code" ? morseActivity() : homeActivity());
     if (url.pathname === "/api/subjects/morse-code") return json(morseSubject);

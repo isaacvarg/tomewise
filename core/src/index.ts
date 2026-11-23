@@ -6,7 +6,7 @@ export type { ItemSet, Subject, SubjectSettingsResolved } from "./subject.ts";
 export type { Item } from "./items.ts";
 export type { Drill } from "./drills.ts";
 export type { Curriculum, MilestoneStatus } from "./curriculum.ts";
-export { milestoneStatusesOf } from "./milestones.ts";
+export { examsOn, milestoneStatusesOf } from "./milestones.ts";
 export { validateLearningHome } from "./validate.ts";
 export { formatIssue } from "./issues.ts";
 export type { ValidationIssue } from "./issues.ts";

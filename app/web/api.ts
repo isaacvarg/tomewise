@@ -88,6 +88,18 @@ export const api = {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ value }),
     }),
+  markMilestoneDone: (subject: Subject, milestone: string) =>
+    getJson<{ events: unknown[] }>("/api/events", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        subject: subject.id,
+        kind: "milestone.status",
+        ref: `milestone:${milestone}`,
+        schemaVersion: Math.max(1, ...subject.payloadSchemas.map((schema) => schema.version)),
+        data: { status: "done" },
+      }),
+    }),
   saveSubjectAssessments: (id: string, value: AssessmentOverrides) =>
     getJson<Settings>(`/api/settings/subjects/${encodeURIComponent(id)}/assessments`, {
       method: "PUT",

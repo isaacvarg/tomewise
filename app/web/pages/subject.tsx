@@ -1,5 +1,5 @@
 import { type KeyboardEvent, type ReactNode, useEffect, useId, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router";
+import { Link, useLocation, useNavigate, useParams } from "react-router";
 import { type Activity, type AgentPrompt, api, type DueItem, type Explanation, type Progress, type Subject, type SubjectPrompts } from "../api.ts";
 import { Heatmap } from "../heatmap.tsx";
 import { count, minutesFor } from "../home/model.ts";
@@ -9,6 +9,7 @@ import { Stats } from "../subject/stats.tsx";
 import {
   curriculumView,
   drillRows,
+  examsOn,
   goalProgress,
   type LessonRow,
   type MilestoneView,
@@ -242,6 +243,14 @@ function PromptText({ subject, prompt }: { subject: Subject; prompt: AgentPrompt
       return (
         <>
           Every lesson in <strong>{prompt.milestone.title}</strong> is done.
+          {!examsOn(subject) && (
+            <>
+              {" "}
+              <Link className="tome-ask-go" to={`${tabPath(subject.id, "curriculum")}#${markId(prompt.milestone.id)}`}>
+                Mark it done
+              </Link>
+            </>
+          )}
         </>
       );
     case "exam-unwritten":
@@ -376,9 +385,17 @@ const STATUS: Record<MilestoneView["status"], string> = {
   changed: "Changed",
 };
 
+const markId = (milestone: string) => `mark-${milestone}`;
+
 function Curriculum({ data }: { data: SubjectData }) {
   const view = curriculumView(data.subject, data.progress.completedLessons, data.progress.milestones);
   const hasCurriculum = data.subject.curriculum !== undefined;
+  const { hash } = useLocation();
+  useEffect(() => {
+    const target = hash.length > 1 ? document.getElementById(decodeURIComponent(hash.slice(1))) : null;
+    target?.scrollIntoView({ block: "center" });
+    target?.focus();
+  }, [hash]);
   return (
     <section className="tome-section tome-curriculum" aria-label="Curriculum">
       <div className="tome-section-head">
@@ -407,6 +424,7 @@ function Curriculum({ data }: { data: SubjectData }) {
                   {milestone.exam && <Exam exam={milestone.exam} />}
                 </ol>
               )}
+              {milestone.markable && <MarkDone subject={data.subject} milestone={milestone} />}
             </div>
           ))}
         </div>
@@ -424,6 +442,36 @@ function Curriculum({ data }: { data: SubjectData }) {
         </div>
       )}
     </section>
+  );
+}
+
+function MarkDone({ subject, milestone }: { subject: Subject; milestone: MilestoneView }) {
+  const [state, setState] = useState<"idle" | "saving" | "failed">("idle");
+  const mark = () => {
+    setState("saving");
+    api.markMilestoneDone(subject, milestone.id).then(
+      () => setState("idle"),
+      () => setState("failed"),
+    );
+  };
+  return (
+    <>
+      <button
+        id={markId(milestone.id)}
+        className="tome-milestone-done"
+        type="button"
+        disabled={state === "saving"}
+        aria-label={`Mark “${milestone.title}” done`}
+        onClick={mark}
+      >
+        {state === "saving" ? "Marking…" : "Mark done"}
+      </button>
+      {state === "failed" && (
+        <p className="tome-notice" role="alert">
+          Couldn't mark it done. Try again.
+        </p>
+      )}
+    </>
   );
 }
 

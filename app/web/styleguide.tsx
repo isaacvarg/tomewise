@@ -69,6 +69,8 @@ const demoExplanations: Explanation[] = [
   },
 ];
 
+const examsOff = { ...subject.settings, assessments: { ...subject.settings.assessments, exams: false } };
+
 const nothing = () => {};
 
 const noCharts: SubjectStats = { totals: { durationMs: 25 * 60_000, sessions: 3, accuracy: 0.8 }, charts: [] };
@@ -94,6 +96,13 @@ for (const tab of ["overview", "curriculum", "drills", "reference", "stats"]) {
   );
 }
 mount(
+  '[data-styleguide-subject="curriculum-relaxed"]',
+  <Routes>
+    <Route path="/s/:subject/:tab?" element={<SubjectHome />} />
+  </Routes>,
+  "/s/morse-code-relaxed/curriculum",
+);
+mount(
   "[data-styleguide-no-charts]",
   <Screen kicker="Subject" title="Morse code">
     <div className="tome-view" data-view="stats">
@@ -112,7 +121,7 @@ mount(
   "[data-styleguide-prompts]",
   <Screen kicker="Morse code" title="Ask your agent">
     <div className="tome-view" style={{ gridColumn: "1 / -1" }}>
-      <Prompts subject={{ ...subject, id: "morse-code", name: "Morse code" }} prompts={demoPrompts} />
+      <Prompts subject={{ ...subject, id: "morse-code", name: "Morse code", settings: examsOff }} prompts={demoPrompts} />
       <Feedback explanations={demoExplanations} />
     </div>
   </Screen>,
