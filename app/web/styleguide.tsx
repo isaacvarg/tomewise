@@ -2,9 +2,11 @@ import { StrictMode, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { MemoryRouter } from "react-router";
 import type { Subject } from "./api.ts";
+import { dueToday } from "./home/model.ts";
 import { Home } from "./home/home.tsx";
 import { Settings } from "./pages/settings.tsx";
 import { RunSummary, Runner } from "./run/runner.tsx";
+import { RunBreak, StartList } from "./run/start.tsx";
 import { summarize } from "./run/summary.ts";
 import "./styles/app.css";
 
@@ -27,6 +29,18 @@ const demoRun = {
   ],
 } as const;
 
+const demoDue = dueToday(
+  [
+    { id: "morse-code", name: "Morse code", due: 9 },
+    { id: "spanish", name: "Spanish", due: 4 },
+  ].map(({ id, name, due }) => ({
+    subject: { ...subject, id, name },
+    due: Array.from({ length: due }, (_, index) => ({ item: subject.items[index % subject.items.length]!, due: null })),
+  })),
+);
+
+const nothing = () => {};
+
 function mount(selector: string, page: ReactNode) {
   for (const element of document.querySelectorAll(selector)) {
     createRoot(element).render(
@@ -46,3 +60,8 @@ mount(
     <RunSummary summary={summarize([{ ...demoRun, results: [...demoRun.results] }])} />
   </div>,
 );
+mount(
+  "[data-styleguide-break]",
+  <RunBreak run={{ ...demoRun, results: [...demoRun.results] }} next={demoDue.rows[0]!} onContinue={nothing} onSkip={nothing} onDone={nothing} />,
+);
+mount("[data-styleguide-start-list]", <StartList due={demoDue} />);

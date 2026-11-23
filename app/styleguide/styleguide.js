@@ -173,6 +173,8 @@
     "[data-styleguide-home]": '.tome-app[data-state="ready"]',
     "[data-styleguide-runner]": '.tome-runner[data-state="running"] .tome-drill-item > *',
     "[data-styleguide-summary]": ".tome-runner-summary",
+    "[data-styleguide-break]": ".tome-break",
+    "[data-styleguide-start-list]": ".tome-picks",
     "[data-styleguide-settings]": '.tome-app[data-state="ready"]',
   };
 

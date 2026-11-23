@@ -1,17 +1,25 @@
+import { useRef } from "react";
 import { Link, useSearchParams } from "react-router";
-import { api, type Subject } from "../api.ts";
-import { useLoad } from "../load.ts";
+import { api, type StartMode, type Subject } from "../api.ts";
+import { type Loaded, useLoad } from "../load.ts";
 import { Runner } from "../run/runner.tsx";
+import { Sequence, StartList } from "../run/start.tsx";
 import { Screen } from "../screen.tsx";
+import { loadToday } from "../today.ts";
 
 export function RunDue() {
-  const subject = useSearchParams()[0].get("subject");
+  const params = useSearchParams()[0];
+  const subject = params.get("subject");
   if (subject) return <Run drill="review" load={() => api.subject(subject)} deps={[subject]} />;
-  return (
-    <Screen kicker="Review" title="Due today">
-      <Link to="/">Back to today</Link>
-    </Screen>
-  );
+  return <StartDue all={params.has("all")} />;
+}
+
+function StartDue({ all }: { all: boolean }) {
+  const loaded = useLoad(loadToday, [], { refetchOn: ["content", "events"] });
+  const mode = useRef<StartMode>(undefined);
+  if (loaded.state !== "ready") return <NotReady loaded={loaded} />;
+  mode.current ??= loaded.data.settings.start;
+  return all || mode.current === "sequence" ? <Sequence due={loaded.data.due} /> : <StartList due={loaded.data.due} />;
 }
 
 export function RunDrill() {
@@ -45,6 +53,10 @@ async function subjectWithDrill(drill: string, id: string | null): Promise<Subje
 function Run({ drill, load, deps }: { drill: string; load: () => Promise<Subject>; deps: unknown[] }) {
   const loaded = useLoad(load, deps);
   if (loaded.state === "ready") return <Runner key={`${loaded.data.id} ${drill}`} subject={loaded.data} drill={drill} />;
+  return <NotReady loaded={loaded} />;
+}
+
+function NotReady({ loaded }: { loaded: Exclude<Loaded<unknown>, { state: "ready" }> }) {
   return (
     <div className="tome-runner" data-state={loaded.state}>
       {loaded.state === "loading" ? (

@@ -44,12 +44,12 @@ export const widgetClasses: Readonly<Record<string, readonly string[]>> = {
 };
 
 export const appClasses: readonly string[] = [
-  "tome-actions", "tome-activity", "tome-again", "tome-app", "tome-back", "tome-cell", "tome-due", "tome-due-how",
+  "tome-actions", "tome-activity", "tome-again", "tome-app", "tome-back", "tome-break", "tome-break-continue", "tome-break-done", "tome-break-next", "tome-break-skip", "tome-cell", "tome-due", "tome-due-how",
   "tome-due-what", "tome-header", "tome-heat-days", "tome-heat-legend", "tome-heatmap", "tome-heatmap-wrap",
   "tome-hint", "tome-home-link", "tome-kicker", "tome-look-again", "tome-look-item", "tome-look-why", "tome-mark",
   "tome-mark-letter", "tome-meta", "tome-meta-narrow", "tome-meta-wide", "tome-notice", "tome-option",
   "tome-option-name", "tome-option-text", "tome-options", "tome-order", "tome-order-handle", "tome-order-move",
-  "tome-order-name", "tome-order-row", "tome-runner", "tome-runner-bar", "tome-runner-summary", "tome-score",
+  "tome-order-name", "tome-order-row", "tome-pick", "tome-pick-how", "tome-pick-name", "tome-picks", "tome-runner", "tome-runner-bar", "tome-runner-summary", "tome-score",
   "tome-score-sub", "tome-section", "tome-section-head", "tome-settings", "tome-settings-actions",
   "tome-settings-cancel", "tome-settings-save", "tome-stage", "tome-start", "tome-stats", "tome-streak",
   "tome-streak-num", "tome-streak-text", "tome-subject", "tome-subject-name", "tome-subjects", "tome-summary-head",
