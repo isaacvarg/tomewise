@@ -1,159 +1,209 @@
 ---
 name: teach
-description: Teach the user a new skill or concept, within this workspace.
+description: Teach the learner a subject in their Tomewise learning home, one lesson at a time, planned from their history.
 disable-model-invocation: true
 argument-hint: "What would you like to learn about?"
 ---
 
-The user has asked you to teach them something. This is a stateful request - they intend to learn the topic over multiple sessions.
+The learner has asked you to teach them something. This is a stateful request: they learn the subject over many sessions, and their **learning home** holds the state. The app runs the lessons, records every answer and schedules reviews; you write the content.
 
-## Teaching Workspace
+## The learning home
 
-Treat the current directory as a teaching workspace. Workspace paths (`./lessons/` and the rest) resolve from the directory `/teach` was run in; only the links to this skill's own files (`*-FORMAT.md`, `WIDGETS.md`) resolve from this skill's folder. The state of their learning is captured in this directory in several files:
+Work from the learning home root, the folder with `tomewise.json`. Each subject is a folder under `subjects/`, and everything about it lives there:
 
-- `MISSION.md`: A document capturing the _reason_ the user is interested in the topic. This should be used to ground all teaching. Use the format in [MISSION-FORMAT.md](./MISSION-FORMAT.md).
-- `./reference/*.html`: A directory of reference materials. These are the compressed learnings from the lessons - cheat sheets, reference algorithms, syntax, yoga poses, glossaries. They are the raw units of learning. They should be beautiful documents which print out well, and are designed for quick reference.
-- `RESOURCES.md`: A list of resources which can be explored to ground your teaching in contextual knowledge, or to acquire knowledge and wisdom. Use the format in [RESOURCES-FORMAT.md](./RESOURCES-FORMAT.md).
-- `./learning-records/*.md`: A directory of learning records, which capture what the user has learned. These are loosely equivalent to architectural decision records in software development - they capture non-obvious lessons and key insights that may need to be revised later, or drive future sessions. These should be used to calculate the zone of proximal development. They are titled `0001-<dash-case-name>.md`, where the number increments each time. Use the format in [LEARNING-RECORD-FORMAT.md](./LEARNING-RECORD-FORMAT.md).
-- `./lessons/*.html`: A directory of lessons. A **lesson** is a single, self-contained HTML output that teaches one tightly-scoped thing tied to the mission. This is the primary unit of teaching in this workspace.
-- `./assets/*`: Reusable **components** shared across lessons. See [Assets](#assets).
-- `NOTES.md`: A scratchpad for you to jot down user preferences, or working notes.
+| Path in `subjects/<subject>/` | What it is |
+| --- | --- |
+| `subject.json` | Name, payload schemas, assessment settings, charts. [SUBJECT-FORMAT.md](./SUBJECT-FORMAT.md) |
+| `MISSION.md` | Why the learner wants this subject. [MISSION-FORMAT.md](./MISSION-FORMAT.md) |
+| `RESOURCES.md` | Trusted sources to teach from. [RESOURCES-FORMAT.md](./RESOURCES-FORMAT.md) |
+| `learning-records/NNNN-<name>.md` | What the learner has demonstrably learned, and changes of mission. [LEARNING-RECORD-FORMAT.md](./LEARNING-RECORD-FORMAT.md) |
+| `GLOSSARY.md` | The subject's terms. [GLOSSARY-FORMAT.md](./GLOSSARY-FORMAT.md) |
+| `NOTES.md` | Your scratchpad: the learner's preferences and working notes |
+| `lessons/NNNN-<name>.html` | Lessons, numbered in order |
+| `items/NNNN-<name>.json` | The items each lesson unlocks. [ITEMS-FORMAT.md](./ITEMS-FORMAT.md) |
+| `drills/<id>.json` | Reusable practice over items. [DRILLS-FORMAT.md](./DRILLS-FORMAT.md) |
+| `quizzes/`, `exams/` | Scored checks. [ASSESSMENTS-FORMAT.md](./ASSESSMENTS-FORMAT.md) |
+| `curriculum.json` | The path of units and milestones. [CURRICULUM-FORMAT.md](./CURRICULUM-FORMAT.md) |
+| `reference/*.html` | Reference sheets: cheat sheets, glossaries, sequences |
+| `assets/` | Custom widgets, audio and anything lessons share |
+| `events/` | The learner's history, written by the app. [EVENTS-FORMAT.md](./EVENTS-FORMAT.md) |
 
-### Learning home files
+Read a file's format doc before writing or changing that file. Each links a worked example from the Morse example learning home and the JSON Schema to check against.
 
-The app reads a subject's files in fixed formats. Read the format doc before writing or changing one, and before reading history:
+The app is the one writer of `events/`. Read history through `tome stats`, `tome due` and `tome query`, and record anything (such as a graded explanation) with `tome log`.
 
-- Events, refs and `tome log`: [EVENTS-FORMAT.md](./EVENTS-FORMAT.md)
-- `subject.json` and payload schemas: [SUBJECT-FORMAT.md](./SUBJECT-FORMAT.md)
-- Items: [ITEMS-FORMAT.md](./ITEMS-FORMAT.md)
-- Drills: [DRILLS-FORMAT.md](./DRILLS-FORMAT.md)
-- `curriculum.json` and milestones: [CURRICULUM-FORMAT.md](./CURRICULUM-FORMAT.md)
-- Quizzes and exams: [ASSESSMENTS-FORMAT.md](./ASSESSMENTS-FORMAT.md)
+## A teaching session
 
-Each links a worked example from the Morse example learning home and the JSON Schema to check a file against. Run `tome validate` after every change.
+Every session, such as "next Morse lesson", runs these steps in order.
+
+### 1. Before planning
+
+From the learning home root, run:
+
+```sh
+git pull
+tome stats --json
+tome due --json
+```
+
+`git pull` brings in the history the app pushed since your last session. `tome stats --json` shows sessions, time, accuracy and streak; `tome due --json` lists the items the schedule says are due. If the pull fails, stop and show the learner the error.
+
+Done when all three have run and you have read their output.
+
+### 2. Plan the lesson
+
+Choose one lesson in the learner's [zone of proximal development](#zone-of-proximal-development), tied to the [mission](#the-mission). Read `MISSION.md`, the `learning-records/`, `NOTES.md`, `curriculum.json` and the existing `lessons/`, `items/` and `drills/`. Weigh what step 1 showed: low accuracy or a long due list argues for consolidating before adding new material.
+
+Done when you can name the lesson's single win and every item it adds.
+
+### 3. Write the lesson
+
+Write `lessons/NNNN-<name>.html`, numbered one past the last lesson. A lesson is a plain HTML page; the app injects the theme and the widgets, so it needs only a `<title>`, its content, and a `<script type="module">` for any custom widget in `assets/`:
+
+```html
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>A, the short pair</title>
+</head>
+<body>
+<h1>A, the short pair</h1>
+<p>A is di-dah.</p>
+<tome-audio ref="item:letter-a" choices="A M K"></tome-audio>
+<tome-drill drill="listen-pairs"></tome-drill>
+<tome-done></tome-done>
+</body>
+</html>
+```
+
+- **Widgets for every practice and check.** Each answer a widget records moves the review schedule. Read [WIDGETS.md](./WIDGETS.md) before writing one. End the lesson with `<tome-done>` or a `final` widget.
+- **Theme tokens for every style.** The learner's theme styles the page, headings and widgets. Style anything extra only with `.tome-*` classes and `var(--t-*)` tokens: `--t-bg`, `--t-surface`, `--t-ink`, `--t-muted`, `--t-rule`, `--t-accent`, `--t-accent-ink`, `--t-good`, `--t-good-bg`, `--t-bad`, `--t-bad-bg`, `--t-heat-0` to `--t-heat-4`, `--t-display`, `--t-ui`, `--t-mono`, `--t-radius`, `--t-cell-radius`. Then the lesson follows whatever theme the learner picks.
+- **Short.** One tangible win that fits in working memory, completable in minutes.
+- **Linked.** Link earlier lessons (`./0004-the-late-bump.html`) and reference sheets (`../reference/cheat-sheet.html`) with plain anchors.
+- **Cited.** Back each claim with a link from `RESOURCES.md`, and recommend the single best primary source to read or watch.
+- **A reminder** that the learner can ask you follow-up questions.
+
+Done when every practice is a widget, the page ends in `<tome-done>` or a `final` widget, and every style is a token or a `.tome-*` class.
+
+### 4. Write its items and drills
+
+The lesson ships with what it unlocks:
+
+- **Items** in `items/NNNN-<name>.json`, named after the lesson. Every item the lesson teaches has `"unlockedBy": "NNNN-<name>"`, and the lesson's widgets name them by ref (`item:letter-a`).
+- **A drill** that draws the lesson's items by a tag they carry, run from the lesson with `<tome-drill drill="<id>">`. Write a new `drills/<id>.json`, or run an existing drill when its tags already cover the new items.
+
+Done when every item the lesson shows is unlocked by it and the lesson runs a drill that draws them.
+
+### 5. Validate
+
+```sh
+tome validate
+```
+
+Fix every problem it reports and run it again.
+
+Done when it prints `<root> is valid.` and exits 0. Only then commit.
+
+### 6. Commit and push
+
+Commit the subject's changes in the learning home's style: Conventional Commits, scoped by subject folder (or `home` for `tomewise.json`), with no attribution lines.
+
+| Change | Message |
+| --- | --- |
+| New content | `feat(morse-code): add lesson 5 (A, the short pair)` |
+| Content fix | `fix(morse-code): correct item R audio speed` |
+| Curriculum or settings | `chore(morse-code): update curriculum, milestone 1 done` |
+
+```sh
+git add subjects/<subject>
+git commit --message "feat(<subject>): add lesson N (<title>)"
+git push
+```
+
+The app pulls the push. Tell the learner the lesson is ready at `/s/<subject>/lessons/NNNN-<name>.html` in the app.
+
+Done when `git push` succeeds.
 
 ## Philosophy
 
-To learn at a deep level, the user needs three things:
+To learn at a deep level, the learner needs three things:
 
 - **Knowledge**, captured from high-quality, high-trust resources
-- **Skills**, acquired through highly-relevant interactive lessons devised by you, based on the knowledge
+- **Skills**, acquired through highly relevant interactive lessons devised by you, based on the knowledge
 - **Wisdom**, which comes from interacting with other learners and practitioners
 
-Before the `RESOURCES.md` is well-populated, your focus should be to find high-quality resources which will help the user acquire knowledge. Never trust your parametric knowledge.
+Before `RESOURCES.md` is well populated, focus on finding high-quality resources that help the learner acquire knowledge. Never trust your parametric knowledge.
 
-Some topics may require more skills than knowledge. Learning more about theoretical physics might be more knowledge-based. For yoga, more skills-based.
+Some subjects need more skills than knowledge. Theoretical physics leans on knowledge; yoga on skills.
 
-### Fluency vs Storage Strength
+### Fluency vs storage strength
 
-You should be careful to split between two types of learning:
+Split between two types of learning:
 
 - **Fluency strength**: in-the-moment retrieval of knowledge
 - **Storage strength**: long-term retention of knowledge
 
-Fluency can give the user an illusory sense of mastery, but storage strength is the real goal. Try to design lessons which build long-term retention by desirable difficulty:
+Fluency can give an illusory sense of mastery; storage strength is the real goal. Design lessons that build it by desirable difficulty:
 
-- Using retrieval practice (recall from memory)
-- Spacing (distributing practice over time)
-- Interleaving (mixing up different but related topics in practice - for skills practice only)
+- Retrieval practice (recall from memory)
+- Spacing (practice distributed over time; the app's review schedule does this from what widgets record)
+- Interleaving (mixing different but related topics in practice, for skills only)
 
-## Lessons
+## The mission
 
-A lesson is the main thing you produce: the unit in which knowledge and skills reach the user. Each lesson is one self-contained HTML file, saved to `./lessons/` and titled `0001-<dash-case-name>.html` where the number increments each time.
+Tie every lesson to the mission: the reason the learner wants the subject.
 
-A lesson should be **beautiful**, with clean, readable typography and layout, since the user will return to these later to review. Think Tufte.
+If the mission is unclear or `MISSION.md` is empty, your first job is to ask the learner why they want to learn this. Without the mission, lessons feel abstract and you have no way to judge what comes next.
 
-The lesson should be short, and completable very quickly. Learners' working memory is very small, and we need to stay within it. But each lesson should give the user a single tangible win that they can build on. It should be directly tied to the mission, and should be in the user's zone of proximal development.
+Missions change as the learner grows. Confirm a change with the learner, update `MISSION.md`, and add a learning record for it.
 
-If possible, open the lesson file for the user by running a CLI command.
+## Zone of proximal development
 
-Each lesson should link via HTML anchors to other lessons and reference documents.
-
-Each lesson should recommend a primary source for the user to read or watch. This should be the most high-quality, high-trust resource you found on the topic.
-
-Each lesson should contain a reminder to ask followup questions to the agent. The agent is their teacher, and can assist with anything that's unclear.
-
-## Assets
-
-Lessons are built from reusable **components**, stored in `./assets/`: stylesheets, custom widgets, simulators, diagram helpers, and anything else a second lesson could reuse.
-
-Reuse is the default, not the exception. Before authoring a lesson, read `./assets/` and build from the components already there. When a lesson needs something new and reusable, write it as a component in `./assets/` and link to it; never inline code a future lesson would duplicate.
-
-A shared stylesheet is the first component every workspace earns: every lesson links it, so the lessons look like one consistent course rather than a pile of one-offs. As the workspace grows, so should the component library.
-
-The app applies the learner's theme to every lesson, so style lessons and components only with theme tokens and `.tome-*` classes, never literal colours, fonts or radii. Then a lesson follows whatever theme the learner picks. The tokens are `--t-bg`, `--t-surface`, `--t-ink`, `--t-muted`, `--t-rule`, `--t-accent`, `--t-accent-ink`, `--t-good`, `--t-good-bg`, `--t-bad`, `--t-bad-bg`, `--t-heat-0` to `--t-heat-4`, `--t-display`, `--t-ui`, `--t-mono`, `--t-radius` and `--t-cell-radius`: use them as `var(--t-accent)`. Leave the page background, body font and headings to the theme.
-
-## The Mission
-
-Every lesson should be tied into the mission - the reason that the user is interested in learning about the topic.
-
-If the user is unclear about the mission, or the `MISSION.md` is not populated, your first job should be to question the user on why they want to learn this.
-
-Failing to understand the mission will mean knowledge acquisition is not grounded in real-world goals. Lessons will feel too abstract. You will have no way of judging what the user should do next.
-
-Missions may change as the user develops more skills and knowledge. This is normal - make sure to update the `MISSION.md` and add a learning record to capture the change. Confirm with the user before changing the mission.
-
-## Zone Of Proximal Development
-
-Each lesson, the user should always feel as if they are being challenged 'just enough'.
-
-The user may specify an exact thing they want to learn. If they don't, figure out their zone of proximal development by:
-
-- Reading their `learning-records`
-- Figuring out the right thing to teach them based on their mission
-- Teach the most relevant thing that fits in their zone of proximal development
+Each lesson should challenge the learner just enough. When they don't name what to learn, find it from their learning records, their history from step 1, and the mission, and teach the most relevant thing that fits.
 
 ## Knowledge
 
-Lessons should be designed around a skill the user is going to learn. The knowledge in the lesson should be only what's required to acquire that skill. You teach the knowledge first, then get the user to practice the skills via an interactive feedback loop.
+Design each lesson around a skill the learner is going to acquire, with only the knowledge that skill needs. Teach the knowledge first, then have the learner practise the skill through a feedback loop.
 
-Knowledge should first be gathered from trusted resources. Use `RESOURCES.md` to keep track of them. Lessons should be littered with citations - links to external resources to back up any claim made. This increases the trustworthiness of the lesson.
+Gather knowledge from trusted resources and track them in `RESOURCES.md`. Cite generously: links to external sources back every claim.
 
-For acquiring knowledge, difficulty is the enemy. It eats working memory you need for understanding.
+For acquiring knowledge, difficulty is the enemy. It eats the working memory understanding needs.
 
 ## Skills
 
-If knowledge is all about acquisition, skills are about durability and flexibility. Make the knowledge stick.
+Skills are about durability and flexibility: make the knowledge stick. For skill acquisition, difficulty is the tool; effortful retrieval builds storage strength.
 
-For skill acquisition, difficulty is the tool. Effortful retrieval is what builds storage strength. Skills should be taught through interactive lessons. There are several tools at your disposal:
+Teach skills through a **feedback loop**, as tight as possible: immediate, and ideally automatic. Widgets give that loop and record it. Use the item widgets for retrieval, `<tome-routine>` for real-world steps (yoga poses), `<tome-explain>` for the learner's own account of a concept, and `<tome-drill>` for practice over many items. A format no widget fits gets a custom widget in `assets/`, following [WIDGETS.md](./WIDGETS.md).
 
-- Interactive lessons, using quizzes and light in-browser tasks
-- Lessons which guide the user through a list of real-world steps to take (for instance, yoga poses)
-
-Each of these should be based on a **feedback loop**, where the user receives feedback on their performance. This feedback loop should be as tight as possible, giving feedback immediately - and ideally automatically.
-
-Build every practice and check from **widgets**: `<tome-flashcard>`, `<tome-choice>`, `<tome-typed>`, `<tome-audio>` and `<tome-routine>`, one per item type, plus `<tome-done>`, `<tome-explain>`, `<tome-exam-question>`, `<tome-timer>` and `<tome-drill>`. Widgets record each answer in the learner's history, which drives the review schedule; a format none fits gets a custom widget in `./assets/`. Read [WIDGETS.md](./WIDGETS.md) before writing a lesson, quiz or exam.
+For multiple-choice questions, make every answer the same number of words (and characters, where possible), and vary the position of the correct answer. Give no clue through formatting or order.
 
 The subject home charts only what you ask for: write **chart specs** in `subject.json` when the learner wants to see progress over time, such as speed, accuracy or practice minutes. Read [CHARTS-FORMAT.md](./CHARTS-FORMAT.md) before adding or changing one.
 
-For quizzes, each answer should be exactly the same number of words (and characters, if possible). Vary which position holds the correct answer across questions. Don't give the user any clues about the answer through formatting or order.
+## Acquiring wisdom
 
-## Acquiring Wisdom
+Wisdom comes from real-world interaction: testing skills outside the learning home.
 
-Wisdom comes from true real-world interaction - testing your skills outside the learning environment.
+When a question seems to need wisdom, attempt an answer, then point to a **community**: a place, online or offline, where the learner can test their skills for real, such as a forum, a subreddit, a class or a local group. Find high-reputation ones. If the learner doesn't want to join one, respect it.
 
-When the user asks a question that appears to require wisdom, your default posture should be to attempt to answer - but to ultimately delegate to a **community**.
+## Reference sheets
 
-A community is a place (online or offline) where the user can test their skills in the real world. This might be a forum, a subreddit, a real-world class (budget permitting) or a local interest group.
+Alongside lessons, write reference sheets in `reference/`: the compressed essence of lessons, built for quick lookup and printing. Lessons are rarely revisited; reference sheets are.
 
-You should attempt to find high-reputation communities the user can join. If the user expresses a preference that they don't want to join a community, respect it.
-
-## Reference Documents
-
-While creating lessons, you should also create reference documents. Lessons can reference these documents - they are useful for tracking raw units of knowledge useful across lessons.
-
-Lessons will rarely be revisited later - reference documents will be. They should be the compressed essence of the lesson, in a format designed for quick reference.
-
-Some learning topics lend themselves to reference:
+Subjects that lend themselves to reference:
 
 - Syntax and code snippets for programming
 - Algorithms and flowcharts for processes
-- Yoga poses and sequences for yoga
+- Poses and sequences for yoga
 - Exercises and routines for fitness
-- Glossaries for any topic with its own nomenclature
+- Glossaries for any subject with its own nomenclature
 
-Glossaries, in particular, are an essential reference. Once one is created, it should be adhered to in every lesson.
+Once `GLOSSARY.md` exists, use its terms in every lesson.
 
 ## `NOTES.md`
 
-The user will sometimes express preferences of how they want to be taught, or things you should keep in mind. This is the place to record those preferences, so you can refer back to them when designing lessons or working with the user.
+When the learner states a preference about how they want to be taught, or something to keep in mind, record it in `NOTES.md` and read it when planning.
+
+## Credit
+
+Forked from Matt Pocock's `teach` skill under the MIT License; see [LICENSE](./LICENSE).
