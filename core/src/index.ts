@@ -36,6 +36,8 @@ export type { LearningEvent, EventKind } from "./events.ts";
 export type { PayloadSchemaVersion } from "./payload.ts";
 export { dueItems, nextDue, quizItems } from "./due.ts";
 export { completedLessons } from "./progress.ts";
+export { dueQuiz, quizSlots } from "./quiz-due.ts";
+export type { QuizSlot } from "./quiz-due.ts";
 export type { DueItem, ScheduledItem } from "./due.ts";
 export { agentPrompts, explanations } from "./prompts.ts";
 export type { AgentPrompt, Explanation, Grade, PromptMilestone } from "./prompts.ts";
