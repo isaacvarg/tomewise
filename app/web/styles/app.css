@@ -152,6 +152,74 @@
     outline: 2px solid var(--t-accent); outline-offset: 2px;
   }
 
+  .tome-header > .tome-home-link { align-self: flex-start; font-size: .82rem; color: var(--t-muted); margin-bottom: .5rem; }
+  .tome-title:has(> .tome-mark) { display: flex; align-items: center; gap: .7rem; }
+  .tome-row { color: inherit; text-decoration: none; }
+  .tome-row:focus-visible, .tome-tab:focus-visible { outline: 2px solid var(--t-accent); outline-offset: 2px; }
+
+  .tome-tabs {
+    display: flex; flex: none; overflow-x: auto; scrollbar-width: none; position: sticky; top: 0; z-index: 2;
+    margin-top: -.6rem; padding-top: .5rem; background: var(--t-bg); border-bottom: 1px solid var(--t-rule);
+  }
+  .tome-tabs::-webkit-scrollbar { display: none; }
+  .tome-tab {
+    flex: none; color: var(--t-muted); font: 600 .78rem var(--t-ui); text-decoration: none;
+    padding: .5rem .36rem .6rem; box-shadow: inset 0 -2px 0 transparent;
+  }
+  .tome-tab:hover { color: var(--t-ink); }
+  .tome-tab[aria-selected="true"] { color: var(--t-ink); box-shadow: inset 0 -2px 0 var(--t-accent); }
+  .tome-tab:focus-visible { outline-offset: -2px; }
+  .tome-view { display: flex; flex-direction: column; gap: 1.35rem; }
+  .tome-view[hidden] { display: none; }
+
+  .tome-goal { padding: .85rem .9rem; background: var(--t-surface); border-radius: var(--t-radius); gap: .5rem; }
+  .tome-goal-num { display: flex; align-items: baseline; gap: .4rem; }
+  .tome-goal-num b { font-family: var(--t-display); font-weight: 400; font-size: 2.1rem; line-height: 1; font-variant-numeric: tabular-nums; }
+  .tome-goal-num span { font-size: .85rem; color: var(--t-muted); }
+  .tome-goal-bar { height: 6px; background: var(--t-rule); border-radius: 99px; overflow: hidden; }
+  .tome-goal-bar span { display: block; height: 100%; background: var(--t-accent); border-radius: inherit; }
+  .tome-goal-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; font-size: .62rem; color: var(--t-muted); text-align: center; margin-top: .2rem; }
+  .tome-goal-week i { display: block; height: 4px; border-radius: 99px; background: var(--t-rule); margin-bottom: 3px; }
+  .tome-goal-week i[data-met] { background: var(--t-accent); }
+  .tome-goal-week i[data-part] { background: color-mix(in srgb, var(--t-accent) 35%, var(--t-rule)); }
+  .tome-goal-week span[data-today] { color: var(--t-ink); font-weight: 600; }
+  .tome-due .tome-start { margin-top: 0; }
+
+  .tome-curriculum { gap: .9rem; }
+  .tome-unit { display: flex; flex-direction: column; gap: .5rem; }
+  .tome-unit h4 { margin: 0; font-family: inherit; font-size: .75rem; font-weight: 600; color: var(--t-muted); letter-spacing: .05em; text-transform: uppercase; }
+  .tome-milestone { border: 1px solid var(--t-rule); border-radius: var(--t-radius); padding: .7rem .9rem .2rem; display: flex; flex-direction: column; }
+  .tome-milestone-head { display: flex; justify-content: space-between; align-items: baseline; gap: .8rem; padding-bottom: .45rem; }
+  .tome-milestone-head b { font-size: .92rem; font-weight: 600; }
+  .tome-status { font-size: .7rem; font-weight: 600; padding: .1rem .5rem; border-radius: 99px; white-space: nowrap; color: var(--t-muted); border: 1px solid var(--t-rule); }
+  .tome-status[data-status="current"] { color: var(--t-accent-ink); background: var(--t-accent); border-color: var(--t-accent); }
+  .tome-status[data-status="done"] { color: var(--t-good); background: var(--t-good-bg); border-color: transparent; }
+  .tome-lessons { list-style: none; margin: 0; padding: 0; }
+  .tome-lessons li { border-top: 1px solid var(--t-rule); }
+  .tome-milestone-plain { padding-top: .2rem; }
+  .tome-milestone-plain .tome-lessons li:first-child { border-top: 0; }
+  .tome-lessons .tome-row { display: grid; grid-template-columns: 1.3rem 1fr auto; align-items: center; gap: .55rem; padding: .5rem 0; font-size: .87rem; }
+  .tome-check { width: 1.1rem; height: 1.1rem; border-radius: 50%; border: 1.5px solid var(--t-rule); display: grid; place-items: center; }
+  .tome-check svg { width: .7rem; height: .7rem; }
+  .tome-lessons [data-done] .tome-check { background: var(--t-good); border-color: var(--t-good); color: var(--t-bg); }
+  .tome-num { font-family: var(--t-mono); font-size: .72rem; color: var(--t-muted); margin-right: .45rem; font-variant-numeric: tabular-nums; }
+  .tome-side { font-size: .75rem; color: var(--t-muted); text-align: right; }
+  .tome-lessons [data-later] .tome-row { opacity: .5; }
+  .tome-lessons [data-later] .tome-row:hover { opacity: .8; }
+  .tome-exam .tome-check { border-style: dashed; }
+  .tome-exam .tome-side { color: var(--t-accent); font-weight: 600; }
+
+  .tome-drills ul, .tome-reference ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
+  .tome-drills .tome-row, .tome-reference .tome-row {
+    display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: .7rem .9rem;
+    border-radius: var(--t-radius); background: var(--t-surface); border: 1px solid var(--t-rule);
+  }
+  .tome-drills .tome-drill-name, .tome-reference .tome-drill-name { font-weight: 600; font-size: .9rem; }
+  .tome-drill-sub { display: block; font-size: .75rem; color: var(--t-muted); font-weight: 400; }
+  .tome-drill-go { font-size: .8rem; font-weight: 600; color: var(--t-accent); white-space: nowrap; }
+  .tome-drills [data-locked] .tome-row { opacity: .5; cursor: default; }
+  .tome-drills [data-locked] .tome-drill-go { color: var(--t-muted); font-weight: 400; }
+
   @container (min-width: 720px) {
     .tome-app {
       display: grid; align-content: start; gap: 1.6rem 2rem;
@@ -174,6 +242,17 @@
     .tome-meta-narrow { display: none; }
     .tome-meta-wide { display: inline; }
     .tome-subject { min-height: 6.5rem; }
+    .tome-app:has(> .tome-tabs) { display: flex; gap: 1.5rem; }
+    .tome-tabs { gap: .5rem; }
+    .tome-tab { font-size: .88rem; padding-inline: .7rem; }
+    .tome-overview {
+      display: grid; gap: 1.5rem 2.4rem; align-items: start;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+      grid-template-areas: "goal activity" "prompts due";
+    }
+    .tome-goal { grid-area: goal; }
+    .tome-view[data-view="curriculum"] { max-width: 44rem; }
+    .tome-drills ul, .tome-reference ul { grid-template-columns: 1fr 1fr; }
     .tome-app:has(> .tome-settings) { display: flex; padding: 2rem max(2.5rem, calc((100% - 40rem) / 2)); }
   }
 }

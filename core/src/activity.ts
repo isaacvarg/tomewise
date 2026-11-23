@@ -9,6 +9,7 @@ import { type Goal, ruleChanges, type StreakRules, weekdays } from "./schemas.ts
 export interface ActivityDay {
   date: string;
   subjects: string[];
+  minutes: number;
 }
 
 export interface GoalResult {
@@ -34,6 +35,7 @@ export interface Activity {
 
 export interface ActivityOptions {
   now?: Date;
+  subject?: string;
   from?: string;
   to?: string;
 }
@@ -168,22 +170,24 @@ export async function readActivity(home: LearningHome, options: ActivityOptions 
   const today = options.to === undefined ? localDay((options.now ?? new Date()).getTime(), timezone) : parseDay(options.to);
   const from = options.from === undefined ? -Infinity : parseDay(options.from);
   const issues: ValidationIssue[] = [];
-  const activeSubjects = new Map<number, string[]>();
+  const activeSubjects = new Map<number, { subjects: string[]; ms: number }>();
   const streakChanges: { time: number; from: StreakRules }[] = [];
   const goals: GoalResult[] = [];
 
   for (const id of home.subjects) {
-    const subject = await loadSubject(home, id);
     const scan = await scanEvents(home.root, id);
     issues.push(...scan.issues);
+    streakChanges.push(...changesIn(scan.lines, "streak.changed", issues));
+    if (options.subject !== undefined && id !== options.subject) continue;
+    const subject = await loadSubject(home, id);
     const sessions = sessionsIn(scan.lines, timezone).filter((s) => s.day <= today);
     for (const { day, ms } of sessions) {
       if (ms < subject.settings.minimumSessionSeconds * 1000) continue;
-      const subjects = activeSubjects.get(day) ?? [];
-      if (!subjects.includes(id)) subjects.push(id);
-      activeSubjects.set(day, subjects);
+      const active = activeSubjects.get(day) ?? { subjects: [], ms: 0 };
+      if (!active.subjects.includes(id)) active.subjects.push(id);
+      active.ms += ms;
+      activeSubjects.set(day, active);
     }
-    streakChanges.push(...changesIn(scan.lines, "streak.changed", issues));
     const goalRules = new RulesByDay(subject.goals);
     for (const change of changesIn(scan.lines, "goal.changed", issues).sort((a, b) => a.time - b.time)) {
       goalRules.add(localDay(change.time, timezone), change.from);
@@ -202,7 +206,7 @@ export async function readActivity(home: LearningHome, options: ActivityOptions 
     days: [...activeSubjects]
       .filter(([day]) => day >= from)
       .sort(([a], [b]) => a - b)
-      .map(([day, subjects]) => ({ date: isoDate(day), subjects: subjects.sort() })),
+      .map(([day, { subjects, ms }]) => ({ date: isoDate(day), subjects: subjects.sort(), minutes: Math.round(ms / 60_000) })),
     streak: streakOf(active, today, home, streakRules),
     goals: goals.filter((goal) => parseDay(goal.to) >= from),
   };

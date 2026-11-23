@@ -11,3 +11,10 @@ h1 { font-style: italic; }
 .tome-progress { height: 2px; border-radius: 0; }
 .tome-answer { background: transparent; }
 .tome-score { font-style: italic; }
+
+.tome-header:has(+ .tome-tabs) { border-bottom: 0; padding-bottom: 0; }
+.tome-tab { font-weight: 500; }
+.tome-goal-num b { font-style: italic; }
+.tome-goal-bar { height: 3px; border-radius: 0; }
+.tome-goal-week i { height: 3px; border-radius: 0; }
+.tome-drills .tome-row, .tome-reference .tome-row { background: transparent; }

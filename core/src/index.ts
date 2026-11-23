@@ -27,6 +27,7 @@ export type { AppendedEvent, AppendOptions, EventRange, EventTarget } from "./ev
 export type { LearningEvent, EventKind } from "./events.ts";
 export type { PayloadSchemaVersion } from "./payload.ts";
 export { dueItems } from "./due.ts";
+export { completedLessons } from "./progress.ts";
 export type { DueItem } from "./due.ts";
 export { aggregates, queryPayload } from "./query.ts";
 export type { Aggregate, QueryOptions, QueryResult } from "./query.ts";

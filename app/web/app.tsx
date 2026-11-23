@@ -9,7 +9,7 @@ export function App() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
-      <Route path="/s/:subject" element={<SubjectHome />} />
+      <Route path="/s/:subject/:tab?" element={<SubjectHome />} />
       <Route path="/run/due" element={<RunDue />} />
       <Route path="/run" element={<RunDrill />} />
       <Route path="/settings" element={<Settings />} />

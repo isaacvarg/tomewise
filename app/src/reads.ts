@@ -1,5 +1,5 @@
 import { type Context, Hono } from "hono";
-import { dueItems, readActivity, readEvents, SubjectNotFoundError } from "@tomewise/core";
+import { completedLessons, dueItems, readActivity, readEvents, SubjectNotFoundError } from "@tomewise/core";
 import type { HomeView } from "./watcher.ts";
 
 function query(c: Context, name: string): string | undefined {
@@ -29,9 +29,15 @@ export function readRoutes(view: () => HomeView, now: () => Date = () => new Dat
     c.json({ due: await dueItems(view().home, c.req.param("subject"), query(c, "date") ?? now()) }),
   );
 
-  routes.get("/activity", async (c) =>
-    c.json(await readActivity(view().home, { now: now(), from: query(c, "from"), to: query(c, "to") })),
+  routes.get("/subjects/:subject/progress", async (c) =>
+    c.json({ completedLessons: await completedLessons(view().home, c.req.param("subject")) }),
   );
+
+  routes.get("/activity", async (c) => {
+    const subject = query(c, "subject");
+    if (subject !== undefined) subjectOf(view(), subject);
+    return c.json(await readActivity(view().home, { now: now(), subject, from: query(c, "from"), to: query(c, "to") }));
+  });
 
   routes.onError((error, c) => {
     if (error instanceof SubjectNotFoundError) return c.json({ error: error.message }, 404);

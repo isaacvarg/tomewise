@@ -32,7 +32,7 @@ describe("the dashboard SPA", () => {
   });
 
   it.each([
-    ["/s/morse-code", "Morse code"],
+    ["/s/morse-code", "MMorse code"],
     ["/run", "No drill chosen"],
     ["/settings", "Settings"],
     ["/no/such/page", "Not found"],

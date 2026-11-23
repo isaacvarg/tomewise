@@ -1,17 +1,20 @@
 import type { Activity, DueItem, Subject } from "../api.ts";
 
+type ActivityDay = Activity["days"][number];
+
 export type WeekStart = Subject["settings"]["weekStart"];
 
 const DAY_MS = 86_400_000;
-const WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const;
+export const WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const;
 
 export const HEATMAP_WEEKS = 52;
 export const NARROW_WEEKS = 18;
 export const SECONDS_PER_ITEM = 40;
 
-const dayOf = (date: string) => Date.parse(date) / DAY_MS;
-const dateOf = (day: number) => new Date(day * DAY_MS).toISOString().slice(0, 10);
-const weekdayOf = (day: number) => (new Date(day * DAY_MS).getUTCDay() + 6) % 7;
+export const dayOf = (date: string) => Date.parse(date) / DAY_MS;
+export const dateOf = (day: number) => new Date(day * DAY_MS).toISOString().slice(0, 10);
+export const weekdayOf = (day: number) => (new Date(day * DAY_MS).getUTCDay() + 6) % 7;
+export const weekStartOf = (day: number, weekStart: WeekStart) => day - ((weekdayOf(day) - WEEKDAYS.indexOf(weekStart) + 7) % 7);
 
 export interface HeatCell {
   date: string;
@@ -21,17 +24,22 @@ export interface HeatCell {
   old: boolean;
 }
 
-export function heatmapCells(activity: Activity, weekStart: WeekStart, subjectCount: number): HeatCell[] {
+export const bySubjectsPractised =
+  (subjectCount: number) =>
+  ({ subjects }: ActivityDay): number =>
+    Math.min(4, Math.ceil((4 * subjects.length) / Math.max(subjectCount, subjects.length)));
+
+export function heatmapCells(activity: Activity, weekStart: WeekStart, levelOf: (day: ActivityDay) => number): HeatCell[] {
   const today = dayOf(activity.today);
-  const first = today - ((weekdayOf(today) - WEEKDAYS.indexOf(weekStart) + 7) % 7) - (HEATMAP_WEEKS - 1) * 7;
-  const active = new Map(activity.days.map((day) => [day.date, day.subjects.length]));
+  const first = weekStartOf(today, weekStart) - (HEATMAP_WEEKS - 1) * 7;
+  const active = new Map(activity.days.map((day) => [day.date, day]));
   return Array.from({ length: HEATMAP_WEEKS * 7 }, (_, index) => {
     const day = first + index;
     const date = dateOf(day);
-    const subjects = active.get(date) ?? 0;
+    const practised = active.get(date);
     return {
       date,
-      level: subjects === 0 ? 0 : Math.min(4, Math.ceil((4 * subjects) / Math.max(subjectCount, subjects))),
+      level: practised ? levelOf(practised) : 0,
       today: day === today,
       future: day > today,
       old: index < (HEATMAP_WEEKS - NARROW_WEEKS) * 7,

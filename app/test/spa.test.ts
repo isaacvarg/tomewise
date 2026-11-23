@@ -53,11 +53,28 @@ describe("dashboard SPA", () => {
     }
   });
 
+  it("serves index.html for every subject home tab, and lesson pages and assets from the subject", async () => {
+    const get = await startWithSpa(await builtSpa());
+
+    for (const tab of ["curriculum", "drills", "reference", "stats"]) {
+      const response = await get(`/s/morse-code/${tab}`);
+      expect(response.status, tab).toBe(200);
+      expect(await response.text(), tab).toContain(BODY);
+    }
+    const lesson = await get("/s/morse-code/lessons/0001-k-and-m.html");
+    expect(lesson.status).toBe(200);
+    expect(await lesson.text()).toContain('name="tome-page-kind" content="lesson"');
+    const audio = await get("/s/morse-code/assets/audio/k.wav");
+    expect(audio.status).toBe(200);
+    expect(audio.headers.get("content-type")).toMatch(/audio/);
+  });
+
   it("answers 404 for a missing file rather than index.html", async () => {
     const get = await startWithSpa(await builtSpa());
 
     expect((await get("/assets/missing.js")).status).toBe(404);
     expect((await get("/s/morse-code/lessons/missing.html")).status).toBe(404);
+    expect((await get("/s/morse-code/reference/missing.html")).status).toBe(404);
   });
 
   it("leaves API routes alone", async () => {
