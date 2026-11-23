@@ -33,7 +33,7 @@ export function createApp(
   const app = new Hono();
   const home = () => view().home;
   const resolveTheme = themeResolver(tool, warn);
-  app.route("/api/events", eventRoutes(home, sync, changes));
+  app.route("/api/events", eventRoutes(home, sync, changes, warn));
   app.route("/api/changes", changeRoutes(changes));
   app.route("/api/sync", syncRoutes(sync));
   app.route("/api/settings", settingsRoutes(home, { tool, sync, warn, reload }));
