@@ -62,7 +62,7 @@ describe("GET /api/subjects/:subject/events", () => {
     const response = await app.get("/api/subjects/morse-code/events");
 
     expect(response.body).toEqual({ events: await readEvents(home, "morse-code") });
-    expect(response.body.events).toHaveLength(33);
+    expect(response.body.events).toHaveLength(35);
   });
 
   it("gives 400 for a malformed date", async () => {
@@ -337,11 +337,22 @@ describe("ask-your-agent prompts", () => {
   };
   const examUnwritten = (root: string) => rm(join(root, "subjects/morse-code/exams/first-five.html"));
   const gradePrompt = { kind: "ungraded-explanations", count: 1, refs: ["lesson:0004-the-late-bump"], say: "Grade my Morse code explanation." };
+  const example = {
+    id: "01M6ERETN0YYARVDHJG0T15Q2K",
+    ts: "2026-11-02T18:31:00.000Z",
+    ref: "lesson:0002-r",
+    text: "R is dit-dah-dit. It is K backwards.",
+    grade: {
+      id: "01M6EXHSG0K3Q8WZ7N5TB2FD9C",
+      ts: "2026-11-02T20:00:00.000Z",
+      feedback: "Close. R is dit-dah-dit and K is dah-di-dah, so R is K with dits and dahs swapped, not reversed. Reversed, R reads the same.",
+    },
+  };
 
   it("are empty while nothing needs the agent", async () => {
     const app = await startTestApp();
 
-    expect((await app.get("/api/subjects/morse-code/prompts")).body).toEqual({ prompts: [], explanations: [] });
+    expect((await app.get("/api/subjects/morse-code/prompts")).body).toEqual({ prompts: [], explanations: [example] });
     expect((await app.get("/api/prompts")).body).toEqual({ subjects: [] });
   });
 
@@ -353,7 +364,7 @@ describe("ask-your-agent prompts", () => {
     expect(waiting.status).toBe(200);
     expect(waiting.body).toEqual({
       prompts: [examPrompt, gradePrompt],
-      explanations: [{ id: saved.id, ts: saved.ts, ref: saved.ref, text: saved.data.text }],
+      explanations: [{ id: saved.id, ts: saved.ts, ref: saved.ref, text: saved.data.text }, example],
     });
     expect((await app.get("/api/prompts")).body).toEqual({ subjects: [{ subject: "morse-code", prompts: [examPrompt, gradePrompt] }] });
 
@@ -363,6 +374,7 @@ describe("ask-your-agent prompts", () => {
       prompts: [examPrompt],
       explanations: [
         { id: saved.id, ts: saved.ts, ref: saved.ref, text: saved.data.text, grade: { id: graded.id, ts: graded.ts, feedback: graded.data.feedback } },
+        example,
       ],
     });
   });
