@@ -45,6 +45,24 @@ describe("tome validate", () => {
     expect(result.stderr).toMatch(/^tomewise\.json: weekStart: .*monday/m);
   });
 
+  it("accepts a vault block", async () => {
+    const root = await home({ formatVersion: 1, vault: { enabled: true, notesFolder: "sessions" } });
+
+    const result = await tome(["validate"], root);
+
+    expect(result.stderr).toBe("");
+    expect(result.code).toBe(0);
+  });
+
+  it("rejects a vault block with a notes folder outside the learning home", async () => {
+    const root = await home({ formatVersion: 1, vault: { notesFolder: "../sessions" } });
+
+    const result = await tome(["validate"], root);
+
+    expect(result.code).toBe(1);
+    expect(result.stderr).toMatch(/^tomewise\.json: vault\.notesFolder: .*inside the learning home/m);
+  });
+
   it("works from a folder nested inside the learning home", async () => {
     const root = await home({ formatVersion: 1 });
     const nested = join(root, "subjects", "morse-code");

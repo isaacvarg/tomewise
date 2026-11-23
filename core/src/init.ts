@@ -2,7 +2,7 @@ import { access, mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { AppUrl, CONFIG_FILE, globalConfigPath } from "./find.ts";
 import { readJson } from "./json.ts";
-import { DEFAULT_ASSESSMENTS, DEFAULT_GIT_CADENCE, type QuizFrequency, SUPPORTED_FORMAT_VERSION, systemTimezone, type Timed, TomewiseConfig } from "./schemas.ts";
+import { DEFAULT_ASSESSMENTS, DEFAULT_GIT_CADENCE, DEFAULT_NOTES_FOLDER, type QuizFrequency, SUPPORTED_FORMAT_VERSION, systemTimezone, type Timed, TomewiseConfig } from "./schemas.ts";
 
 export const DEFAULT_APP_URL = "http://127.0.0.1:4777";
 
@@ -22,9 +22,10 @@ export interface InitSettings {
   timed?: Timed;
   scoreDisplay?: string;
   passMark?: number;
+  vault?: boolean;
 }
 
-export type InitSetting = Exclude<keyof InitSettings, "git" | "remote" | "assessments" | "exams">;
+export type InitSetting = Exclude<keyof InitSettings, "git" | "remote" | "assessments" | "exams" | "vault">;
 
 export interface InitProblem {
   setting: InitSetting;
@@ -90,6 +91,7 @@ export function checkInitSettings(settings: InitSettings): { ok: true; checked: 
     streak: { restDaysPerWeek: settings.restDaysPerWeek ?? 0 },
     assessments: assessmentsBlock(settings),
     git: gitBlock(settings),
+    ...(settings.vault ? { vault: { enabled: true, notesFolder: DEFAULT_NOTES_FOLDER } } : {}),
   };
   const appUrl = settings.appUrl ?? DEFAULT_APP_URL;
   const problems: InitProblem[] = [];

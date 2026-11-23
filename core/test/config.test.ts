@@ -19,6 +19,7 @@ describe("loading tomewise.json", () => {
       subjects: [],
       git: { enabled: false, cadence: "session", push: false, pullIntervalMinutes: 5 },
       assessments: DEFAULT_ASSESSMENTS,
+      vault: { enabled: false, notesFolder: "sessions" },
     });
   });
 
@@ -38,6 +39,14 @@ describe("loading tomewise.json", () => {
     expect(config.git).toEqual({ enabled: true, cadence: "session", push: false, pullIntervalMinutes: 5 });
   });
 
+  it("turns vault mode on with notes in sessions for an empty vault block", async () => {
+    const home = await buildHome({ "tomewise.json": { formatVersion: 1, vault: {} } });
+
+    const { config } = await loadLearningHome(home);
+
+    expect(config.vault).toEqual({ enabled: true, notesFolder: "sessions" });
+  });
+
   it("keeps the values the learner set", async () => {
     const assessments = { enabled: true, quizFrequency: { every: 3 }, quizLength: 15, exams: false, timed: { minutes: 30 }, scoreDisplay: "hidden", passMark: 60 };
     const home = await buildHome({
@@ -52,6 +61,7 @@ describe("loading tomewise.json", () => {
         subjects: ["yoga", "spanish"],
         git: { enabled: true, cadence: "daily", remote: "origin", branch: "main", push: true, pullIntervalMinutes: 15 },
         assessments,
+        vault: { enabled: true, notesFolder: "notes/sessions" },
       },
     });
 
@@ -68,6 +78,7 @@ describe("loading tomewise.json", () => {
       subjects: ["yoga", "spanish"],
       git: { enabled: true, cadence: "daily", remote: "origin", branch: "main", push: true, pullIntervalMinutes: 15 },
       assessments,
+      vault: { enabled: true, notesFolder: "notes/sessions" },
     });
   });
 });
