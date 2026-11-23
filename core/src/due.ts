@@ -45,7 +45,7 @@ function localDay(on: Date | string, timezone: string): [number, number, number]
   return [shifted.getUTCFullYear(), shifted.getUTCMonth() + 1, shifted.getUTCDate()];
 }
 
-function endOfDay(on: Date | string, timezone: string): number {
+export function endOfDay(on: Date | string, timezone: string): number {
   const [year, month, day] = localDay(on, timezone);
   const midnight = Date.UTC(year, month - 1, day + 1);
   let instant = midnight - offsetAt(midnight, timezone);

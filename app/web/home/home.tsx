@@ -4,8 +4,9 @@ import { useLoad } from "../load.ts";
 import { Heatmap } from "../heatmap.tsx";
 import { Failed, Screen } from "../screen.tsx";
 import { loadToday } from "../today.ts";
+import { DueQuiz } from "../due-quiz.tsx";
 import { Sync } from "./sync.tsx";
-import { bySubjectsPractised, count, type DueToday, heatmapCells, longDate, type WeekStart } from "./model.ts";
+import { bySubjectsPractised, count, type DueToday, dueMeta, heatmapCells, longDate, type WeekStart } from "./model.ts";
 
 async function loadHome() {
   const [today, prompts] = await Promise.all([loadToday(), api.allPrompts()]);
@@ -63,9 +64,9 @@ function Due({ due }: { due: DueToday }) {
     <section className="tome-section tome-due">
       <div className="tome-section-head">
         <h3>Due today</h3>
-        <span className="tome-meta">{count(due.items, "item")}</span>
+        <span className="tome-meta">{dueMeta(due.items, due.quizzes.length)}</span>
       </div>
-      {due.rows.length === 0 ? (
+      {due.rows.length === 0 && due.quizzes.length === 0 ? (
         <p className="tome-hint">Nothing due today.</p>
       ) : (
         <ul>
@@ -75,6 +76,11 @@ function Due({ due }: { due: DueToday }) {
               <span className="tome-due-how">
                 {count(row.items, "item")} · {row.minutes} min
               </span>
+            </li>
+          ))}
+          {due.quizzes.map((subject) => (
+            <li key={`quiz ${subject.id}`}>
+              <DueQuiz subject={subject} />
             </li>
           ))}
         </ul>
@@ -100,7 +106,7 @@ function Start({ due }: { due: DueToday }) {
   if (due.items === 0) {
     return (
       <a className="tome-start" aria-disabled="true">
-        Start <small>nothing due</small>
+        Start <small>{due.quizzes.length === 0 ? "nothing due" : "no items due"}</small>
       </a>
     );
   }

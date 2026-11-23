@@ -11,12 +11,13 @@ import type {
   Explanation,
   MilestoneStatus,
   QuizFrequency,
+  QuizSlot,
   ScheduledItem,
   StartMode,
   Subject,
 } from "@tomewise/core";
 
-export type { Activity, Drill, AgentPrompt, AssessmentOverrides, AssessmentSettings, ChartSeries, DueItem, Explanation, MilestoneStatus, QuizFrequency, ScheduledItem, StartMode, Subject };
+export type { Activity, Drill, AgentPrompt, AssessmentOverrides, AssessmentSettings, ChartSeries, DueItem, Explanation, MilestoneStatus, QuizFrequency, QuizSlot, ScheduledItem, StartMode, Subject };
 
 export interface Progress {
   completedLessons: string[];
@@ -77,6 +78,7 @@ export const api = {
   activity: (subject?: string) =>
     getJson<Activity>(subject === undefined ? "/api/activity" : `/api/activity?subject=${encodeURIComponent(subject)}`),
   quiz: (id: string) => getJson<{ drill: Drill; items: Item[] }>(`${subjectPath(id)}/quiz`),
+  dueQuiz: (id: string) => getJson<{ quiz: QuizSlot | null }>(`${subjectPath(id)}/quiz/due`).then((body) => body.quiz),
   progress: (id: string) => getJson<Progress>(`${subjectPath(id)}/progress`),
   stats: (id: string) => getJson<SubjectStats>(`${subjectPath(id)}/stats`),
   prompts: (id: string) => getJson<SubjectPrompts>(`${subjectPath(id)}/prompts`),

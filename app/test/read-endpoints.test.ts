@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { dueItems, loadLearningHome, loadSubject, nextDue, readActivity, readEvents } from "@tomewise/core";
@@ -370,5 +370,38 @@ describe("ask-your-agent prompts", () => {
     const app = await startTestApp();
 
     expect((await app.get("/api/subjects/klingon/prompts")).status).toBe(404);
+  });
+});
+
+describe("GET /api/subjects/:subject/quiz/due", () => {
+  const clock = (at: string) => ({ now: () => new Date(at), every: () => () => {} });
+  const weekly = async (root: string) => {
+    const file = join(root, "subjects/morse-code/subject.json");
+    const subject = JSON.parse(await readFile(file, "utf8"));
+    await writeFile(file, JSON.stringify({ ...subject, settings: { assessments: { quizFrequency: "weekly" } } }));
+  };
+
+  it("gives the due quiz slot by the app's clock, and none once a quiz is taken", async () => {
+    const app = await startTestApp(weekly, undefined, { clock: clock("2026-11-21T12:00:00Z") });
+
+    expect((await app.get("/api/subjects/morse-code/quiz/due")).body).toEqual({ quiz: { opened: "2026-11-16T00:00:00.000Z" } });
+    const prompts = (await app.get("/api/subjects/morse-code/prompts")).body.prompts;
+    expect(prompts).toContainEqual({ kind: "quiz-unwritten", quiz: { opened: "2026-11-16T00:00:00.000Z" }, say: "Write the Morse code quiz that's due." });
+
+    const session = { subject: "morse-code", ref: "drill:quiz-2026-11-21", sessionId: "01KAQ0000000000000000000S1", schemaVersion: 2 };
+    const taken = [
+      { ...session, id: session.sessionId, ts: "2026-11-21T11:00:00.000Z", kind: "session.start", data: {} },
+      { ...session, id: "01KAQ0000000000000000000E1", ts: "2026-11-21T11:05:00.000Z", kind: "session.end", duration: 300_000, score: 80 },
+    ];
+    expect((await app.post(taken)).status).toBe(201);
+    expect((await app.get("/api/subjects/morse-code/quiz/due")).body).toEqual({ quiz: null });
+    expect((await app.get("/api/prompts")).body).toEqual({ subjects: [] });
+  });
+
+  it("gives none before 5 lessons are done, and 404 for an unknown subject", async () => {
+    const app = await startTestApp(undefined, undefined, { clock: clock("2026-11-21T12:00:00Z") });
+
+    expect((await app.get("/api/subjects/morse-code/quiz/due")).body).toEqual({ quiz: null });
+    expect((await app.get("/api/subjects/klingon/quiz/due")).status).toBe(404);
   });
 });

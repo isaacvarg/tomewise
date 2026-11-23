@@ -4,6 +4,7 @@ import {
   agentPrompts,
   completedLessons,
   dueItems,
+  dueQuiz,
   explanations,
   isoDate,
   localDay,
@@ -64,6 +65,12 @@ export function readRoutes(view: () => HomeView, now: () => Date = () => new Dat
     return c.json({ drill: quizDrill(date, items.length, assessments), items });
   });
 
+  routes.get("/subjects/:subject/quiz/due", async (c) => {
+    const current = view();
+    const subject = subjectOf(current, c.req.param("subject"));
+    return c.json({ quiz: dueQuiz(subject, await readEvents(current.home, subject.id), now()) ?? null });
+  });
+
   routes.get("/subjects/:subject/progress", async (c) => {
     const current = view();
     const subject = subjectOf(current, c.req.param("subject"));
@@ -92,13 +99,13 @@ export function readRoutes(view: () => HomeView, now: () => Date = () => new Dat
     const current = view();
     const subject = subjectOf(current, c.req.param("subject"));
     const events = await readEvents(current.home, subject.id);
-    return c.json({ prompts: agentPrompts(subject, events), explanations: explanations(events) });
+    return c.json({ prompts: agentPrompts(subject, events, now()), explanations: explanations(events) });
   });
 
   routes.get("/prompts", async (c) => {
     const { home, subjects } = view();
     const all = await Promise.all(
-      [...subjects.values()].map(async (subject) => ({ subject: subject.id, prompts: agentPrompts(subject, await readEvents(home, subject.id)) })),
+      [...subjects.values()].map(async (subject) => ({ subject: subject.id, prompts: agentPrompts(subject, await readEvents(home, subject.id), now()) })),
     );
     return c.json({ subjects: all.filter((entry) => entry.prompts.length > 0) });
   });

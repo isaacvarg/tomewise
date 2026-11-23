@@ -139,6 +139,21 @@ describe("ask-your-agent prompts", () => {
     expect(await promptsFor([lesson, again, item, graded(lesson, "Yes"), graded(again, "Yes"), graded(item, "Yes")])).toEqual([]);
   });
 
+  it("asks for a quiz while one is due with none written, until a quiz is taken", async () => {
+    const lessons = [completed("0001-k-and-m"), completed("0002-r")];
+    const { subject, events } = await state(lessons, { lessons: ["0003-s"] });
+    const every2 = { ...subject, settings: { ...subject.settings, assessments: { ...subject.settings.assessments, quizFrequency: { every: 2 } } } };
+    const now = new Date("2026-11-05T12:00:00.000Z");
+
+    expect(agentPrompts(every2, events, now)).toEqual([
+      { kind: "quiz-unwritten", quiz: { opened: "2026-11-02T09:00:00.000Z", after: "lesson:0002-r" }, say: "Write the Morse code quiz that's due." },
+    ]);
+    const sessionId = nextId();
+    const taken = { id: nextId(), ts: "2026-11-04T09:00:00.000Z", subject: SUBJECT, kind: "session.end", ref: "drill:quiz-2026-11-04", sessionId, schemaVersion: 1, duration: 1000, score: 100 };
+    expect(agentPrompts(every2, [...events, taken] as typeof events, now)).toEqual([]);
+    expect(agentPrompts(subject, events, now)).toEqual([]);
+  });
+
   it("lists milestone prompts in curriculum order, then explanations", async () => {
     const events = [completed("0001-k-and-m"), completed("0002-r"), completed("0003-s"), saved("lesson:0003-s", "S is dit-dit-dit")];
     expect((await promptsFor(events)).map((prompt) => prompt.kind)).toEqual(["milestone-done", "milestone-done", "ungraded-explanations"]);

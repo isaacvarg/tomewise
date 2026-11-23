@@ -59,7 +59,7 @@ export function parseDay(date: string): number {
   return time / DAY_MS;
 }
 
-function weekOf(day: number, weekStart: (typeof weekdays)[number]): number {
+export function weekOf(day: number, weekStart: (typeof weekdays)[number]): number {
   const weekday = (new Date(day * DAY_MS).getUTCDay() + 6) % 7;
   return day - ((weekday - weekdays.indexOf(weekStart) + 7) % 7);
 }
