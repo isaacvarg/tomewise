@@ -289,7 +289,7 @@ describe("tome init prompts", () => {
     const flagsParent = await temp("tomewise-init-flags-");
     const flagsHOME = await temp("tomewise-init-flags-home-");
     const root = join(parent, "learning");
-    const script = scripted(["learning", "Europe/London", "Sunday", "1", "http://localhost:4800", "", "n", "none", ""]);
+    const script = scripted(["", "learning", "Europe/London", "Sunday", "1", "http://localhost:4800", "", "n", "none", ""]);
 
     const asked = await tomeAsked(["init"], parent, HOME, script.streams);
     const flagged = await tome(
@@ -301,7 +301,7 @@ describe("tome init prompts", () => {
     expect(asked.stderr).toBe("");
     expect(asked.code).toBe(0);
     expect(flagged.code).toBe(0);
-    for (const question of ["learning home go", "Timezone", "Week starts on", "Rest days per week", "App URL", "Set up git?"]) {
+    for (const question of ["Using Obsidian?", "learning home go", "Timezone", "Week starts on", "Rest days per week", "App URL", "Set up git?"]) {
       expect(script.shown()).toContain(question);
     }
     expect(await readFile(join(root, "tomewise.json"), "utf8")).toBe(
@@ -315,7 +315,7 @@ describe("tome init prompts", () => {
     const root = await temp("tomewise-init-");
     const HOME = await temp("tomewise-init-home-");
     const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const script = scripted(["", "", "", "", "", "", "n", "none", ""]);
+    const script = scripted(["", "", "", "", "", "", "", "n", "none", ""]);
 
     const result = await tomeAsked(["init"], root, HOME, script.streams);
 
@@ -362,7 +362,7 @@ describe("tome init prompts", () => {
   it("asks again after an invalid answer", async () => {
     const root = await temp("tomewise-init-");
     const HOME = await temp("tomewise-init-home-");
-    const script = scripted([".", "Mars/Olympus_Mons", "UTC", "funday", "tuesday", "seven", "9", "3", "not a url", "", "", "maybe", "n", "none", ""]);
+    const script = scripted(["", ".", "Mars/Olympus_Mons", "UTC", "funday", "tuesday", "seven", "9", "3", "not a url", "", "", "maybe", "n", "none", ""]);
 
     const result = await tomeAsked(["init"], root, HOME, script.streams);
 
@@ -382,7 +382,7 @@ describe("tome init prompts", () => {
   it("runs git init and adds the remote when git is chosen", async () => {
     const root = await temp("tomewise-init-");
     const HOME = await temp("tomewise-init-home-");
-    const script = scripted(["", "", "", "", "", "", "y", "git@example.com:me/learning.git", "", "", "none", ""]);
+    const script = scripted(["", "", "", "", "", "", "", "y", "git@example.com:me/learning.git", "", "", "none", ""]);
 
     const result = await tomeAsked(["init"], root, HOME, script.streams);
 
@@ -396,7 +396,7 @@ describe("tome init prompts", () => {
     const root = await temp("tomewise-init-");
     const HOME = await temp("tomewise-init-home-");
 
-    const result = await tomeAsked(["init"], root, HOME, scripted(["", "", "", "", "", "", "", "", "", "none", ""]).streams);
+    const result = await tomeAsked(["init"], root, HOME, scripted(["", "", "", "", "", "", "", "", "", "", "none", ""]).streams);
 
     expect(result.code).toBe(0);
     expect(await readdir(join(root, ".git"))).toContain("HEAD");
@@ -407,7 +407,7 @@ describe("tome init prompts", () => {
     const root = await temp("tomewise-init-");
     const HOME = await temp("tomewise-init-home-");
 
-    const result = await tomeAsked(["init"], root, HOME, scripted(["", "", "", "", "", "", "no", "none", ""]).streams);
+    const result = await tomeAsked(["init"], root, HOME, scripted(["", "", "", "", "", "", "", "no", "none", ""]).streams);
 
     expect(result.code).toBe(0);
     expect(await readdir(root)).not.toContain(".git");
@@ -514,10 +514,10 @@ describe("tome init prompts", () => {
     expect(await readdir(root)).toEqual([]);
   });
 
-  it.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])("writes nothing when the input ends after %i answers", async (answered) => {
+  it.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])("writes nothing when the input ends after %i answers", async (answered) => {
     const root = await temp("tomewise-init-");
     const HOME = await temp("tomewise-init-home-");
-    const answers = ["", "", "", "", "", "", "y", "git@example.com:me/learning.git", "", "", "none", ""].slice(0, answered - 1);
+    const answers = ["", "", "", "", "", "", "", "y", "git@example.com:me/learning.git", "", "", "none", ""].slice(0, answered - 1);
 
     const result = await tomeAsked(["init"], root, HOME, scripted(answers).streams);
 
@@ -548,7 +548,7 @@ describe("tome init prompts", () => {
   it("asks for cadence and push when git is chosen with a remote, and writes them", async () => {
     const root = await temp("tomewise-init-");
     const HOME = await temp("tomewise-init-home-");
-    const script = scripted(["", "", "", "", "", "", "y", "git@example.com:me/learning.git", "weekly", "Daily", "n", "none", ""]);
+    const script = scripted(["", "", "", "", "", "", "", "y", "git@example.com:me/learning.git", "weekly", "Daily", "n", "none", ""]);
 
     const result = await tomeAsked(["init"], root, HOME, script.streams);
 
@@ -569,7 +569,7 @@ describe("tome init prompts", () => {
   it("asks for cadence but not push when git is chosen without a remote", async () => {
     const root = await temp("tomewise-init-");
     const HOME = await temp("tomewise-init-home-");
-    const script = scripted(["", "", "", "", "", "", "y", "", "hourly", "none", ""]);
+    const script = scripted(["", "", "", "", "", "", "", "y", "", "hourly", "none", ""]);
 
     const result = await tomeAsked(["init"], root, HOME, script.streams);
 
@@ -623,7 +623,7 @@ describe("tome init prompts", () => {
   it("turns assessments off when asked", async () => {
     const root = await temp("tomewise-init-");
     const HOME = await temp("tomewise-init-home-");
-    const script = scripted(["", "", "", "", "", "off", "n", "none", ""]);
+    const script = scripted(["", "", "", "", "", "", "off", "n", "none", ""]);
 
     const result = await tomeAsked(["init"], root, HOME, script.streams);
 
@@ -635,7 +635,7 @@ describe("tome init prompts", () => {
   it("asks each assessment setting when choosing them, again after an invalid answer", async () => {
     const root = await temp("tomewise-init-");
     const HOME = await temp("tomewise-init-home-");
-    const script = scripted(["", "", "", "", "", "choose", "daily", "4", "0", "12", "n", "soon", "25", "letter", "hidden", "101", "65", "n", "none", ""]);
+    const script = scripted(["", "", "", "", "", "", "choose", "daily", "4", "0", "12", "n", "soon", "25", "letter", "hidden", "101", "65", "n", "none", ""]);
 
     const result = await tomeAsked(["init"], root, HOME, script.streams);
 
@@ -672,9 +672,162 @@ describe("tome init prompts", () => {
     const root = await temp("tomewise-init-");
     const HOME = await temp("tomewise-init-home-");
     await writeFile(join(root, "tomewise.json"), "{}");
-    const script = scripted([""]);
+    const script = scripted(["", ""]);
 
     const result = await tomeAsked(["init"], root, HOME, script.streams);
+
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain("already a learning home");
+    expect(script.shown()).not.toContain("Timezone");
+  });
+});
+
+describe("tome init vault mode", () => {
+  const vaultBlock = { enabled: true, notesFolder: "sessions" };
+
+  it("asks for the vault and subfolder when using Obsidian, and scaffolds the learning home there with vault mode on", async () => {
+    const cwd = await temp("tomewise-init-");
+    const vault = await temp("tomewise-vault-");
+    const HOME = await temp("tomewise-init-home-");
+    const root = join(vault, "Learning");
+    const script = scripted(["y", vault, "Learning", "UTC", "", "", "", "", "n", "none", ""]);
+
+    const result = await tomeAsked(["init"], cwd, HOME, script.streams);
+
+    expect(result.stderr).toBe("");
+    expect(result.code).toBe(0);
+    expect(script.shown()).toContain("Using Obsidian? [y/N]");
+    expect(script.shown()).toContain("Vault folder");
+    expect(script.shown()).toContain("Subfolder of the vault for the learning home [Tomewise]");
+    expect(script.shown()).not.toContain("learning home go");
+    expect((await readJsonFile(join(root, "tomewise.json"))).vault).toEqual(vaultBlock);
+    expect(await readdir(join(root, "subjects"))).toEqual([]);
+    expect(await readdir(cwd)).toEqual([]);
+    expect(await readJsonFile(globalConfig(HOME))).toEqual({ learningHome: root, appUrl: "http://127.0.0.1:4777" });
+    expect((await tome(["validate"], cwd, HOME)).code).toBe(0);
+  });
+
+  it("writes the same learning home from --vault and --vault-folder without prompts", async () => {
+    const asked = { cwd: await temp("tomewise-init-"), vault: await temp("tomewise-vault-"), HOME: await temp("tomewise-init-home-") };
+    const flagged = { cwd: await temp("tomewise-init-"), vault: await temp("tomewise-vault-"), HOME: await temp("tomewise-init-home-") };
+
+    await tomeAsked(["init", "--timezone", "UTC"], asked.cwd, asked.HOME, scripted(["y", asked.vault, "Notes/Learning", "", "", "", "", "n", "none", ""]).streams);
+    const result = await tome(["init", "--vault", flagged.vault, "--vault-folder", "Notes/Learning", "--timezone", "UTC"], flagged.cwd, flagged.HOME);
+
+    expect(result.stderr).toBe("");
+    expect(result.code).toBe(0);
+    expect(result.stdout).toContain(join(flagged.vault, "Notes", "Learning"));
+    expect(await readFile(join(flagged.vault, "Notes", "Learning", "tomewise.json"), "utf8")).toBe(
+      await readFile(join(asked.vault, "Notes", "Learning", "tomewise.json"), "utf8"),
+    );
+    expect((await readJsonFile(globalConfig(flagged.HOME))).learningHome).toBe(join(flagged.vault, "Notes", "Learning"));
+  });
+
+  it("puts the learning home in a Tomewise subfolder when --vault-folder is left out, resolving the vault from the working folder", async () => {
+    const vault = await temp("tomewise-vault-");
+    const HOME = await temp("tomewise-init-home-");
+
+    const result = await tome(["init", "--vault", "."], vault, HOME);
+
+    expect(result.code).toBe(0);
+    expect((await readJsonFile(join(vault, "Tomewise", "tomewise.json"))).vault).toEqual(vaultBlock);
+  });
+
+  it("asks only for the subfolder when --vault is given", async () => {
+    const vault = await temp("tomewise-vault-");
+    const HOME = await temp("tomewise-init-home-");
+    const script = scripted(["Study", "", "", "", "", "", "n", "none", ""]);
+
+    const result = await tomeAsked(["init", "--vault", vault], vault, HOME, script.streams);
+
+    expect(result.code).toBe(0);
+    expect(script.shown()).not.toContain("Using Obsidian?");
+    expect(script.shown()).not.toContain("Vault folder");
+    expect((await readJsonFile(join(vault, "Study", "tomewise.json"))).vault).toEqual(vaultBlock);
+  });
+
+  it("asks again for a vault that isn't a folder and a subfolder outside the vault", async () => {
+    const cwd = await temp("tomewise-init-");
+    const vault = await temp("tomewise-vault-");
+    const HOME = await temp("tomewise-init-home-");
+    await writeFile(join(vault, "note.md"), "");
+    const missing = join(vault, "missing");
+    const script = scripted(["y", missing, join(vault, "note.md"), vault, "../outside", "/elsewhere", ".", "a:b", "Learning", "", "", "", "", "", "n", "none", ""]);
+
+    const result = await tomeAsked(["init"], cwd, HOME, script.streams);
+
+    expect(result.code).toBe(0);
+    expect(script.shown()).toContain(`${missing} is not a folder`);
+    expect(script.shown()).toContain(`${join(vault, "note.md")} is not a folder`);
+    expect(script.shown()).toContain('Use a folder inside the vault, such as "Tomewise", not "../outside"');
+    expect(script.shown()).toContain('not "/elsewhere"');
+    expect(script.shown()).toContain('not "."');
+    expect(script.shown()).toContain('not "a:b"');
+    expect((await readdir(vault)).sort()).toEqual(["Learning", "note.md"]);
+  });
+
+  it("reports a missing vault and a subfolder outside it from flags, writing nothing", async () => {
+    const cwd = await temp("tomewise-init-");
+    const vault = await temp("tomewise-vault-");
+    const HOME = await temp("tomewise-init-home-");
+
+    const missing = await tome(["init", "--vault", join(vault, "missing")], cwd, HOME);
+    const outside = await tome(["init", "--vault", vault, "--vault-folder", "../outside"], cwd, HOME);
+
+    expect(missing.code).toBe(1);
+    expect(missing.stderr).toMatch(/^--vault: .* is not a folder/m);
+    expect(outside.code).toBe(1);
+    expect(outside.stderr).toMatch(/^--vault-folder: Use a folder inside the vault/m);
+    expect(outside.stderr).toContain("Nothing was written.");
+    expect(await readdir(vault)).toEqual([]);
+    expect(await readdir(cwd)).toEqual([]);
+    expect(await readdir(HOME)).toEqual([]);
+  });
+
+  it.each([
+    [["--vault-folder", "Learning"], "--vault-folder needs --vault"],
+    [["--no-vault", "--vault-folder", "Learning"], "--vault-folder needs --vault"],
+    [["learning", "--vault", "."], "--vault"],
+    [["--vault", ".", "--no-vault"], "--vault and --no-vault"],
+    [["--no-vault", "--vault", "."], "--vault and --no-vault"],
+  ])("rejects %j with usage", async (args, message) => {
+    const cwd = await temp("tomewise-init-");
+    const HOME = await temp("tomewise-init-home-");
+
+    const result = await tome(["init", ...args], cwd, HOME);
+
+    expect(result.code).toBe(2);
+    expect(result.stderr).toContain(message);
+    expect(result.stderr).toContain("tome init");
+    expect(await readdir(cwd)).toEqual([]);
+  });
+
+  it("skips the Obsidian question with --no-vault or a folder, writing no vault block", async () => {
+    const parent = await temp("tomewise-init-");
+    const HOME = await temp("tomewise-init-home-");
+    const noVault = scripted(["", "", "", "", "", "", "n", "none", ""]);
+    const folder = scripted(["", "", "", "", "", "n", "none", ""]);
+
+    const declined = await tomeAsked(["init", "--no-vault"], parent, HOME, noVault.streams);
+    const named = await tomeAsked(["init", "named"], parent, HOME, folder.streams);
+
+    expect(declined.code).toBe(0);
+    expect(named.code).toBe(0);
+    expect(noVault.shown()).not.toContain("Using Obsidian?");
+    expect(noVault.shown()).toContain("learning home go");
+    expect(folder.shown()).not.toContain("Using Obsidian?");
+    expect(await readJsonFile(join(parent, "tomewise.json"))).not.toHaveProperty("vault");
+    expect(await readJsonFile(join(parent, "named", "tomewise.json"))).not.toHaveProperty("vault");
+  });
+
+  it("stops before asking more when the vault subfolder is already a learning home", async () => {
+    const vault = await temp("tomewise-vault-");
+    const HOME = await temp("tomewise-init-home-");
+    await mkdir(join(vault, "Tomewise"));
+    await writeFile(join(vault, "Tomewise", "tomewise.json"), "{}");
+    const script = scripted(["y", vault, ""]);
+
+    const result = await tomeAsked(["init"], vault, HOME, script.streams);
 
     expect(result.code).toBe(1);
     expect(result.stderr).toContain("already a learning home");

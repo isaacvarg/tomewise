@@ -224,6 +224,27 @@
       },
       "additionalProperties": false,
       "description": "Quiz and exam settings for every subject. A subject can override any of them in subject.json."
+    },
+    "vault": {
+      "default": {
+        "enabled": false
+      },
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "default": true,
+          "description": "Whether the app writes Obsidian-friendly notes alongside the plain files.",
+          "type": "boolean"
+        },
+        "notesFolder": {
+          "default": "sessions",
+          "description": "Folder inside the learning home, relative to tomewise.json, that holds the generated session notes.",
+          "type": "string",
+          "pattern": "^(?!\\.{1,2}(?:\\/|$))[^/\\\\:]+(?:\\/(?!\\.{1,2}(?:\\/|$))[^/\\\\:]+)*\\/?$"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Vault mode settings. Leave the block out to keep vault mode off; a block turns it on unless enabled is false."
     }
   },
   "required": [

@@ -15,7 +15,11 @@
     "empty git block": { "formatVersion": 1, "git": {} },
     "git off": { "formatVersion": 1, "git": { "enabled": false } },
     "push off without a remote": { "formatVersion": 1, "git": { "push": false } },
-    "every git setting": { "formatVersion": 1, "git": { "enabled": true, "cadence": "hourly", "remote": "origin", "branch": "feature/history", "push": true, "pullIntervalMinutes": 10 } }
+    "every git setting": { "formatVersion": 1, "git": { "enabled": true, "cadence": "hourly", "remote": "origin", "branch": "feature/history", "push": true, "pullIntervalMinutes": 10 } },
+    "empty vault block": { "formatVersion": 1, "vault": {} },
+    "vault off": { "formatVersion": 1, "vault": { "enabled": false } },
+    "every vault setting": { "formatVersion": 1, "vault": { "enabled": true, "notesFolder": "notes/Learning sessions" } },
+    "notes folder with a trailing slash": { "formatVersion": 1, "vault": { "notesFolder": "sessions/" } }
   },
   "invalid": {
     "assessments not an object": { "formatVersion": 1, "assessments": true },
@@ -59,7 +63,16 @@
     "branch with ..": { "formatVersion": 1, "git": { "branch": "a..b" } },
     "branch ending .lock": { "formatVersion": 1, "git": { "branch": "main.lock" } },
     "branch ending with a dot": { "formatVersion": 1, "git": { "branch": "main." } },
-    "pull interval over a day": { "formatVersion": 1, "git": { "pullIntervalMinutes": 1441 } }
+    "pull interval over a day": { "formatVersion": 1, "git": { "pullIntervalMinutes": 1441 } },
+    "vault not an object": { "formatVersion": 1, "vault": true },
+    "vault enabled as a string": { "formatVersion": 1, "vault": { "enabled": "yes" } },
+    "unknown vault field": { "formatVersion": 1, "vault": { "path": "~/Notes" } },
+    "empty notes folder": { "formatVersion": 1, "vault": { "notesFolder": "" } },
+    "absolute notes folder": { "formatVersion": 1, "vault": { "notesFolder": "/sessions" } },
+    "notes folder outside the learning home": { "formatVersion": 1, "vault": { "notesFolder": "../sessions" } },
+    "notes folder climbing out midway": { "formatVersion": 1, "vault": { "notesFolder": "notes/../../sessions" } },
+    "notes folder with a backslash": { "formatVersion": 1, "vault": { "notesFolder": "notes\\sessions" } },
+    "notes folder as the learning home": { "formatVersion": 1, "vault": { "notesFolder": "." } }
   },
   "zodOnly": {
     "unknown timezone": { "formatVersion": 1, "timezone": "Mars/Phobos" }

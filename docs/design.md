@@ -155,6 +155,9 @@ On top of `teach`, the teaching skill:
 
 Scaffolds into a vault subfolder, writes a Markdown note per session (frontmatter summary), a Markdown copy of the curriculum, and Obsidian Base views.
 
+- **Setting**: `vault` in `tomewise.json`, with `enabled` and `notesFolder` (a folder inside the learning home, default `sessions`). Leaving the block out keeps vault mode off; a block turns it on unless `enabled` is `false`.
+- **Init**: `tome init` asks "Using Obsidian?", then the vault folder and a subfolder of it (default `Tomewise`), and puts the learning home there with vault mode on. `--vault <vault> [--vault-folder <subfolder>]` gives the same answers without prompts; `--no-vault` skips the question.
+
 ## Still open
 
 - The concrete JSON schemas (envelope fields and types, item and drill files, `subject.json`, `curriculum.json`). This is spec work.
