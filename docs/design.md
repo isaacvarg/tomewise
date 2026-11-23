@@ -160,6 +160,7 @@ Scaffolds into a vault subfolder, writes a Markdown note per session (frontmatte
 - **Session notes**: one note per session at `<notesFolder>/<subject>/<YYYY-MM-DD>-<session id>.md`, frontmatter summary plus a short body, marked `generatedBy: tomewise`. `tome vault rebuild` regenerates them from history and never touches files without the marker. See [`docs/cli/vault.md`](cli/vault.md).
 - **Curriculum copy**: `subjects/<subject>/curriculum.md` beside `curriculum.json`, marked `generatedBy: tomewise`, listing milestones in order with their status from `milestone.status` events. `tome vault rebuild` writes it, and the app rewrites it on start, after a `milestone.status` event (posted or pulled) and after a change to `curriculum.json`.
 - **Bases**: `sessions.base` at the learning home root lists the session notes, with a view by subject and a view by week. Written at init in vault mode and on `tome vault rebuild`, and left alone once its `# generatedBy: tomewise` first line is gone.
+- **Git**: with git sync on, each history commit also takes the new and changed session notes, curriculum copies and `sessions.base`. A file only goes in if it still carries the marker, so learner files stay unstaged, even in the notes folder.
 
 ## Still open
 

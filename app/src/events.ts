@@ -25,8 +25,8 @@ export function eventRoutes(home: () => LearningHome, sync: GitSync, changes: Ch
         await writeEndedSessionNotes(home(), events, warn);
         return { events, exams: closed.exams, quizzes: closed.quizzes };
       });
-      sync.recorded(events);
       await sync.exclusive(() => copyCurricula(home(), milestoneSubjects(events), logCopyError));
+      sync.recorded(events);
       changes.announce({ kind: "events", subjects: [...new Set(events.map((event) => event.subject))] });
       return c.json({ events, ...(exams.length > 0 && { exams }), ...(quizzes.length > 0 && { quizzes }) }, 201);
     } catch (error) {

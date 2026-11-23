@@ -1,9 +1,9 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { LearningHome } from "./load.ts";
-import { GENERATED_MARKER, type WrittenNotes } from "./session-notes.ts";
+import { GENERATED_MARKER, type GeneratedStatus, type WrittenNotes } from "./session-notes.ts";
 
-const SESSIONS_BASE_FILE = "sessions.base";
+export const SESSIONS_BASE_FILE = "sessions.base";
 
 const DISPLAY_NAMES: Record<string, string> = {
   "file.name": "Session",
@@ -62,20 +62,20 @@ function sessionsBase(): string {
   ].join("\n");
 }
 
-async function isLearnerFile(file: string): Promise<boolean> {
+export async function baseStatus(file: string): Promise<GeneratedStatus> {
   let text: string;
   try {
     text = await readFile(file, "utf8");
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return "missing";
     throw error;
   }
-  return text.replace(/^\uFEFF/, "").split(/\r?\n/, 1)[0]!.trimEnd() !== `# ${GENERATED_MARKER}`;
+  return text.replace(/^\uFEFF/, "").split(/\r?\n/, 1)[0]!.trimEnd() === `# ${GENERATED_MARKER}` ? "generated" : "learner";
 }
 
 export async function writeSessionsBase(home: LearningHome): Promise<WrittenNotes> {
   const file = join(home.root, SESSIONS_BASE_FILE);
-  if (await isLearnerFile(file)) return { written: [], leftAlone: [SESSIONS_BASE_FILE] };
+  if ((await baseStatus(file)) === "learner") return { written: [], leftAlone: [SESSIONS_BASE_FILE] };
   await writeFile(file, sessionsBase());
   return { written: [SESSIONS_BASE_FILE], leftAlone: [] };
 }

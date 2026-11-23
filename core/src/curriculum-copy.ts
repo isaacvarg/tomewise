@@ -4,6 +4,8 @@ import { milestoneStatusesOf } from "./milestones.ts";
 import { assertVaultMode, GENERATED_MARKER, writeSessionNotes, type GeneratedNote, type WrittenNotes } from "./session-notes.ts";
 import { subjectPath } from "./subject.ts";
 
+export const CURRICULUM_COPY_FILE = "curriculum.md";
+
 export async function curriculumCopy(home: LearningHome, subject: string): Promise<GeneratedNote | undefined> {
   const loaded = await loadSubject(home, subject);
   if (!loaded.curriculum) return undefined;
@@ -20,7 +22,7 @@ export async function curriculumCopy(home: LearningHome, subject: string): Promi
     ...(unit.milestones.length > 0 ? [""] : []),
   ]);
   return {
-    path: subjectPath(subject, "curriculum.md"),
+    path: subjectPath(subject, CURRICULUM_COPY_FILE),
     content: [
       "---",
       GENERATED_MARKER,

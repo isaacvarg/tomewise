@@ -67,7 +67,7 @@ export async function startServer(home: LearningHome, { host, port, watch, clock
     clock,
     pulledEvents: (subjects) => {
       changes.announce({ kind: "events", subjects });
-      void copyCurricula(watched.current().home, subjects, onError);
+      void sync.exclusive(() => copyCurricula(watched.current().home, subjects, onError));
     },
   });
   await trackRuleChanges(watched, sync.exclusive, onError);

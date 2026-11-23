@@ -2,7 +2,16 @@ import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { Hono } from "hono";
-import { type GitCadence, isoDate, type LearningEvent, type LearningHome, localDay, readEvents } from "@tomewise/core";
+import {
+  generatedFileGlobs,
+  type GitCadence,
+  isGeneratedFile,
+  isoDate,
+  type LearningEvent,
+  type LearningHome,
+  localDay,
+  readEvents,
+} from "@tomewise/core";
 import { HISTORY_PREFIX, historyMessage } from "./history.ts";
 
 export interface Clock {
@@ -181,15 +190,27 @@ export function startSync(home: () => LearningHome, { clock = systemClock, pulle
     return added;
   }
 
+  async function generatedPathspecs(): Promise<string[]> {
+    const current = home();
+    if (!current.config.vault.enabled) return [];
+    const globs = generatedFileGlobs(current).map((glob) => `:(glob)${glob}`);
+    const changed = await git(root, ["ls-files", "--modified", "--others", "--exclude-standard", "-z", "--", ...globs]);
+    const staged = await git(root, ["diff", "--cached", "--name-only", "--no-renames", "-z", "--", ...globs]);
+    const paths = [...new Set(`${changed}\0${staged}`.split("\0").filter((path) => path !== ""))];
+    const generated = await Promise.all(paths.map((path) => isGeneratedFile(current, path)));
+    return paths.filter((_, index) => generated[index]).map((path) => `:(literal)${path}`);
+  }
+
   async function commitHistory() {
     if ((await git(root, ["status", "--porcelain", "--", EVENT_FILES])) === "") return;
     const remote = settings.remote;
     const target = remote === undefined ? await checkedBranch() : await pull(remote);
-    await git(root, ["add", "--all", "--", EVENT_FILES]);
+    const generated = await generatedPathspecs();
+    await git(root, ["add", "--all", "--", EVENT_FILES, ...generated]);
     const added = await addedEvents();
     if (added.length === 0) throw new Error("Event files changed without new events; check subjects/*/events/ with git status");
     const message = historyMessage(added, config.timezone);
-    await git(root, ["commit", "--quiet", "--only", "--message", message, "--", EVENT_FILES]);
+    await git(root, ["commit", "--quiet", "--only", "--message", message, "--", EVENT_FILES, ...generated]);
     state.lastCommit = clock.now().toISOString();
     if (remote !== undefined) await pushPending(remote, target);
   }

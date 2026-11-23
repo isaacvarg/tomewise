@@ -58,7 +58,7 @@ export type { ContractToken, TokenKind } from "./theme-contract.ts";
 export type { JsonSchema, SchemaFile } from "./json-schemas.ts";
 export { checkInitSettings, DEFAULT_APP_URL, initLearningHome } from "./init.ts";
 export type { InitOptions, InitProblem, InitResult, InitSetting, InitSettings } from "./init.ts";
-export { GENERATED_MARKER, rebuildVault, sessionNotes, writeSessionNote, writeSessionNotes } from "./session-notes.ts";
+export { GENERATED_MARKER, generatedFileGlobs, isGeneratedFile, rebuildVault, sessionNotes, writeSessionNote, writeSessionNotes } from "./session-notes.ts";
 export type { GeneratedNote, SessionNote, SessionSummary, VaultRebuild, WrittenNotes } from "./session-notes.ts";
 export { curriculumCopy, writeCurriculumCopies } from "./curriculum-copy.ts";
 export { writeSessionsBase } from "./sessions-base.ts";
