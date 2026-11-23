@@ -55,10 +55,10 @@ async function git(cwd: string, ...args: string[]): Promise<string> {
   return stdout.trim();
 }
 
-async function enableGit(root: string, settings: Record<string, unknown>) {
+async function patchConfig(root: string, patch: Record<string, unknown>) {
   const path = join(root, "tomewise.json");
   const config = JSON.parse(await readFile(path, "utf8"));
-  await writeFile(path, JSON.stringify({ ...config, git: settings }, null, 2));
+  await writeFile(path, JSON.stringify({ ...config, ...patch }, null, 2));
 }
 
 function fakeClock() {
@@ -89,12 +89,12 @@ function fakeClock() {
 async function cloneSeam(
   settings: Record<string, unknown> = { remote: "origin" },
   clock?: Clock,
-  { identity = true }: { identity?: boolean } = {},
+  { identity = true, vault }: { identity?: boolean; vault?: Record<string, unknown> } = {},
 ) {
   const remote = await mkdtemp(join(tmpdir(), "tomewise-remote-"));
   let agent = "";
   const app = await startTestApp(async (root) => {
-    await enableGit(root, settings);
+    await patchConfig(root, { git: settings, ...(vault && { vault }) });
     await git(remote, "init", "--bare", "--quiet", "--initial-branch=main");
     await git(root, "init", "--quiet", "--initial-branch=main");
     if (identity) {
@@ -291,7 +291,7 @@ describe("git sync", () => {
     await git(agent, "commit", "--quiet", "-m", "chore: phone");
     await git(agent, "push", "--quiet", remote, "main");
     const app = await startTestApp(async (root) => {
-      await enableGit(root, { remote: "origin" });
+      await patchConfig(root, { git: { remote: "origin" } });
       await git(root, "init", "--quiet", "--initial-branch=main");
       await git(root, "remote", "add", "origin", remote);
     });
@@ -696,3 +696,84 @@ async function divergedPushTarget(root: string): Promise<string> {
   await git(root, "config", "remote.origin.pushurl", diverged);
   return diverged;
 }
+
+describe("history commits in vault mode", () => {
+  const NOTES = "sessions/morse-code";
+  const note = (n: number) => `${NOTES}/2026-11-22-01KAJ${String(n).padStart(21, "0")}.md`;
+  const COPY = `${SUBJECT}/curriculum.md`;
+  const LEARNER = {
+    [`${NOTES}/thoughts.md`]: "---\ntags: morse\n---\nMy own note.\n",
+    [`${NOTES}/copied.md`]: "Not frontmatter.\ngeneratedBy: tomewise\n",
+    [`${SUBJECT}/notes.md`]: "---\ngeneratedBy: tomewise\n---\nOutside the vault views.\n",
+  };
+  const committed = async (root: string) => (await git(root, "show", "--name-only", "--format=", "HEAD")).split("\n").sort();
+  const untracked = async (root: string) => (await git(root, "status", "--porcelain", "--untracked-files=all")).split("\n").sort();
+
+  it("commits the session note, curriculum copies and the Base with the events, and leaves learner files out", async () => {
+    const { app } = await cloneSeam({}, undefined, { vault: {} });
+    await writeFiles(app.root, { ...LEARNER, "sessions.base": "# generatedBy: tomewise\nviews: []\n" });
+
+    expect((await app.post(practice(1))).status).toBe(201);
+
+    await poll(() => subjects(app.root)).toEqual([ONE_SESSION, "chore: start"]);
+    expect(await committed(app.root)).toEqual([`${EVENTS}/2026-11.jsonl`, COPY, note(1), "sessions.base"].sort());
+    expect(await untracked(app.root)).toEqual(Object.keys(LEARNER).map((path) => `?? ${path}`).sort());
+  });
+
+  it("commits changed generated files and leaves a learner's Base alone", async () => {
+    const { app } = await cloneSeam({}, undefined, { vault: {} });
+    await writeFiles(app.root, { "sessions.base": "views: []\n" });
+    expect((await app.post(practice(1))).status).toBe(201);
+    await poll(() => subjects(app.root)).toHaveLength(2);
+
+    const markDone = { ts: "2026-11-22T08:45:00.000Z", subject: "morse-code", kind: "milestone.status", ref: "milestone:first-five", schemaVersion: 2, data: { status: "done" } };
+    expect((await app.post([markDone, ...practice(2)])).status).toBe(201);
+
+    await poll(() => subjects(app.root)).toHaveLength(3);
+    expect(await committed(app.root)).toEqual([`${EVENTS}/2026-11.jsonl`, COPY, note(2)].sort());
+    expect(await untracked(app.root)).toEqual(["?? sessions.base"]);
+  });
+
+  it("honours a custom notes folder, even one with glob characters", async () => {
+    const { app } = await cloneSeam({}, undefined, { vault: { notesFolder: "journal/[old] practice*/" } });
+    await writeFiles(app.root, { [`${NOTES}/stray.md`]: "---\ngeneratedBy: tomewise\n---\n" });
+
+    expect((await app.post(practice(1))).status).toBe(201);
+
+    await poll(() => subjects(app.root)).toHaveLength(2);
+    expect(await committed(app.root)).toEqual([`${EVENTS}/2026-11.jsonl`, COPY, note(1).replace(NOTES, "journal/[old] practice*/morse-code")].sort());
+    expect(await untracked(app.root)).toEqual([`?? ${NOTES}/stray.md`]);
+  });
+
+  it("pushes the generated files with the events, and takes a generated file staged by hand", async () => {
+    const { app, remote } = await cloneSeam({ remote: "origin", push: true }, undefined, { vault: {} });
+    await writeFiles(app.root, { "sessions.base": "# generatedBy: tomewise\nviews: []\n", ...LEARNER });
+    await git(app.root, "add", "sessions.base", `${NOTES}/thoughts.md`);
+
+    expect((await app.post(practice(1))).status).toBe(201);
+
+    await poll(() => git(remote, "log", "-1", "--format=%s", "main")).toBe(ONE_SESSION);
+    expect((await git(remote, "show", "--name-only", "--format=", "main")).split("\n").sort()).toEqual(
+      [`${EVENTS}/2026-11.jsonl`, COPY, note(1), "sessions.base"].sort(),
+    );
+    expect(await untracked(app.root)).toEqual(
+      [`A  ${NOTES}/thoughts.md`, ...Object.keys(LEARNER).filter((path) => !path.endsWith("thoughts.md")).map((path) => `?? ${path}`)].sort(),
+    );
+  });
+
+  it("stages only event files with vault mode off, even beside generated-looking files", async () => {
+    const { app } = await cloneSeam({});
+    const generatedLooking = {
+      [note(1)]: "---\ngeneratedBy: tomewise\n---\n",
+      [COPY]: "---\ngeneratedBy: tomewise\n---\n",
+      "sessions.base": "# generatedBy: tomewise\n",
+    };
+    await writeFiles(app.root, generatedLooking);
+
+    expect((await app.post(practice(1))).status).toBe(201);
+
+    await poll(() => subjects(app.root)).toEqual([ONE_SESSION, "chore: start"]);
+    expect(await committed(app.root)).toEqual([`${EVENTS}/2026-11.jsonl`]);
+    expect(await untracked(app.root)).toEqual(Object.keys(generatedLooking).map((path) => `?? ${path}`).sort());
+  });
+});
