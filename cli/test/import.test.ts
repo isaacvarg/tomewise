@@ -1,4 +1,4 @@
-import { cp, mkdir, mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -155,6 +155,19 @@ describe("tome import", () => {
     const files = Object.keys(await snapshot(join(app.root, SUBJECT)));
     expect(files).not.toContain("scratch.txt");
     expect(files.some((file) => file.startsWith(".git"))).toBe(false);
+  });
+
+  it("creates subjects/ in a home that has none, as a fresh clone of an empty home does", async () => {
+    const root = join(await mkdtemp(join(tmpdir(), "tomewise-cli-bare-")), "learning");
+    const HOME = await homeWithConfig({});
+    expect((await tome(["init", root, "--timezone", "Europe/London"], tmpdir(), { HOME })).code).toBe(0);
+    await rm(join(root, "subjects"), { recursive: true });
+
+    const result = await tome(["import", await workspace()], root, { HOME });
+
+    expect(result.code).toBe(0);
+    expect(Object.values(await eventsIn(root)).flat()).toEqual(completed());
+    expect((await tome(["validate"], root, { HOME })).code).toBe(0);
   });
 
   it("refuses to import into a subject that already exists and changes nothing", async () => {
