@@ -6,6 +6,7 @@ import { readEvents } from "./event-store.ts";
 import { parseRef, type LearningEvent, type Ref } from "./events.ts";
 import { loadSubject, type LearningHome } from "./load.ts";
 import { CONFIG_FILE } from "./find.ts";
+import { writeCurriculumCopies } from "./curriculum-copy.ts";
 
 export const GENERATED_MARKER = "generatedBy: tomewise";
 
@@ -23,15 +24,22 @@ export interface SessionSummary {
   items: string[];
 }
 
-export interface SessionNote {
+export interface GeneratedNote {
   path: string;
-  summary: SessionSummary;
   content: string;
+}
+
+export interface SessionNote extends GeneratedNote {
+  summary: SessionSummary;
 }
 
 export interface WrittenNotes {
   written: string[];
   leftAlone: string[];
+}
+
+export interface VaultRebuild extends WrittenNotes {
+  curricula: WrittenNotes;
 }
 
 function summarise(subject: string, start: LearningEvent, events: readonly LearningEvent[], timezone: string): SessionSummary {
@@ -118,7 +126,7 @@ async function noteStatus(file: string): Promise<NoteStatus> {
   return frontmatter.includes(GENERATED_MARKER) ? "generated" : "learner";
 }
 
-export async function writeSessionNotes(home: LearningHome, notes: readonly SessionNote[]): Promise<WrittenNotes> {
+export async function writeSessionNotes(home: LearningHome, notes: readonly GeneratedNote[]): Promise<WrittenNotes> {
   const result: WrittenNotes = { written: [], leftAlone: [] };
   for (const note of notes) {
     const file = join(home.root, note.path);
@@ -139,7 +147,7 @@ export async function writeSessionNote(home: LearningHome, subject: string, sess
   return writeSessionNotes(home, notes.filter((note) => note.summary.sessionId === sessionId));
 }
 
-function assertVaultMode(home: LearningHome): void {
+export function assertVaultMode(home: LearningHome): void {
   if (!home.config.vault.enabled) {
     throw new VaultDisabledError(
       `Vault mode is off in ${join(home.root, CONFIG_FILE)}. Add "vault": {} to turn it on.`,
@@ -147,9 +155,10 @@ function assertVaultMode(home: LearningHome): void {
   }
 }
 
-export async function rebuildVault(home: LearningHome): Promise<WrittenNotes> {
+export async function rebuildVault(home: LearningHome): Promise<VaultRebuild> {
   assertVaultMode(home);
   const notes: SessionNote[] = [];
   for (const subject of home.subjects) notes.push(...(await sessionNotes(home, subject)));
-  return writeSessionNotes(home, notes);
+  const curricula = await writeCurriculumCopies(home, home.subjects);
+  return { ...(await writeSessionNotes(home, notes)), curricula };
 }

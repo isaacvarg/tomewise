@@ -20,6 +20,7 @@ async function tome(args: string[], cwd: string) {
   return { code, stdout: out.join("\n"), stderr: err.join("\n") };
 }
 
+const CURRICULUM = "subjects/morse-code/curriculum.md";
 const FIRST_LESSON = "sessions/morse-code/2026-10-30-01M6731E208N3RH6N28TSQZD7V.md";
 
 describe("tome vault rebuild", () => {
@@ -91,7 +92,7 @@ describe("tome vault rebuild", () => {
     const result = await tome(["vault", "rebuild"], root);
 
     expect(result.code).toBe(0);
-    expect(result.stdout).toBe("Wrote 4 session notes.");
+    expect(result.stdout).toBe(["Wrote 4 session notes.", "Wrote 1 curriculum copy."].join("\n"));
     expect(await snapshot(join(root, "sessions"))).toEqual(first);
   });
 
@@ -105,7 +106,7 @@ describe("tome vault rebuild", () => {
 
     expect(result.code).toBe(0);
     expect(result.stdout).toBe(
-      ["Wrote 3 session notes.", `Left ${FIRST_LESSON} alone: it has no generatedBy: tomewise marker.`].join("\n"),
+      ["Wrote 3 session notes.", "Wrote 1 curriculum copy.", `Left ${FIRST_LESSON} alone: it has no generatedBy: tomewise marker.`].join("\n"),
     );
     expect(await readFile(join(root, "sessions/morse-code/my-notes.md"), "utf8")).toBe(mine);
     expect(await readFile(join(root, FIRST_LESSON), "utf8")).toBe(lookalike);
@@ -119,8 +120,22 @@ describe("tome vault rebuild", () => {
 
     const result = await tome(["vault", "rebuild"], root);
 
-    expect(result.stdout).toBe("Wrote 4 session notes.");
+    expect(result.stdout).toBe(["Wrote 4 session notes.", "Wrote 1 curriculum copy."].join("\n"));
     expect(await readFile(join(root, FIRST_LESSON), "utf8")).toBe(note);
+  });
+
+  it("writes each subject's curriculum copy and leaves a learner's curriculum.md alone", async () => {
+    const root = await morse();
+    await tome(["vault", "rebuild"], root);
+    expect(await readFile(join(root, CURRICULUM), "utf8")).toMatch(/^---\ngeneratedBy: tomewise\n/);
+    await writeFile(join(root, CURRICULUM), "# My path\n");
+
+    const result = await tome(["vault", "rebuild"], root);
+
+    expect(result.stdout).toBe(
+      ["Wrote 4 session notes.", "Wrote 0 curriculum copies.", `Left ${CURRICULUM} alone: it has no generatedBy: tomewise marker.`].join("\n"),
+    );
+    expect(await readFile(join(root, CURRICULUM), "utf8")).toBe("# My path\n");
   });
 
   it("refuses with a clear error when vault mode is off", async () => {
@@ -133,6 +148,7 @@ describe("tome vault rebuild", () => {
       expect(result.stdout).toBe("");
       expect(result.stderr).toBe(`Vault mode is off in ${join(root, "tomewise.json")}. Add "vault": {} to turn it on.`);
       expect(await readdir(root)).not.toContain("sessions");
+      expect(await readdir(join(root, "subjects/morse-code"))).not.toContain("curriculum.md");
     }
   });
 

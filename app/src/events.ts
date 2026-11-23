@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { appendEvents, closeExams, InvalidEventError, type LearningHome } from "@tomewise/core";
 import type { Changes } from "./changes.ts";
+import { copyCurricula, logCopyError, milestoneSubjects } from "./curriculum-copy.ts";
 import type { GitSync } from "./sync.ts";
 
 export function eventRoutes(home: () => LearningHome, sync: GitSync, changes: Changes): Hono {
@@ -22,6 +23,7 @@ export function eventRoutes(home: () => LearningHome, sync: GitSync, changes: Ch
       });
       const events = appended.map(({ event }) => event);
       sync.recorded(events);
+      await sync.exclusive(() => copyCurricula(home(), milestoneSubjects(events), logCopyError));
       changes.announce({ kind: "events", subjects: [...new Set(events.map((event) => event.subject))] });
       return c.json({ events, ...(exams.length > 0 && { exams }), ...(quizzes.length > 0 && { quizzes }) }, 201);
     } catch (error) {
