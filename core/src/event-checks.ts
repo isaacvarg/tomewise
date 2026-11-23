@@ -2,7 +2,7 @@ import type { LearningEvent, Ref } from "./events.ts";
 import { parseRef } from "./events.ts";
 import { issuesFrom, type ValidationIssue } from "./issues.ts";
 import { dataSchema } from "./payload.ts";
-import { explanationText, ruleChanges } from "./schemas.ts";
+import { explanationText, gradeFeedback, ruleChanges } from "./schemas.ts";
 import { subjectPath, type Subject } from "./subject.ts";
 
 type SubjectRefs = Omit<Subject, "settings">;
@@ -64,7 +64,9 @@ export function checkAgainstSubject(event: LearningEvent, subject: SubjectRefs, 
         ? ruleChanges[event.kind as keyof typeof ruleChanges]
         : event.kind === "explanation.saved"
           ? declared.extend({ text: explanationText })
-          : declared;
+          : event.kind === "explanation.graded"
+            ? declared.extend({ feedback: gradeFeedback })
+            : declared;
     const data = schema.safeParse(event.data);
     if (!data.success) issues.push(...issuesFrom("", data.error, ["data"]).map(({ file: _, ...issue }) => issue));
   }

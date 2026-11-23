@@ -80,6 +80,12 @@ export function lessonName(id: string): LessonName {
   return { number: Number(numbered[1]), title: capitalised(spaced(numbered[2]!)) };
 }
 
+export function refName(ref: string): string {
+  const [kind, id = ""] = ref.split(/:(.*)/);
+  if (kind === "lesson") return lessonName(id).title;
+  return capitalised(spaced(id));
+}
+
 export interface SheetRow {
   id: string;
   name: string;

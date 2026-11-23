@@ -125,6 +125,22 @@
     ],
   });
 
+  const firstFive = { id: "first-five", title: "Copy K, M, R, S and U" };
+  const demoPrompts = {
+    unwritten: { kind: "exam-unwritten", milestone: firstFive, exam: "first-five", say: "Prepare the exam for “Copy K, M, R, S and U”." },
+    ungraded: { kind: "ungraded-explanations", count: 1, refs: ["lesson:0004-the-late-bump"], say: "Grade my Morse code explanation." },
+  };
+  const morseExplanations = [
+    { id: "01STYLEGUIDEEXPLAIN0000002", ts: "2026-11-20T18:10:00.000Z", ref: "lesson:0004-the-late-bump", text: "U ends on a long beep, so it sounds late." },
+    {
+      id: "01STYLEGUIDEEXPLAIN0000001",
+      ts: "2026-11-18T18:02:00.000Z",
+      ref: "lesson:0002-r",
+      text: "R is short, long, short: dit-dah-dit.",
+      grade: { id: "01STYLEGUIDEGRADE000000001", ts: "2026-11-19T08:00:00.000Z", feedback: "Right. Next time say what makes it different from K, which is the same pattern flipped." },
+    },
+  ];
+
   const demoThemes = [
     { name: "meadow", label: "Meadow", description: "Playful and green, with leaves that rise when you start.", stylesheets: ["tokens.css", "theme.css"], script: "leaves.js" },
     { name: "paper", label: "Paper", description: "Calm and bookish: warm paper, serif headings, one rust accent.", stylesheets: ["tokens.css", "theme.css"] },
@@ -162,6 +178,10 @@
     if (url.pathname === "/api/subjects/morse-code") return json(morseSubject);
     if (url.pathname === "/api/subjects/morse-code/stats") return json(morseStats());
     if (url.pathname === "/api/subjects/morse-code/unlocked") return json(morseUnlocked());
+    if (url.pathname === "/api/prompts") return json({ subjects: [{ subject: "morse-code", prompts: [demoPrompts.unwritten, demoPrompts.ungraded] }] });
+    if (url.pathname === "/api/subjects/morse-code/prompts") {
+      return json({ prompts: [demoPrompts.unwritten, demoPrompts.ungraded], explanations: morseExplanations });
+    }
     if (url.pathname === "/api/subjects/morse-code/progress") return json({ completedLessons: morseLessons.slice(0, 4) });
     if (url.pathname === "/api/subjects") return json({ subjects: homeSubjects.map(({ due, ...subject }) => subject) });
     const homeSubject = homeSubjects.find((candidate) => url.pathname === `/api/subjects/${candidate.id}/due`);
@@ -271,6 +291,7 @@
     "[data-styleguide-settings]": '.tome-app[data-state="ready"]',
     "[data-styleguide-subject]": '.tome-app[data-state="ready"]:not(:has([aria-busy="true"]))',
     "[data-styleguide-no-charts]": ".tome-totals",
+    "[data-styleguide-prompts]": ".tome-prompts",
   };
 
   async function appReady(mount, selector) {

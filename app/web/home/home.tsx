@@ -1,13 +1,18 @@
 import { Link } from "react-router";
-import type { Activity, Subject } from "../api.ts";
+import { type Activity, api, type Subject } from "../api.ts";
 import { useLoad } from "../load.ts";
 import { Heatmap } from "../heatmap.tsx";
 import { Failed, Screen } from "../screen.tsx";
 import { loadToday } from "../today.ts";
 import { bySubjectsPractised, count, type DueToday, heatmapCells, longDate, type WeekStart } from "./model.ts";
 
+async function loadHome() {
+  const [today, prompts] = await Promise.all([loadToday(), api.allPrompts()]);
+  return { ...today, asks: Object.fromEntries(prompts.map((entry) => [entry.subject, entry.prompts.length])) };
+}
+
 export function Home() {
-  const loaded = useLoad(loadToday, [], { refetchOn: ["content", "events"] });
+  const loaded = useLoad(loadHome, [], { refetchOn: ["content", "events"] });
   if (loaded.state === "loading") {
     return (
       <Screen title="Today" state="loading">
@@ -22,12 +27,12 @@ export function Home() {
       </Screen>
     );
   }
-  const { subjects, activity, due } = loaded.data;
+  const { subjects, activity, due, asks } = loaded.data;
   const weekStart: WeekStart = subjects[0]?.settings.weekStart ?? "monday";
   return (
     <Screen kicker={longDate(activity.today)} title="Today">
       <Heatmap cells={heatmapCells(activity, weekStart, bySubjectsPractised(subjects.length))} weekStart={weekStart} label="Activity heatmap" />
-      <Subjects subjects={subjects} />
+      <Subjects subjects={subjects} asks={asks} />
       <Due due={due} />
       <Streak activity={activity} />
       <Start due={due} />
@@ -35,7 +40,7 @@ export function Home() {
   );
 }
 
-function Subjects({ subjects }: { subjects: Subject[] }) {
+function Subjects({ subjects, asks }: { subjects: Subject[]; asks: Record<string, number> }) {
   return (
     <nav className="tome-subjects" aria-label="Subjects">
       {subjects.map((subject) => (
@@ -44,6 +49,7 @@ function Subjects({ subjects }: { subjects: Subject[] }) {
             {Array.from(subject.name)[0]?.toLocaleUpperCase()}
           </span>
           <span className="tome-subject-name">{subject.name}</span>
+          {asks[subject.id] !== undefined && <span className="tome-subject-ask">{asks[subject.id]} to ask your agent</span>}
         </Link>
       ))}
     </nav>

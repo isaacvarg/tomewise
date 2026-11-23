@@ -1,6 +1,6 @@
-import { type KeyboardEvent, type ReactNode, useId, useRef } from "react";
+import { type KeyboardEvent, type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { type Activity, api, type DueItem, type Subject } from "../api.ts";
+import { type Activity, type AgentPrompt, api, type DueItem, type Explanation, type Subject, type SubjectPrompts } from "../api.ts";
 import { Heatmap } from "../heatmap.tsx";
 import { count, minutesFor } from "../home/model.ts";
 import { useLoad } from "../load.ts";
@@ -12,6 +12,7 @@ import {
   goalProgress,
   type LessonRow,
   type MilestoneView,
+  refName,
   sheetRows,
   subjectPath,
   subjectHeatmap,
@@ -29,11 +30,17 @@ interface SubjectData {
   activity: Activity;
   completed: string[];
   due: DueItem[];
+  prompts: SubjectPrompts;
 }
 
 async function loadSubjectHome(id: string): Promise<SubjectData> {
-  const [subject, activity, completed] = await Promise.all([api.subject(id), api.activity(id), api.completedLessons(id)]);
-  return { subject, activity, completed, due: await api.due(id, activity.today) };
+  const [subject, activity, completed, prompts] = await Promise.all([
+    api.subject(id),
+    api.activity(id),
+    api.completedLessons(id),
+    api.prompts(id),
+  ]);
+  return { subject, activity, completed, prompts, due: await api.due(id, activity.today) };
 }
 
 const backLink = (
@@ -143,8 +150,9 @@ function Overview({ data }: { data: SubjectData }) {
         label={`${subject.name} activity heatmap`}
         meta={streak > 0 && ` · ${count(streak, "day")} in a row`}
       />
-      <Prompts />
+      <Prompts subject={data.subject} prompts={data.prompts.prompts} />
       <Due data={data} />
+      <Feedback explanations={data.prompts.explanations} />
     </>
   );
 }
@@ -204,8 +212,117 @@ function listed(names: string[]): string {
   return names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
 }
 
-function Prompts() {
-  return null;
+export function Prompts({ subject, prompts }: { subject: Subject; prompts: AgentPrompt[] }) {
+  if (prompts.length === 0) return null;
+  return (
+    <section className="tome-section tome-prompts">
+      <div className="tome-section-head">
+        <h3>Ask your agent</h3>
+        <span className="tome-meta">{prompts.length} waiting</span>
+      </div>
+      <ul>
+        {prompts.map((prompt) => (
+          <li key={promptKey(prompt)} className="tome-ask" data-prompt={prompt.kind}>
+            <p>
+              <PromptText subject={subject} prompt={prompt} />
+            </p>
+            <Say text={prompt.say} />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+const promptKey = (prompt: AgentPrompt) => (prompt.kind === "ungraded-explanations" ? prompt.kind : `${prompt.kind}:${prompt.milestone.id}`);
+
+function PromptText({ subject, prompt }: { subject: Subject; prompt: AgentPrompt }) {
+  switch (prompt.kind) {
+    case "milestone-done":
+      return (
+        <>
+          Every lesson in <strong>{prompt.milestone.title}</strong> is done.
+        </>
+      );
+    case "exam-unwritten":
+      return (
+        <>
+          Every lesson in <strong>{prompt.milestone.title}</strong> is done. Its exam isn't written yet.
+        </>
+      );
+    case "exam-ready":
+      return (
+        <>
+          The exam for <strong>{prompt.milestone.title}</strong> is ready.{" "}
+          <a className="tome-ask-go" href={subjectPath(subject.id, "exams", `${prompt.exam}.html`)}>
+            Take the exam
+          </a>
+        </>
+      );
+    case "ungraded-explanations": {
+      const several = prompt.count > 1;
+      const names = prompt.refs.map((ref) => <strong key={ref}>{refName(ref)}</strong>);
+      return (
+        <>
+          Your {several ? "explanations" : "explanation"} from {joined(names)} {several ? "are" : "is"} waiting to be graded.
+        </>
+      );
+    }
+  }
+}
+
+function joined(parts: ReactNode[]): ReactNode[] {
+  return parts.flatMap((part, index) => (index === 0 ? [part] : [index === parts.length - 1 ? " and " : ", ", part]));
+}
+
+function Say({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), 2000);
+    return () => clearTimeout(timer);
+  }, [copied]);
+  const clipboard = typeof navigator === "undefined" ? undefined : navigator.clipboard;
+  return (
+    <div className="tome-ask-say">
+      <span>{text}</span>
+      {clipboard && (
+        <button className="tome-copy" type="button" onClick={() => void navigator.clipboard.writeText(text).then(() => setCopied(true), () => setCopied(false))}>
+          {copied ? "Copied" : "Copy"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+const FEEDBACK_SHOWN = 3;
+
+export function Feedback({ explanations }: { explanations: Explanation[] }) {
+  const graded = explanations
+    .filter((explanation) => explanation.grade !== undefined)
+    .sort((a, b) => b.grade!.ts.localeCompare(a.grade!.ts));
+  if (graded.length === 0) return null;
+  return (
+    <section className="tome-section tome-explanations">
+      <div className="tome-section-head">
+        <h3>Feedback</h3>
+        <span className="tome-meta">{graded.length > FEEDBACK_SHOWN ? `latest ${FEEDBACK_SHOWN} of ${graded.length}` : count(graded.length, "explanation")}</span>
+      </div>
+      <ul>
+        {graded.slice(0, FEEDBACK_SHOWN).map((explanation) => (
+          <li key={explanation.id} className="tome-explanation">
+            <p className="tome-hint">
+              Your explanation of <b className="tome-explanation-from">{refName(explanation.ref)}</b>
+            </p>
+            <blockquote className="tome-explanation-text">{explanation.text}</blockquote>
+            <p className="tome-explanation-feedback">
+              <b>Your agent</b> {explanation.grade!.feedback}
+            </p>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
 }
 
 function Due({ data }: { data: SubjectData }) {

@@ -1,10 +1,15 @@
-import type { Activity, AppSetting, ChartSeries, DueItem, ScheduledItem, StartMode, Subject } from "@tomewise/core";
+import type { Activity, AgentPrompt, AppSetting, ChartSeries, DueItem, Explanation, ScheduledItem, StartMode, Subject } from "@tomewise/core";
 
-export type { Activity, ChartSeries, DueItem, ScheduledItem, StartMode, Subject };
+export type { Activity, AgentPrompt, ChartSeries, DueItem, Explanation, ScheduledItem, StartMode, Subject };
 
 export interface SubjectStats {
   totals: { durationMs: number; sessions: number; accuracy: number | null };
   charts: ChartSeries[];
+}
+
+export interface SubjectPrompts {
+  prompts: AgentPrompt[];
+  explanations: Explanation[];
 }
 
 export interface ThemeChoice {
@@ -42,6 +47,9 @@ export const api = {
   completedLessons: (id: string) =>
     getJson<{ completedLessons: string[] }>(`${subjectPath(id)}/progress`).then((body) => body.completedLessons),
   stats: (id: string) => getJson<SubjectStats>(`${subjectPath(id)}/stats`),
+  prompts: (id: string) => getJson<SubjectPrompts>(`${subjectPath(id)}/prompts`),
+  allPrompts: () =>
+    getJson<{ subjects: { subject: string; prompts: AgentPrompt[] }[] }>("/api/prompts").then((body) => body.subjects),
   settings: () => getJson<Settings>("/api/settings"),
   saveSetting: (key: AppSetting, value: unknown) =>
     getJson<Settings>(`/api/settings/${key}`, {

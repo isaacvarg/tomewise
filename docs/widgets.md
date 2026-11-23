@@ -331,6 +331,8 @@ The learner writes a plain-language explanation and saves it for the agent to gr
 
 `data.text` is checked by the app for every subject; a subject's payload schema may add fields to `explanation.saved` but not drop `text`.
 
+The agent grades an explanation with an `explanation.graded` event whose `ref` is `event:<id>` of the `explanation.saved` and whose `data.feedback` holds what it says to the learner. `data.feedback` is checked the same way as `data.text`. Until a grade arrives, the subject home asks the learner to have their agent grade it; after, it shows the feedback under the explanation.
+
 Keyboard: Tab into the text box, Ctrl+Enter (⌘+Enter) saves. Touch: tap Save explanation.
 
 ### Markup
