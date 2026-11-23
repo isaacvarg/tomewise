@@ -54,6 +54,10 @@ export const appClasses: readonly string[] = [
   "tome-settings-cancel", "tome-settings-save", "tome-stage", "tome-start", "tome-stats", "tome-streak",
   "tome-streak-num", "tome-streak-text", "tome-subject", "tome-subject-name", "tome-subjects", "tome-summary-head",
   "tome-title",
+  "tome-check", "tome-curriculum", "tome-drill-go", "tome-drill-name", "tome-drill-sub", "tome-drills", "tome-exam", "tome-goal",
+  "tome-goal-bar", "tome-goal-num", "tome-goal-week", "tome-lessons", "tome-milestone", "tome-milestone-head",
+  "tome-milestone-plain", "tome-num", "tome-overview", "tome-reference", "tome-row", "tome-side",
+  "tome-status", "tome-tab", "tome-tabs", "tome-unit", "tome-view",
 ];
 
 export const requiredTokenNames = (kind?: TokenKind): string[] =>

@@ -31,7 +31,10 @@ export const api = {
   subject: (id: string) => getJson<Subject>(subjectPath(id)),
   due: (id: string, date: string) =>
     getJson<{ due: DueItem[] }>(`${subjectPath(id)}/due?date=${encodeURIComponent(date)}`).then((body) => body.due),
-  activity: () => getJson<Activity>("/api/activity"),
+  activity: (subject?: string) =>
+    getJson<Activity>(subject === undefined ? "/api/activity" : `/api/activity?subject=${encodeURIComponent(subject)}`),
+  completedLessons: (id: string) =>
+    getJson<{ completedLessons: string[] }>(`${subjectPath(id)}/progress`).then((body) => body.completedLessons),
   settings: () => getJson<Settings>("/api/settings"),
   saveSetting: (key: AppSetting, value: unknown) =>
     getJson<Settings>(`/api/settings/${key}`, {

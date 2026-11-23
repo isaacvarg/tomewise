@@ -43,10 +43,37 @@ describe("home in /styleguide", () => {
     expect(await streakBesideDue(desktop.page)).toBe(true);
   }, 20_000);
 
+  it.each(["phone", "desktop"] as const)("shows the subject home and each of its tabs at %s width", async (width) => {
+    const { page, pageErrors } = await openStyleguide(width);
+
+    expect(await page.evaluate(() => document.documentElement.dataset.styleguideErrors ?? "")).toBe("");
+    const tabs = await page
+      .locator("#subject-home [data-styleguide-subject]")
+      .evaluateAll((els) => els.map((el) => [el.getAttribute("data-styleguide-subject"), el.querySelector('.tome-tab[aria-selected="true"]')?.textContent]));
+    expect(tabs).toEqual([
+      ["overview", "Overview"],
+      ["curriculum", "Curriculum"],
+      ["drills", "Drills"],
+      ["reference", "Reference"],
+      ["stats", "Stats"],
+    ]);
+    const tab = (view: string) => `#subject-home [data-styleguide-subject="${view}"]`;
+    expect(await texts(page, `${tab("overview")} .tome-goal-num`)).toEqual(["6\nof 10 min today · 4 to go"]);
+    expect(await page.locator(`${tab("overview")} .tome-heatmap [data-level]`).count()).toBeGreaterThan(20);
+    expect(await page.locator(`${tab("overview")} .tome-start`).getAttribute("href")).toBe("/run/due?subject=morse-code");
+    expect(await page.locator(`${tab("curriculum")} .tome-lessons [data-done]`).count()).toBe(4);
+    expect(await page.locator(`${tab("curriculum")} .tome-lessons [data-later]`).count()).toBe(2);
+    expect(await page.locator(`${tab("drills")} [data-locked]`).count()).toBe(1);
+    expect(await page.locator(`${tab("reference")} .tome-reference li`).count()).toBe(2);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect(pageErrors).toEqual([]);
+  }, 20_000);
+
   it("links home from the styleguide's contents", async () => {
     const { page } = await openStyleguide();
 
     expect(await page.locator('.styleguide-nav a[href="#home"]').innerText()).toBe("Home");
+    expect(await page.locator('.styleguide-nav a[href="#subject-home"]').innerText()).toBe("Subject home");
   });
 
   it("stays ready, saying how to build it, when the dashboard isn't built", async () => {

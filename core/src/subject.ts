@@ -40,6 +40,7 @@ export interface Subject {
   lessons: string[];
   quizzes: string[];
   exams: string[];
+  references: string[];
   itemSets: ItemSet[];
   items: Item[];
   drills: Drill[];
@@ -154,6 +155,7 @@ export async function readSubject(root: string, id: string): Promise<SubjectRead
   const lessons = await namesIn(join(dir, "lessons"), ".html");
   const quizzes = await namesIn(join(dir, "quizzes"), ".html");
   const exams = await namesIn(join(dir, "exams"), ".html");
+  const references = await namesIn(join(dir, "reference"), ".html");
 
   const itemSets: ItemSet[] = [];
   const located: Located<Item>[] = [];
@@ -191,6 +193,7 @@ export async function readSubject(root: string, id: string): Promise<SubjectRead
       lessons,
       quizzes,
       exams,
+      references,
       itemSets,
       items: itemSets.flatMap((set) => set.items),
       drills: [reviewDrill, ...drills.map((drill) => drill.value)],

@@ -23,6 +23,14 @@ h1, h2, h3, h4 { font-weight: 500; }
 }
 .tome-progress { height: 8px; }
 
+.tome-tabs { border-bottom: 0; padding-bottom: .5rem; }
+.tome-tab { font-family: var(--t-display); font-weight: 500; border-radius: 99px; padding: .35rem .4rem; box-shadow: none; }
+.tome-tab[aria-selected="true"] { background: var(--t-accent); color: var(--t-accent-ink); box-shadow: 0 3px 0 color-mix(in srgb, var(--t-accent) 60%, #000); }
+.tome-goal-bar { height: 10px; }
+.tome-goal-week i { height: 9px; border-radius: 2px 70% 2px 70%; }
+.tome-milestone, .tome-drills .tome-row, .tome-reference .tome-row { border: 0; background: var(--t-surface); box-shadow: 0 2px 0 var(--t-rule); }
+.tome-check { border-radius: 2px 70% 2px 70%; }
+
 .tome-start, .tome-again, .tome-reveal, .tome-submit, .tome-done-button, .tome-save, .tome-next {
   border-radius: 99px;
   font-family: var(--t-display);

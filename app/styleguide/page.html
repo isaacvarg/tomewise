@@ -16,6 +16,7 @@
   .styleguide-state { margin: 0; min-width: 0; display: flex; flex-direction: column; gap: .5rem; }
   .styleguide-state > figcaption { font-size: .8rem; color: var(--t-muted); font-family: var(--t-mono); }
   .styleguide-lesson { border: 1px solid var(--t-rule); border-radius: var(--t-radius); padding: 0 1rem 1rem; }
+  .styleguide-screens { display: grid; gap: 1.5rem; }
   .styleguide-screen { display: flex; flex-direction: column; container-type: inline-size; border: 1px solid var(--t-rule); border-radius: var(--t-radius); overflow: hidden; }
   .styleguide-unbuilt { margin: 0; padding: 1rem; color: var(--t-muted); }
 }
@@ -27,6 +28,7 @@
   <p>Every page and widget state in the <strong data-styleguide-theme></strong> theme, with demo data. Nothing here touches your learning home.</p>
   <ul class="styleguide-nav">
     <li><a href="#home">Home</a></li>
+    <li><a href="#subject-home">Subject home</a></li>
     <li><a href="#runner">Runner</a></li>
     <li><a href="#summary">Summary</a></li>
     <li><a href="#settings">Settings</a></li>
@@ -47,6 +49,17 @@
 <section class="styleguide-section" id="home">
   <h2>Home</h2>
   <div class="styleguide-screen" data-styleguide-home></div>
+</section>
+
+<section class="styleguide-section" id="subject-home">
+  <h2>Subject home</h2>
+  <div class="styleguide-screens">
+    <figure class="styleguide-state"><figcaption>overview</figcaption><div class="styleguide-screen" data-styleguide-subject="overview"></div></figure>
+    <figure class="styleguide-state"><figcaption>curriculum</figcaption><div class="styleguide-screen" data-styleguide-subject="curriculum"></div></figure>
+    <figure class="styleguide-state"><figcaption>drills</figcaption><div class="styleguide-screen" data-styleguide-subject="drills"></div></figure>
+    <figure class="styleguide-state"><figcaption>reference</figcaption><div class="styleguide-screen" data-styleguide-subject="reference"></div></figure>
+    <figure class="styleguide-state"><figcaption>stats</figcaption><div class="styleguide-screen" data-styleguide-subject="stats"></div></figure>
+  </div>
 </section>
 
 <section class="styleguide-section" id="runner">

@@ -62,7 +62,7 @@ describe("activity days", () => {
 
     const activity = await readActivity(learningHome, { now: new Date("2026-11-21T12:00:00.000Z") });
 
-    expect(activity.days).toEqual([{ date: "2026-11-20", subjects: [SUBJECT] }]);
+    expect(activity.days).toEqual([{ date: "2026-11-20", subjects: [SUBJECT], minutes: 20 }]);
   });
 
   it("puts the same UTC timestamps on different days in different timezones", async () => {
@@ -164,6 +164,27 @@ describe("streaks", () => {
 
     const activity = await readActivity(learningHome, { now: new Date(monday(20, "20:00")) });
 
+    expect(activity.streak).toEqual({ days: 3, restDaysLeft: 0 });
+  });
+
+  it("judges one subject's streak by rule changes recorded in any subject", async () => {
+    const yoga = (lines: Line[]) => lines.map((line) => ({ ...line, subject: "yoga" }));
+    const root = await buildHome({
+      "tomewise.json": { formatVersion: 1, timezone: "Europe/London", streak: { restDaysPerWeek: 0 } },
+      [`subjects/${SUBJECT}/subject.json`]: { name: "Morse code" },
+      "subjects/yoga/subject.json": { name: "Yoga" },
+      "subjects/yoga/lessons/0001-k-and-m.html": "<h1>Sun salute</h1>",
+      ...eventFiles(change("streak.changed", monday(20, "09:00"), { from: { restDaysPerWeek: 2 }, to: { restDaysPerWeek: 0 } })),
+      "subjects/yoga/events/2026-11.jsonl": [16, 19, 20]
+        .flatMap((day) => yoga(session(monday(day), 10)))
+        .map((line) => `${JSON.stringify(line)}\n`)
+        .join(""),
+    });
+    expect(await validateLearningHome(root)).toEqual([]);
+
+    const activity = await readActivity(await loadLearningHome(root), { subject: "yoga", now: new Date(monday(20, "20:00")) });
+
+    expect(dates(activity)).toEqual(["2026-11-16", "2026-11-19", "2026-11-20"]);
     expect(activity.streak).toEqual({ days: 3, restDaysLeft: 0 });
   });
 });

@@ -1,4 +1,4 @@
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { dueItems, loadLearningHome, loadSubject, readActivity, readEvents } from "@tomewise/core";
@@ -123,6 +123,37 @@ describe("GET /api/subjects/:subject/due", () => {
   });
 });
 
+describe("GET /api/subjects/:subject/progress", () => {
+  it("lists the lessons completed so far, first completed first", async () => {
+    const app = await startTestApp();
+
+    const response = await app.get("/api/subjects/morse-code/progress");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ completedLessons: ["0001-k-and-m", "0002-r"] });
+  });
+
+  it("gives 404 for an unknown subject", async () => {
+    const app = await startTestApp();
+
+    expect((await app.get("/api/subjects/klingon/progress")).status).toBe(404);
+  });
+});
+
+describe("a subject's reference sheets", () => {
+  it("are listed on the subject by file name", async () => {
+    const app = await startTestApp(async (root) => {
+      await mkdir(join(root, "subjects/morse-code/reference"), { recursive: true });
+      await writeFile(join(root, "subjects/morse-code/reference/wpm-timing.html"), "<h1>WPM</h1>");
+      await writeFile(join(root, "subjects/morse-code/reference/notes.txt"), "not a sheet");
+    });
+
+    const response = await app.get("/api/subjects/morse-code");
+
+    expect(response.body.references).toEqual(["wpm-timing"]);
+  });
+});
+
 describe("today, by the app's clock", () => {
   const clock = { now: () => new Date("2026-11-21T12:00:00Z"), every: () => () => {} };
 
@@ -163,6 +194,36 @@ describe("GET /api/activity", () => {
     expect(response.body).toEqual(json(await readActivity(home)));
   });
 
+  it("narrows days, streak and goals to one subject", async () => {
+    const yoga = async (root: string) => {
+      await shortSessionsCount(root);
+      await mkdir(join(root, "subjects/yoga/events"), { recursive: true });
+      await writeFile(join(root, "subjects/yoga/subject.json"), JSON.stringify({ name: "Yoga", goals: [{ id: "daily", per: "day", minutes: 10 }] }));
+      const start = { id: "01KAY0000000000000000000S1", ts: "2026-11-20T07:00:00.000Z", subject: "yoga", kind: "session.start", ref: "drill:review", sessionId: "01KAY0000000000000000000S1", schemaVersion: 1, data: {} };
+      const end = { ...start, id: "01KAY0000000000000000000E1", ts: "2026-11-20T07:06:00.000Z", kind: "session.end", duration: 360_000 };
+      await writeFile(join(root, "subjects/yoga/events/2026-11.jsonl"), `${JSON.stringify(start)}\n${JSON.stringify(end)}\n`);
+    };
+    const app = await startTestApp(yoga);
+
+    const response = await app.get("/api/activity?subject=yoga&to=2026-11-21");
+
+    expect(response.status).toBe(200);
+    expect(response.body.days).toEqual([{ date: "2026-11-20", subjects: ["yoga"], minutes: 6 }]);
+    expect(response.body.streak.days).toBe(1);
+    expect(response.body.goals.map((goal: any) => [goal.subject, goal.to, goal.minutes])).toEqual([
+      ["yoga", "2026-11-20", 6],
+      ["yoga", "2026-11-21", 0],
+    ]);
+  });
+
+  it("gives 404 for an unknown subject", async () => {
+    const app = await startTestApp();
+
+    const response = await app.get("/api/activity?subject=klingon");
+
+    expect(response.status).toBe(404);
+  });
+
   it("gives 400 for a malformed date", async () => {
     const app = await startTestApp();
 
@@ -200,6 +261,6 @@ describe("an event posted to the app", () => {
     const due = await app.get("/api/subjects/morse-code/due?date=2026-11-22");
     expect(due.body.due).toContainEqual({ item: expect.objectContaining({ id: "letter-s" }), due: "2026-11-22T09:01:30.000Z" });
     const activity = await app.get("/api/activity?from=2026-11-22&to=2026-11-22");
-    expect(activity.body.days).toEqual([{ date: "2026-11-22", subjects: ["morse-code"] }]);
+    expect(activity.body.days).toEqual([{ date: "2026-11-22", subjects: ["morse-code"], minutes: 2 }]);
   });
 });

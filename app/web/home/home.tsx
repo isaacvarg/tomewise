@@ -1,17 +1,17 @@
 import { Link } from "react-router";
 import { type Activity, api, type Subject } from "../api.ts";
 import { useLoad } from "../load.ts";
+import { Heatmap } from "../heatmap.tsx";
 import { Failed, Screen } from "../screen.tsx";
 import {
+  bySubjectsPractised,
   count,
   type DueToday,
   dueToday,
   heatmapCells,
   inSavedOrder,
   longDate,
-  NARROW_WEEKS,
   type WeekStart,
-  weekdayLetters,
 } from "./model.ts";
 
 interface HomeData {
@@ -47,53 +47,12 @@ export function Home() {
   const weekStart: WeekStart = subjects[0]?.settings.weekStart ?? "monday";
   return (
     <Screen kicker={longDate(activity.today)} title="Today">
-      <Heatmap activity={activity} weekStart={weekStart} subjectCount={subjects.length} />
+      <Heatmap cells={heatmapCells(activity, weekStart, bySubjectsPractised(subjects.length))} weekStart={weekStart} label="Activity heatmap" />
       <Subjects subjects={subjects} />
       <Due due={due} />
       <Streak activity={activity} />
       <Start due={due} />
     </Screen>
-  );
-}
-
-function Heatmap({ activity, weekStart, subjectCount }: { activity: Activity; weekStart: WeekStart; subjectCount: number }) {
-  return (
-    <section className="tome-section tome-activity" aria-label="Activity">
-      <div className="tome-section-head">
-        <h3>Activity</h3>
-        <span className="tome-meta">
-          <span className="tome-meta-narrow">Last {NARROW_WEEKS} weeks</span>
-          <span className="tome-meta-wide">Last 12 months</span>
-        </span>
-      </div>
-      <div className="tome-heatmap-wrap">
-        <div className="tome-heat-days" aria-hidden="true">
-          {weekdayLetters(weekStart).map((letter, index) => (
-            <span key={index}>{letter}</span>
-          ))}
-        </div>
-        <div className="tome-heatmap" role="img" aria-label="Activity heatmap">
-          {heatmapCells(activity, weekStart, subjectCount).map((cell) => (
-            <i
-              key={cell.date}
-              className="tome-cell"
-              data-date={cell.date}
-              data-level={cell.level > 0 ? cell.level : undefined}
-              data-today={cell.today ? "" : undefined}
-              data-future={cell.future ? "" : undefined}
-              data-old={cell.old ? "" : undefined}
-            />
-          ))}
-        </div>
-      </div>
-      <div className="tome-heat-legend" aria-hidden="true">
-        <span>Less</span>
-        {[0, 1, 2, 3, 4].map((level) => (
-          <i key={level} className="tome-cell" data-level={level > 0 ? level : undefined} />
-        ))}
-        <span>More</span>
-      </div>
-    </section>
   );
 }
 

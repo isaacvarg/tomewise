@@ -36,6 +36,58 @@
     return { today: TODAY, days, streak: { days: 6, restDaysLeft: 1 }, goals: [] };
   }
 
+  const settingsOf = homeSubjects[0].settings;
+  const morseLessons = ["0001-k-and-m", "0002-r", "0003-s", "0004-the-late-bump", "0005-a-the-short-pair", "0006-n-a-turned-round", "0007-why-the-gaps-are-long"];
+  const letter = (answer, unlockedBy, tag) => ({ id: `letter-${answer.toLowerCase()}`, type: "timed-audio", prompt: answer, answer, unlockedBy, tags: [tag], retired: false });
+  const morseSubject = {
+    id: "morse-code",
+    name: "Morse code",
+    settings: settingsOf,
+    lessons: morseLessons,
+    quizzes: [],
+    exams: [],
+    references: ["wpm-timing", "a-and-n-side-by-side"],
+    itemSets: [],
+    items: [
+      letter("K", "0001-k-and-m", "letter"),
+      letter("M", "0001-k-and-m", "letter"),
+      letter("R", "0002-r", "letter"),
+      letter("S", "0003-s", "letter"),
+      letter("U", "0004-the-late-bump", "letter"),
+      letter("A", "0005-a-the-short-pair", "second-five"),
+      letter("N", "0006-n-a-turned-round", "second-five"),
+    ],
+    drills: [
+      { id: "review", builtIn: true, name: "Review everything due", select: { from: "due", tags: [] }, format: "item" },
+      { id: "listen-kmrsu", builtIn: false, name: "Listen · K M R S U", select: { from: "unlocked", tags: ["letter"] }, count: 12, format: "multiple-choice", timeLimits: { perItemSeconds: 5 } },
+      { id: "listen-an", builtIn: false, name: "Listen · A N", select: { from: "unlocked", tags: ["second-five"] }, count: 12, format: "multiple-choice" },
+    ],
+    curriculum: {
+      units: [
+        { title: "Koch letters", milestones: [{ id: "first-five", title: "Copy K, M, R, S and U", status: "current", lessons: morseLessons.slice(0, 4), exam: "first-five" }] },
+        { title: "More letters", milestones: [{ id: "next-five", title: "Copy the next five letters", status: "upcoming", lessons: morseLessons.slice(4, 6) }] },
+      ],
+    },
+    payloadSchemas: [],
+    goals: [{ id: "daily", per: "day", minutes: 10 }],
+    charts: [],
+  };
+
+  function morseActivity() {
+    const today = Date.parse(TODAY);
+    const days = [];
+    const goals = [];
+    const week = [12, 10, 4, 11, 13, 6];
+    for (let ago = 125; ago >= 0; ago--) {
+      const date = new Date(today - ago * DAY_MS).toISOString().slice(0, 10);
+      const r = seeded(ago + 7);
+      const minutes = ago < week.length ? week[week.length - 1 - ago] : ago < 63 && r > 0.35 ? Math.round(r * 16) : 0;
+      if (minutes > 0) days.push({ date, subjects: ["morse-code"], minutes });
+      if (ago < week.length) goals.push({ subject: "morse-code", goal: morseSubject.goals[0], from: date, to: date, minutes, met: minutes >= 10 });
+    }
+    return { today: TODAY, days, streak: { days: 6, restDaysLeft: 1 }, goals };
+  }
+
   const demoThemes = [
     { name: "meadow", label: "Meadow", description: "Playful and green, with leaves that rise when you start.", stylesheets: ["tokens.css", "theme.css"], script: "leaves.js" },
     { name: "paper", label: "Paper", description: "Calm and bookish: warm paper, serif headings, one rust accent.", stylesheets: ["tokens.css", "theme.css"] },
@@ -69,7 +121,9 @@
     }
     if (method !== "GET") return json({ error: "Not found" }, 404);
     if (url.pathname === "/api/settings") return json(settingsBody());
-    if (url.pathname === "/api/activity") return json(homeActivity());
+    if (url.pathname === "/api/activity") return json(url.searchParams.get("subject") === "morse-code" ? morseActivity() : homeActivity());
+    if (url.pathname === "/api/subjects/morse-code") return json(morseSubject);
+    if (url.pathname === "/api/subjects/morse-code/progress") return json({ completedLessons: morseLessons.slice(0, 4) });
     if (url.pathname === "/api/subjects") return json({ subjects: homeSubjects.map(({ due, ...subject }) => subject) });
     const homeSubject = homeSubjects.find((candidate) => url.pathname === `/api/subjects/${candidate.id}/due`);
     if (homeSubject) return json({ due: dueFor(homeSubject) });
@@ -174,6 +228,7 @@
     "[data-styleguide-runner]": '.tome-runner[data-state="running"] .tome-drill-item > *',
     "[data-styleguide-summary]": ".tome-runner-summary",
     "[data-styleguide-settings]": '.tome-app[data-state="ready"]',
+    "[data-styleguide-subject]": '.tome-app[data-state="ready"]',
   };
 
   async function appReady(mount, selector) {

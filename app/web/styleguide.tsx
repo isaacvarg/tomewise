@@ -1,9 +1,10 @@
 import { StrictMode, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, Route, Routes } from "react-router";
 import type { Subject } from "./api.ts";
 import { Home } from "./home/home.tsx";
 import { Settings } from "./pages/settings.tsx";
+import { SubjectHome } from "./pages/subject.tsx";
 import { RunSummary, Runner } from "./run/runner.tsx";
 import { summarize } from "./run/summary.ts";
 import "./styles/app.css";
@@ -27,17 +28,26 @@ const demoRun = {
   ],
 } as const;
 
-function mount(selector: string, page: ReactNode) {
+function mount(selector: string, page: ReactNode, path = "/") {
   for (const element of document.querySelectorAll(selector)) {
     createRoot(element).render(
       <StrictMode>
-        <MemoryRouter>{page}</MemoryRouter>
+        <MemoryRouter initialEntries={[path]}>{page}</MemoryRouter>
       </StrictMode>,
     );
   }
 }
 
 mount("[data-styleguide-home]", <Home />);
+for (const tab of ["overview", "curriculum", "drills", "reference", "stats"]) {
+  mount(
+    `[data-styleguide-subject="${tab}"]`,
+    <Routes>
+      <Route path="/s/:subject/:tab?" element={<SubjectHome />} />
+    </Routes>,
+    tab === "overview" ? "/s/morse-code" : `/s/morse-code/${tab}`,
+  );
+}
 mount("[data-styleguide-settings]", <Settings reloadForThemeScripts={false} />);
 mount("[data-styleguide-runner]", <Runner subject={subject} drill="vocab" ownsPage={false} />);
 mount(
