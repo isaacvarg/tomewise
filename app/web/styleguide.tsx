@@ -7,9 +7,9 @@ import { Home } from "./home/home.tsx";
 import { Glossary } from "./pages/glossary.tsx";
 import { Settings } from "./pages/settings.tsx";
 import { Feedback, Prompts, SubjectHome } from "./pages/subject.tsx";
-import { RunSummary, Runner } from "./run/runner.tsx";
+import { QuizRunSummary, RunSummary, Runner } from "./run/runner.tsx";
 import { RunBreak, StartList } from "./run/start.tsx";
-import { summarize } from "./run/summary.ts";
+import { summarize, summarizeQuiz } from "./run/summary.ts";
 import { Screen } from "./screen.tsx";
 import { StatsPanel } from "./subject/stats.tsx";
 import "./styles/app.css";
@@ -30,6 +30,20 @@ const demoRun = {
     { ref: "item:gato", outcome: "correct", grade: 3, duration: 2100 },
     { ref: "item:rojo", outcome: "wrong", grade: 1, duration: 3100 },
     { ref: "item:gracias", outcome: "correct", grade: 3, duration: 2600 },
+  ],
+} as const;
+
+const demoQuiz = {
+  subject,
+  drill: "quiz-2026-11-21",
+  planned: 4,
+  timeUp: false,
+  session: { sessionId: "01STYLEGUIDE00000000000001", duration: 71_000 },
+  results: [
+    { ref: "item:rojo", outcome: "correct", grade: 3, duration: 2100, given: "rojo" },
+    { ref: "item:hola", outcome: "wrong", grade: 1, duration: 3400 },
+    { ref: "item:gracias", outcome: "wrong", grade: 1, duration: 5200, given: "de nada" },
+    { ref: "item:letter-k", outcome: "skipped", grade: 1, duration: 8000, given: "" },
   ],
 } as const;
 
@@ -139,3 +153,12 @@ mount(
   <RunBreak run={{ ...demoRun, results: [...demoRun.results] }} next={demoDue.rows[0]!} onContinue={nothing} onSkip={nothing} onDone={nothing} />,
 );
 mount("[data-styleguide-start-list]", <StartList due={demoDue} />);
+mount("[data-styleguide-quiz]", <Runner subject={subject} drill="quiz-2026-11-21" quiz ownsPage={false} />);
+for (const scoreDisplay of ["number", "pass-fail", "hidden"] as const) {
+  mount(
+    `[data-styleguide-quiz-summary="${scoreDisplay}"]`,
+    <div className="tome-runner" data-state="done">
+      <QuizRunSummary summary={summarizeQuiz({ ...demoQuiz, results: [...demoQuiz.results] }, { scoreDisplay, passMark: 70 })} />
+    </div>,
+  );
+}

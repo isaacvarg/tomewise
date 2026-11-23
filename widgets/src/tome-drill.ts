@@ -1,8 +1,8 @@
 import { html, nothing, type PropertyValues } from "lit";
-import type { Drill, Item } from "@tomewise/core";
+import type { Drill, Item, Subject } from "@tomewise/core";
 import { type EndedSession, type Grade, type Outcome, tome, TomeError } from "./api.ts";
 import { adoptStyles, messageOf, TomeElement } from "./element.ts";
-import { labelOf, median, planDrill, present } from "./drill-plan.ts";
+import { labelOf, median, planDrill, present, WIDGET_FOR } from "./drill-plan.ts";
 import { widgets } from "./loader.ts";
 
 type State = "loading" | "error" | "empty" | "running" | "done";
@@ -12,6 +12,7 @@ export interface Answered {
   outcome: Outcome;
   grade: Grade;
   duration: number;
+  given?: string;
 }
 
 export interface DrillDone {
@@ -58,6 +59,8 @@ const CSS = `
 .tome-stats li:first-child { border-top: 0; }
 .tome-stats span:last-child { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
 .tome-saved { margin: 0; font-size: .85rem; color: var(--t-muted); }
+.tome-drill[data-mode="quiz"] :is(.tome-feedback, .tome-verdict) { visibility: hidden; }
+.tome-drill[data-mode="quiz"] :is(.tome-answer, .tome-input)[data-state] { background: var(--t-bg); border-color: var(--t-rule); color: var(--t-ink); opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .tome-drill > .tome-progress span { transition: none; } }
 `;
 
@@ -73,6 +76,7 @@ function clock(ms: number): string {
 export class TomeDrill extends TomeElement {
   static override properties = {
     drill: { type: String },
+    quiz: { type: Boolean },
     payload: { type: String },
     close: { type: String },
     state: { state: true },
@@ -86,6 +90,7 @@ export class TomeDrill extends TomeElement {
   };
 
   declare drill: string;
+  declare quiz: boolean;
   declare payload: string;
   declare close: string;
   declare state: State;
@@ -107,10 +112,12 @@ export class TomeDrill extends TomeElement {
   #ticker: ReturnType<typeof setInterval> | undefined;
   #watcher: MutationObserver | undefined;
   #hostSummary = false;
+  #scoreDisplay: Subject["settings"]["assessments"]["scoreDisplay"] = "number";
 
   constructor() {
     super();
     this.drill = "";
+    this.quiz = false;
     this.payload = "";
     this.close = "";
     this.state = "loading";
@@ -134,7 +141,7 @@ export class TomeDrill extends TomeElement {
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
-    if (changed.has("drill") || changed.has("payload")) void this.#load();
+    if (changed.has("drill") || changed.has("quiz") || changed.has("payload")) void this.#load();
   }
 
   get #drillId(): string {
@@ -164,18 +171,12 @@ export class TomeDrill extends TomeElement {
     this.timeUp = false;
     this.#hostSummary = false;
     try {
-      const id = this.#drillId;
-      const subject = await tome.subject();
-      const drill = subject.drills.find((candidate) => candidate.id === id);
-      if (!drill) {
-        const known = subject.drills.map((candidate) => candidate.id).join(", ");
-        throw new TomeError(`No drill "${id}" in ${subject.name}. Drills: ${known}.`);
-      }
-      const candidates = drill.select.from === "due" ? await tome.due() : await tome.unlocked();
+      const { subject, drill, plan } = await this.#planned();
       if (run !== this.#run) return;
       this.#subjectName = subject.name;
+      this.#scoreDisplay = subject.settings.assessments.scoreDisplay;
       this.#definition = drill;
-      this.#plan = planDrill(drill, candidates);
+      this.#plan = plan;
       const total = drill.timeLimits?.totalSeconds;
       this.left = total === undefined ? undefined : total * 1000;
       if (this.#plan.length === 0) {
@@ -189,6 +190,26 @@ export class TomeDrill extends TomeElement {
       this.state = "error";
       this.notice = messageOf(error);
     }
+  }
+
+  async #planned(): Promise<{ subject: Subject; drill: Drill; plan: Item[] }> {
+    const id = this.#drillId;
+    const subject = await tome.subject();
+    if (this.quiz) {
+      const { drill, items } = await tome.quiz(/^quiz-(.+)$/.exec(id)?.[1]);
+      return { subject, drill, plan: items.filter((item) => WIDGET_FOR[item.type] !== undefined) };
+    }
+    const drill = subject.drills.find((candidate) => candidate.id === id);
+    if (!drill) {
+      const known = subject.drills.map((candidate) => candidate.id).join(", ");
+      throw new TomeError(`No drill "${id}" in ${subject.name}. Drills: ${known}.`);
+    }
+    const candidates = drill.select.from === "due" ? await tome.due() : await tome.unlocked();
+    return { subject, drill, plan: planDrill(drill, candidates) };
+  }
+
+  get #quizMode(): boolean {
+    return this.#definition?.quiz === true;
   }
 
   #show(): void {
@@ -231,6 +252,10 @@ export class TomeDrill extends TomeElement {
     if (this.state !== "running" || widget !== this.current) return;
     this.answered = true;
     this.#autoplay = true;
+    if (this.#quizMode) {
+      this.#next();
+      return;
+    }
     this.#pause = setTimeout(() => this.#next(), detail.outcome === "correct" ? PAUSE_RIGHT : PAUSE_MISSED);
     void this.updateComplete.then(() => this.querySelector<HTMLButtonElement>(".tome-next")?.focus({ preventScroll: true }));
   }
@@ -327,11 +352,14 @@ export class TomeDrill extends TomeElement {
       .map(([label, times]) => (times > 1 ? `${label} (${times}×)` : label))
       .join(", ");
     const score = results.length ? `${Math.round((right / results.length) * 100)}%` : "–";
+    const hidden = this.#quizMode && this.#scoreDisplay === "hidden";
     return html`<section class="tome-summary" aria-label="Summary">
       <div class="tome-summary-head">
-        <span class="tome-kicker">${this.timeUp ? "Time's up" : "Drill done"}</span>
-        <span class="tome-score">${score}</span>
-        <span class="tome-score-sub">${right} of ${results.length} right</span>
+        <span class="tome-kicker">${this.timeUp ? "Time's up" : this.#quizMode ? "Quiz done" : "Drill done"}</span>
+        ${hidden
+          ? nothing
+          : html`<span class="tome-score">${score}</span>
+              <span class="tome-score-sub">${right} of ${results.length} right</span>`}
       </div>
       <ul class="tome-stats">
         ${results.length < this.#plan.length
@@ -358,24 +386,24 @@ export class TomeDrill extends TomeElement {
     }
     const total = this.#plan.length;
     if (this.state === "empty") {
-      const due = this.#definition.select.from === "due";
+      const due = this.#definition.select.from === "due" && !this.#quizMode;
       return html`<div class="tome-drill" data-state="empty">
         ${this.#bar(nothing)}
         <div class="tome-empty" role="status">
-          <p class="tome-empty-title">${due ? "Nothing is due" : "Nothing to drill yet"}</p>
+          <p class="tome-empty-title">${due ? "Nothing is due" : this.#quizMode ? "Nothing to quiz yet" : "Nothing to drill yet"}</p>
           <p class="tome-hint">
-            ${due ? "You're up to date. Come back later." : "Complete a lesson to unlock items for this drill."}
+            ${due ? "You're up to date. Come back later." : `Complete a lesson to unlock items for this ${this.#quizMode ? "quiz" : "drill"}.`}
           </p>
         </div>
       </div>`;
     }
     if (this.state === "done") {
-      return html`<div class="tome-drill" data-state="done">
+      return html`<div class="tome-drill" data-state="done" data-mode=${this.#quizMode ? "quiz" : nothing}>
         ${this.#bar(`${this.results.length} / ${total}`)} ${this.#progress(total)}
         ${this.#hostSummary ? nothing : this.#summary()}
       </div>`;
     }
-    return html`<div class="tome-drill" data-state="running">
+    return html`<div class="tome-drill" data-state="running" data-mode=${this.#quizMode ? "quiz" : nothing}>
       ${this.#bar(`${this.index + 1} / ${total}`)} ${this.#progress(this.index + (this.answered ? 1 : 0))}
       <div class="tome-drill-item">${this.current}</div>
       ${this.answered

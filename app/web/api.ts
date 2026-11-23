@@ -1,5 +1,7 @@
 import type {
   Activity,
+  Drill,
+  Item,
   AgentPrompt,
   AppSetting,
   AssessmentOverrides,
@@ -14,7 +16,7 @@ import type {
   Subject,
 } from "@tomewise/core";
 
-export type { Activity, AgentPrompt, AssessmentOverrides, AssessmentSettings, ChartSeries, DueItem, Explanation, MilestoneStatus, QuizFrequency, ScheduledItem, StartMode, Subject };
+export type { Activity, Drill, AgentPrompt, AssessmentOverrides, AssessmentSettings, ChartSeries, DueItem, Explanation, MilestoneStatus, QuizFrequency, ScheduledItem, StartMode, Subject };
 
 export interface Progress {
   completedLessons: string[];
@@ -74,6 +76,7 @@ export const api = {
   unlocked: (id: string) => getJson<{ today: string; items: ScheduledItem[] }>(`${subjectPath(id)}/unlocked`),
   activity: (subject?: string) =>
     getJson<Activity>(subject === undefined ? "/api/activity" : `/api/activity?subject=${encodeURIComponent(subject)}`),
+  quiz: (id: string) => getJson<{ drill: Drill; items: Item[] }>(`${subjectPath(id)}/quiz`),
   progress: (id: string) => getJson<Progress>(`${subjectPath(id)}/progress`),
   stats: (id: string) => getJson<SubjectStats>(`${subjectPath(id)}/stats`),
   prompts: (id: string) => getJson<SubjectPrompts>(`${subjectPath(id)}/prompts`),

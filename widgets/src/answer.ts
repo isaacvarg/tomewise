@@ -195,7 +195,13 @@ export abstract class AnswerElement<T extends Prompted> extends TomeElement {
         new CustomEvent("tome-answered", {
           bubbles: true,
           composed: true,
-          detail: { ref: result.ref, outcome: result.outcome, grade: result.grade, duration: Math.round(result.duration) },
+          detail: {
+            ref: result.ref,
+            outcome: result.outcome,
+            grade: result.grade,
+            duration: Math.round(result.duration),
+            ...(result.given !== undefined && { given: result.given }),
+          },
         }),
       );
     } catch {

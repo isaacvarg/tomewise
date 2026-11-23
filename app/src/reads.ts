@@ -9,6 +9,8 @@ import {
   localDay,
   milestoneStatusesOf,
   nextDue,
+  quizDrill,
+  quizItems,
   readActivity,
   readEvents,
   readStats,
@@ -50,6 +52,16 @@ export function readRoutes(view: () => HomeView, now: () => Date = () => new Dat
     const items = await nextDue(view().home, id, date ?? at);
     const today = date ?? isoDate(localDay(at.getTime(), subjectOf(view(), id).settings.timezone));
     return c.json({ today, items });
+  });
+
+  routes.get("/subjects/:subject/quiz", async (c) => {
+    const subject = subjectOf(view(), c.req.param("subject"));
+    const { assessments, timezone } = subject.settings;
+    if (!assessments.enabled) return c.json({ error: `Assessments are off for ${subject.name}, so it has no quizzes.` }, 409);
+    const at = now();
+    const date = query(c, "date") ?? isoDate(localDay(at.getTime(), timezone));
+    const items = await quizItems(view().home, subject.id, at);
+    return c.json({ drill: quizDrill(date, items.length, assessments), items });
   });
 
   routes.get("/subjects/:subject/progress", async (c) => {

@@ -179,6 +179,14 @@
   const dueFor = (subject) =>
     Array.from({ length: subject.due }, (_, index) => ({ item: { id: `${subject.id}-${index + 1}`, type: "flashcard" }, due: null }));
 
+  const demoQuiz = () => {
+    const items = ["rojo", "hola", "gracias"].map((id) => data.subject.items.find((item) => item.id === id));
+    return {
+      drill: { id: `quiz-${TODAY}`, builtIn: true, quiz: true, name: "Quiz", select: { from: "unlocked", tags: [] }, count: items.length, format: "item", timeLimits: { totalSeconds: 600 } },
+      items,
+    };
+  };
+
   const eventId = () => `01STYLEGUIDE${String(++counter).padStart(14, "0")}`;
 
   async function fakeApi(url, init = {}) {
@@ -228,6 +236,7 @@
     if (url.pathname === subject) return json(data.subject);
     if (url.pathname === `${subject}/events`) return json({ events: [] });
     if (url.pathname === `${subject}/due`) return json({ due: [] });
+    if (url.pathname === `${subject}/quiz`) return json(demoQuiz());
     return json({ error: `No demo data for ${url.pathname}` }, 404);
   }
 
@@ -325,6 +334,8 @@
     "[data-styleguide-home]": '.tome-app[data-state="ready"]',
     "[data-styleguide-runner]": '.tome-runner[data-state="running"] .tome-drill-item > *',
     "[data-styleguide-summary]": ".tome-runner-summary",
+    "[data-styleguide-quiz]": '.tome-runner[data-state="running"] .tome-drill[data-mode="quiz"] .tome-drill-item > *',
+    "[data-styleguide-quiz-summary]": ".tome-quiz-answers",
     "[data-styleguide-break]": ".tome-break",
     "[data-styleguide-start-list]": ".tome-picks",
     "[data-styleguide-settings]": '.tome-app[data-state="ready"]',

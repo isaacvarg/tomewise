@@ -1,4 +1,4 @@
-import type { ExamResult, Item, LearningEvent, Subject } from "@tomewise/core";
+import type { Drill, ExamResult, Item, LearningEvent, Subject } from "@tomewise/core";
 import { clearUnsaved, showUnsaved } from "./notice.ts";
 
 export type PageKind = "lesson" | "quiz" | "exam" | "drill";
@@ -120,6 +120,10 @@ export class Tome {
   async due(): Promise<Item[]> {
     const { due } = await this.#get<{ due: { item: Item }[] }>("due");
     return due.map(({ item }) => item);
+  }
+
+  quiz(date?: string): Promise<{ drill: Drill; items: Item[] }> {
+    return this.#get(date === undefined ? "quiz" : `quiz?date=${encodeURIComponent(date)}`);
   }
 
   async unlocked(): Promise<Item[]> {

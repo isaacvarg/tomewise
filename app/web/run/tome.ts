@@ -5,6 +5,7 @@ export interface Answered {
   outcome: Outcome;
   grade: 1 | 2 | 3 | 4;
   duration: number;
+  given?: string;
 }
 
 export interface EndedSession {

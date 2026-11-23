@@ -1,4 +1,4 @@
-import type { Subject } from "../api.ts";
+import type { AssessmentSettings, Subject } from "../api.ts";
 import type { Answered, DrillDone } from "./tome.ts";
 
 type Item = Subject["items"][number];
@@ -108,4 +108,49 @@ export function summarize(runs: readonly SubjectRun[]): Summary {
       answered: run.results.length,
     })),
   };
+}
+
+export interface QuizAnswer {
+  key: string;
+  prompt: string;
+  given: string;
+  answer: string;
+  outcome: Answered["outcome"];
+}
+
+export interface QuizSummary {
+  timeUp: boolean;
+  score: string | undefined;
+  scoreSub: string;
+  answers: QuizAnswer[];
+  marked: boolean;
+}
+
+const RATINGS = { 1: "Again", 2: "Hard", 3: "Good", 4: "Easy" } as const;
+
+function quizAnswer(item: Item | undefined, result: Answered, index: number): QuizAnswer {
+  const key = `${index} ${result.ref}`;
+  const given = result.outcome === "skipped" ? "No answer" : item?.type === "flashcard" ? RATINGS[result.grade] : (result.given ?? "");
+  if (!item) return { key, prompt: labelOf(item, result.ref), given, answer: "", outcome: result.outcome };
+  switch (item.type) {
+    case "flashcard":
+      return { key, prompt: item.front, given, answer: item.back, outcome: result.outcome };
+    case "routine":
+      return { key, prompt: item.name, given, answer: "", outcome: result.outcome };
+    default:
+      return { key, prompt: item.prompt ?? "Listen", given, answer: item.answer, outcome: result.outcome };
+  }
+}
+
+export function summarizeQuiz(run: SubjectRun, { scoreDisplay, passMark }: Pick<AssessmentSettings, "scoreDisplay" | "passMark">): QuizSummary {
+  const items = new Map(run.subject.items.map((item) => [`item:${item.id}`, item]));
+  const right = run.results.filter((result) => result.outcome === "correct").length;
+  const percent = run.planned ? Math.round((right / run.planned) * 100) : 0;
+  const answers = run.results.map((result, index) => quizAnswer(items.get(result.ref), result, index));
+  const shown = {
+    number: { score: `${percent}%`, scoreSub: `${right} of ${run.planned} right` },
+    "pass-fail": { score: percent >= passMark ? "Passed" : "Not passed", scoreSub: `Pass mark ${passMark}%` },
+    hidden: { score: undefined, scoreSub: "Your score is saved for your agent, not shown." },
+  }[scoreDisplay];
+  return { timeUp: run.timeUp, ...shown, answers, marked: scoreDisplay !== "hidden" };
 }
