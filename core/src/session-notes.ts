@@ -1,15 +1,8 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
 import { isoDate, localDay, sessionMs } from "./activity.ts";
-import { VaultDisabledError } from "./errors.ts";
 import { readEvents } from "./event-store.ts";
 import { parseRef, type LearningEvent, type Ref } from "./events.ts";
+import { assertVaultMode, GENERATED_MARKER, writeGeneratedFiles, type GeneratedFile, type WrittenFiles } from "./generated-files.ts";
 import { loadSubject, type LearningHome } from "./load.ts";
-import { CONFIG_FILE } from "./find.ts";
-import { CURRICULUM_COPY_FILE, writeCurriculumCopies } from "./curriculum-copy.ts";
-import { baseStatus, SESSIONS_BASE_FILE, writeSessionsBase } from "./sessions-base.ts";
-
-export const GENERATED_MARKER = "generatedBy: tomewise";
 
 export interface SessionSummary {
   subject: string;
@@ -25,22 +18,8 @@ export interface SessionSummary {
   items: string[];
 }
 
-export interface GeneratedNote {
-  path: string;
-  content: string;
-}
-
-export interface SessionNote extends GeneratedNote {
+export interface SessionNote extends GeneratedFile {
   summary: SessionSummary;
-}
-
-export interface WrittenNotes {
-  written: string[];
-  leftAlone: string[];
-}
-
-export interface VaultRebuild extends WrittenNotes {
-  curricula: WrittenNotes;
 }
 
 function summarise(subject: string, start: LearningEvent, events: readonly LearningEvent[], timezone: string): SessionSummary {
@@ -91,7 +70,7 @@ function render(summary: SessionSummary, subjectName: string): string {
   ].join("\n");
 }
 
-function notesFolder(home: LearningHome): string {
+export function notesFolder(home: LearningHome): string {
   return home.config.vault.notesFolder.replace(/\/+$/, "");
 }
 
@@ -111,67 +90,8 @@ export async function sessionNotes(home: LearningHome, subject: string): Promise
     });
 }
 
-export type GeneratedStatus = "missing" | "generated" | "learner";
-
-async function noteStatus(file: string): Promise<GeneratedStatus> {
-  let text: string;
-  try {
-    text = await readFile(file, "utf8");
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return "missing";
-    throw error;
-  }
-  const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/).map((line) => line.trimEnd());
-  const close = lines.indexOf("---", 1);
-  const frontmatter = lines[0] === "---" && close > 0 ? lines.slice(1, close) : [];
-  return frontmatter.includes(GENERATED_MARKER) ? "generated" : "learner";
-}
-
-export function generatedFileGlobs(home: LearningHome): string[] {
-  const folder = notesFolder(home).replace(/[*?[\]]/g, "\\$&");
-  return [`${folder}/**/*.md`, `subjects/*/${CURRICULUM_COPY_FILE}`, SESSIONS_BASE_FILE];
-}
-
-export async function isGeneratedFile(home: LearningHome, path: string): Promise<boolean> {
-  const file = join(home.root, path);
-  return (await (path === SESSIONS_BASE_FILE ? baseStatus(file) : noteStatus(file))) === "generated";
-}
-
-export async function writeSessionNotes(home: LearningHome, notes: readonly GeneratedNote[]): Promise<WrittenNotes> {
-  const result: WrittenNotes = { written: [], leftAlone: [] };
-  for (const note of notes) {
-    const file = join(home.root, note.path);
-    if ((await noteStatus(file)) === "learner") {
-      result.leftAlone.push(note.path);
-      continue;
-    }
-    await mkdir(dirname(file), { recursive: true });
-    await writeFile(file, note.content);
-    result.written.push(note.path);
-  }
-  return result;
-}
-
-export async function writeSessionNote(home: LearningHome, subject: string, sessionId: string): Promise<WrittenNotes> {
+export async function writeSessionNote(home: LearningHome, subject: string, sessionId: string): Promise<WrittenFiles> {
   assertVaultMode(home);
   const notes = await sessionNotes(home, subject);
-  return writeSessionNotes(home, notes.filter((note) => note.summary.sessionId === sessionId));
-}
-
-export function assertVaultMode(home: LearningHome): void {
-  if (!home.config.vault.enabled) {
-    throw new VaultDisabledError(
-      `Vault mode is off in ${join(home.root, CONFIG_FILE)}. Add "vault": {} to turn it on.`,
-    );
-  }
-}
-
-export async function rebuildVault(home: LearningHome): Promise<VaultRebuild> {
-  assertVaultMode(home);
-  const notes: SessionNote[] = [];
-  for (const subject of home.subjects) notes.push(...(await sessionNotes(home, subject)));
-  const written = await writeSessionNotes(home, notes);
-  const base = await writeSessionsBase(home);
-  const curricula = await writeCurriculumCopies(home, home.subjects);
-  return { written: [...written.written, ...base.written], leftAlone: [...written.leftAlone, ...base.leftAlone], curricula };
+  return writeGeneratedFiles(home, notes.filter((note) => note.summary.sessionId === sessionId));
 }

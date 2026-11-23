@@ -1,4 +1,5 @@
 import {
+  GENERATED_MARKER,
   InvalidLearningHomeError,
   loadLearningHome,
   rebuildVault,
@@ -33,9 +34,9 @@ export async function vault(io: Io, args: string[]): Promise<number> {
     throw error;
   }
   io.stdout(`Wrote ${plural(result.written.length, "vault file")}.`);
-  const copies = result.curricula.written.length;
-  io.stdout(`Wrote ${copies} ${copies === 1 ? "curriculum copy" : "curriculum copies"}.`);
-  for (const path of result.leftAlone) io.stdout(`Left ${path} alone: it has no generatedBy: tomewise marker.`);
-  for (const path of result.curricula.leftAlone) io.stdout(`Left ${path} alone: it has no generatedBy: tomewise marker.`);
+  io.stdout(`Wrote ${plural(result.curricula.written.length, "curriculum copy", "curriculum copies")}.`);
+  for (const path of [...result.leftAlone, ...result.curricula.leftAlone]) {
+    io.stdout(`Left ${path} alone: it has no ${GENERATED_MARKER} marker.`);
+  }
   return 0;
 }

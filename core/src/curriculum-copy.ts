@@ -1,12 +1,12 @@
 import { readEvents } from "./event-store.ts";
+import { assertVaultMode, GENERATED_MARKER, writeGeneratedFiles, type GeneratedFile, type WrittenFiles } from "./generated-files.ts";
 import { loadSubject, type LearningHome } from "./load.ts";
 import { milestoneStatusesOf } from "./milestones.ts";
-import { assertVaultMode, GENERATED_MARKER, writeSessionNotes, type GeneratedNote, type WrittenNotes } from "./session-notes.ts";
 import { subjectPath } from "./subject.ts";
 
 export const CURRICULUM_COPY_FILE = "curriculum.md";
 
-export async function curriculumCopy(home: LearningHome, subject: string): Promise<GeneratedNote | undefined> {
+export async function curriculumCopy(home: LearningHome, subject: string): Promise<GeneratedFile | undefined> {
   const loaded = await loadSubject(home, subject);
   if (!loaded.curriculum) return undefined;
   const statuses = milestoneStatusesOf(loaded, await readEvents(home, subject));
@@ -38,12 +38,12 @@ export async function curriculumCopy(home: LearningHome, subject: string): Promi
   };
 }
 
-export async function writeCurriculumCopies(home: LearningHome, subjects: readonly string[]): Promise<WrittenNotes> {
+export async function writeCurriculumCopies(home: LearningHome, subjects: readonly string[]): Promise<WrittenFiles> {
   assertVaultMode(home);
-  const copies: GeneratedNote[] = [];
+  const copies: GeneratedFile[] = [];
   for (const subject of subjects) {
     const copy = await curriculumCopy(home, subject);
     if (copy) copies.push(copy);
   }
-  return writeSessionNotes(home, copies);
+  return writeGeneratedFiles(home, copies);
 }

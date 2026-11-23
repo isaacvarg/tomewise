@@ -246,8 +246,8 @@ function duration(ms: number): string {
   return `${s}s`;
 }
 
-export function plural(count: number, word: string): string {
-  return `${count} ${word}${count === 1 ? "" : "s"}`;
+export function plural(count: number, word: string, many = `${word}s`): string {
+  return `${count} ${count === 1 ? word : many}`;
 }
 
 function statsLines(result: Stats, subject: string | undefined): string[] {

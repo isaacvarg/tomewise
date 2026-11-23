@@ -1,28 +1,29 @@
 import { isDeepStrictEqual } from "node:util";
 import { type LearningEvent, type LearningHome, writeCurriculumCopies } from "@tomewise/core";
+import type { Warn } from "./themes.ts";
 import type { WatchedHome } from "./watcher.ts";
 
-export type OnError = (error: unknown) => void;
-
-export const logCopyError: OnError = (error) => console.error("Writing a curriculum copy failed:", error);
-
-export async function copyCurricula(home: LearningHome, subjects: Iterable<string>, onError: OnError): Promise<void> {
+export async function copyCurricula(home: LearningHome, subjects: Iterable<string>, warn: Warn): Promise<void> {
   const ids = [...new Set(subjects)];
   if (!home.config.vault.enabled || ids.length === 0) return;
-  await writeCurriculumCopies(home, ids).then(() => undefined, onError);
+  try {
+    await writeCurriculumCopies(home, ids);
+  } catch (error) {
+    warn(`Couldn't write the curriculum copy for ${ids.join(", ")}: ${(error as Error).message}`);
+  }
 }
 
 export const milestoneSubjects = (events: readonly LearningEvent[]): string[] =>
   events.filter((event) => event.kind === "milestone.status").map((event) => event.subject);
 
-export async function copyCurriculaOnChange(watched: WatchedHome, onError: OnError): Promise<void> {
+export async function copyCurriculaOnChange(watched: WatchedHome, warn: Warn): Promise<void> {
   watched.onReload((next, previous) => {
     const vaultTurnedOn = !previous.home.config.vault.enabled;
     const changed = [...next.subjects]
       .filter(([id, subject]) => vaultTurnedOn || !isDeepStrictEqual(subject.curriculum, previous.subjects.get(id)?.curriculum))
       .map(([id]) => id);
-    return copyCurricula(next.home, changed, onError);
+    return copyCurricula(next.home, changed, warn);
   });
   const { home } = watched.current();
-  await copyCurricula(home, home.subjects, onError);
+  await copyCurricula(home, home.subjects, warn);
 }

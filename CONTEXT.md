@@ -20,6 +20,18 @@ _Avoid_: Obsidian integration, PKM mode
 A Markdown note per session that vault mode generates from history: a frontmatter summary and a short body. Regenerated, never edited; history stays the source of truth.
 _Avoid_: session log, journal entry
 
+**Curriculum copy**:
+A Markdown copy of a subject's curriculum that vault mode generates beside `curriculum.json`, with each milestone's status from history. Regenerated, never edited.
+_Avoid_: curriculum note, curriculum export
+
+**Sessions Base**:
+The Obsidian Base file vault mode generates at the learning home root, listing session notes by subject and by week.
+_Avoid_: sessions view, dashboard
+
+**Vault file**:
+Any file vault mode generates: a session note, a curriculum copy or the sessions Base. It carries the `generatedBy: tomewise` marker, and anything without it is the learner's and left alone.
+_Avoid_: generated note
+
 ## Learning content
 
 **Subject**:

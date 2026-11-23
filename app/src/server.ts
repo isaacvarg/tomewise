@@ -61,18 +61,19 @@ export interface RunningServer {
 
 export async function startServer(home: LearningHome, { host, port, watch, clock, ...options }: ListenOptions): Promise<RunningServer> {
   const onError = watch?.onError ?? ((error: unknown) => console.error(`Reloading ${home.root} failed:`, error));
+  const warn = options.warn ?? console.warn;
   const watched = await watchLearningHome(home, { ...watch, onError });
   const changes = changeBus();
   const sync = startSync(() => watched.current().home, {
     clock,
     pulledEvents: (subjects) => {
       changes.announce({ kind: "events", subjects });
-      void sync.exclusive(() => copyCurricula(watched.current().home, subjects, onError));
+      void sync.exclusive(() => copyCurricula(watched.current().home, subjects, warn));
     },
   });
   await trackRuleChanges(watched, sync.exclusive, onError);
   watched.onReload(() => changes.announce({ kind: "content" }));
-  await copyCurriculaOnChange(watched, onError);
+  await copyCurriculaOnChange(watched, warn);
   const server = createAdaptorServer({ fetch: createApp(watched.current, { ...options, sync, clock, changes, reload: watched.reload }).fetch });
   try {
     await new Promise<void>((resolve, reject) => {
