@@ -88,6 +88,26 @@
     return { today: TODAY, days, streak: { days: 6, restDaysLeft: 1 }, goals };
   }
 
+  function demoSeries(series, values) {
+    const today = Date.parse(TODAY);
+    const date = (index) => new Date(today - (values.length - 1 - index) * DAY_MS).toISOString().slice(0, 10);
+    return { ...series, points: values.map((value, index) => ({ date: date(index), value })) };
+  }
+
+  const morseStats = () => ({
+    totals: { durationMs: 252 * 60_000, sessions: 38, accuracy: 0.91 },
+    charts: [
+      demoSeries(
+        { id: "response-time", title: "Response time", kind: "line", measure: "payload", aggregate: "median", unit: "ms" },
+        Array.from({ length: 30 }, (_, day) => ([7, 15, 16].includes(day) ? null : Math.round(1450 - day * 19 + (seeded(day + 3) - 0.5) * 160))),
+      ),
+      demoSeries(
+        { id: "minutes", title: "Minutes a day", kind: "bar", measure: "minutes", aggregate: "total", unit: "min" },
+        [12, 9, 0, 14, 11, 10, 4, 13, 11, 6, 12, 15, 10, 6],
+      ),
+    ],
+  });
+
   const demoThemes = [
     { name: "meadow", label: "Meadow", description: "Playful and green, with leaves that rise when you start.", stylesheets: ["tokens.css", "theme.css"], script: "leaves.js" },
     { name: "paper", label: "Paper", description: "Calm and bookish: warm paper, serif headings, one rust accent.", stylesheets: ["tokens.css", "theme.css"] },
@@ -123,6 +143,7 @@
     if (url.pathname === "/api/settings") return json(settingsBody());
     if (url.pathname === "/api/activity") return json(url.searchParams.get("subject") === "morse-code" ? morseActivity() : homeActivity());
     if (url.pathname === "/api/subjects/morse-code") return json(morseSubject);
+    if (url.pathname === "/api/subjects/morse-code/stats") return json(morseStats());
     if (url.pathname === "/api/subjects/morse-code/progress") return json({ completedLessons: morseLessons.slice(0, 4) });
     if (url.pathname === "/api/subjects") return json({ subjects: homeSubjects.map(({ due, ...subject }) => subject) });
     const homeSubject = homeSubjects.find((candidate) => url.pathname === `/api/subjects/${candidate.id}/due`);
@@ -230,7 +251,8 @@
     "[data-styleguide-break]": ".tome-break",
     "[data-styleguide-start-list]": ".tome-picks",
     "[data-styleguide-settings]": '.tome-app[data-state="ready"]',
-    "[data-styleguide-subject]": '.tome-app[data-state="ready"]',
+    "[data-styleguide-subject]": '.tome-app[data-state="ready"]:not(:has([aria-busy="true"]))',
+    "[data-styleguide-no-charts]": ".tome-totals",
   };
 
   async function appReady(mount, selector) {

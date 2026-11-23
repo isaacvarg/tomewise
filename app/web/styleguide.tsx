@@ -1,7 +1,7 @@
 import { StrictMode, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { MemoryRouter, Route, Routes } from "react-router";
-import type { Subject } from "./api.ts";
+import type { Subject, SubjectStats } from "./api.ts";
 import { dueToday } from "./home/model.ts";
 import { Home } from "./home/home.tsx";
 import { Settings } from "./pages/settings.tsx";
@@ -9,6 +9,8 @@ import { SubjectHome } from "./pages/subject.tsx";
 import { RunSummary, Runner } from "./run/runner.tsx";
 import { RunBreak, StartList } from "./run/start.tsx";
 import { summarize } from "./run/summary.ts";
+import { Screen } from "./screen.tsx";
+import { StatsPanel } from "./subject/stats.tsx";
 import "./styles/app.css";
 
 const { subject } = JSON.parse(document.getElementById("styleguide-data")!.textContent!) as { subject: Subject };
@@ -42,6 +44,8 @@ const demoDue = dueToday(
 
 const nothing = () => {};
 
+const noCharts: SubjectStats = { totals: { durationMs: 25 * 60_000, sessions: 3, accuracy: 0.8 }, charts: [] };
+
 function mount(selector: string, page: ReactNode, path = "/") {
   for (const element of document.querySelectorAll(selector)) {
     createRoot(element).render(
@@ -62,6 +66,14 @@ for (const tab of ["overview", "curriculum", "drills", "reference", "stats"]) {
     tab === "overview" ? "/s/morse-code" : `/s/morse-code/${tab}`,
   );
 }
+mount(
+  "[data-styleguide-no-charts]",
+  <Screen kicker="Subject" title="Morse code">
+    <div className="tome-view" data-view="stats">
+      <StatsPanel stats={noCharts} />
+    </div>
+  </Screen>,
+);
 mount("[data-styleguide-settings]", <Settings reloadForThemeScripts={false} />);
 mount("[data-styleguide-runner]", <Runner subject={subject} drill="vocab" ownsPage={false} />);
 mount(

@@ -30,6 +30,10 @@ h1, h2, h3, h4 { font-weight: 500; }
 .tome-goal-week i { height: 9px; border-radius: 2px 70% 2px 70%; }
 .tome-milestone, .tome-drills .tome-row, .tome-reference .tome-row { border: 0; background: var(--t-surface); box-shadow: 0 2px 0 var(--t-rule); }
 .tome-check { border-radius: 2px 70% 2px 70%; }
+.tome-totals li { box-shadow: 0 2px 0 var(--t-rule); }
+.tome-totals b { font-weight: 500; }
+.tome-chart-bar { rx: 3px; }
+.tome-chart-line { stroke-width: 3; }
 
 .tome-start, .tome-again, .tome-reveal, .tome-submit, .tome-done-button, .tome-save, .tome-next {
   border-radius: 99px;

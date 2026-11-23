@@ -18,3 +18,5 @@ h1 { font-style: italic; }
 .tome-goal-bar { height: 3px; border-radius: 0; }
 .tome-goal-week i { height: 3px; border-radius: 0; }
 .tome-drills .tome-row, .tome-reference .tome-row { background: transparent; }
+.tome-totals li { background: transparent; border-top: 1px solid var(--t-rule); border-radius: 0; padding-inline: 0; }
+.tome-totals b { font-style: italic; }

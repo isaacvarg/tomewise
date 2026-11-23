@@ -1,5 +1,15 @@
 import { type Context, Hono } from "hono";
-import { completedLessons, dueItems, readActivity, readEvents, SubjectNotFoundError } from "@tomewise/core";
+import {
+  chartSeries,
+  completedLessons,
+  dueItems,
+  isoDate,
+  localDay,
+  readActivity,
+  readEvents,
+  readStats,
+  SubjectNotFoundError,
+} from "@tomewise/core";
 import type { HomeView } from "./watcher.ts";
 
 function query(c: Context, name: string): string | undefined {
@@ -32,6 +42,23 @@ export function readRoutes(view: () => HomeView, now: () => Date = () => new Dat
   routes.get("/subjects/:subject/progress", async (c) =>
     c.json({ completedLessons: await completedLessons(view().home, c.req.param("subject")) }),
   );
+
+  routes.get("/subjects/:subject/stats", async (c) => {
+    const current = view();
+    const { home } = current;
+    const subject = subjectOf(current, c.req.param("subject"));
+    const at = now();
+    const monthStart = isoDate(localDay(at.getTime(), home.config.timezone) - 29);
+    const [all, month, events] = await Promise.all([
+      readStats(home, { subject: subject.id, now: at }),
+      readStats(home, { subject: subject.id, now: at, from: monthStart }),
+      readEvents(home, subject.id),
+    ]);
+    return c.json({
+      totals: { durationMs: all.durationMs, sessions: all.sessions, accuracy: month.accuracy },
+      charts: subject.charts.map((chart) => chartSeries(subject, chart, events, { now: at })),
+    });
+  });
 
   routes.get("/activity", async (c) => {
     const subject = query(c, "subject");

@@ -5,6 +5,7 @@ import { Heatmap } from "../heatmap.tsx";
 import { count, minutesFor } from "../home/model.ts";
 import { useLoad } from "../load.ts";
 import { Failed, Screen } from "../screen.tsx";
+import { Stats } from "../subject/stats.tsx";
 import {
   curriculumView,
   drillRows,
@@ -90,7 +91,7 @@ function Tabs({ data, view }: { data: SubjectData; view: View }) {
     curriculum: () => <Curriculum data={data} />,
     drills: () => <Drills data={data} />,
     reference: () => <Reference data={data} />,
-    stats: () => null,
+    stats: () => <Stats subject={data.subject.id} />,
   };
   return (
     <>
