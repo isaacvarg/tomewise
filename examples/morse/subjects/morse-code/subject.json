@@ -29,6 +29,20 @@
           "required": ["heard", "answer", "responseTime", "wpm"]
         }
       }
+    },
+    {
+      "version": 3,
+      "kinds": {
+        "attempt": {
+          "type": "object",
+          "properties": {
+            "heard": { "type": "string" },
+            "answer": { "type": "string" },
+            "responseTime": { "type": "integer", "unit": "ms" },
+            "wpm": { "type": "number", "unit": "wpm" }
+          }
+        }
+      }
     }
   ]
 }

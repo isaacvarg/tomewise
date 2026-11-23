@@ -19,6 +19,19 @@ Treat the current directory as a teaching workspace. Workspace paths (`./lessons
 - `./assets/*`: Reusable **components** shared across lessons. See [Assets](#assets).
 - `NOTES.md`: A scratchpad for you to jot down user preferences, or working notes.
 
+### Learning home files
+
+The app reads a subject's files in fixed formats. Read the format doc before writing or changing one, and before reading history:
+
+- Events, refs and `tome log`: [EVENTS-FORMAT.md](./EVENTS-FORMAT.md)
+- `subject.json` and payload schemas: [SUBJECT-FORMAT.md](./SUBJECT-FORMAT.md)
+- Items: [ITEMS-FORMAT.md](./ITEMS-FORMAT.md)
+- Drills: [DRILLS-FORMAT.md](./DRILLS-FORMAT.md)
+- `curriculum.json` and milestones: [CURRICULUM-FORMAT.md](./CURRICULUM-FORMAT.md)
+- Quizzes and exams: [ASSESSMENTS-FORMAT.md](./ASSESSMENTS-FORMAT.md)
+
+Each links a worked example from the Morse example learning home and the JSON Schema to check a file against. Run `tome validate` after every change.
+
 ## Philosophy
 
 To learn at a deep level, the user needs three things:
