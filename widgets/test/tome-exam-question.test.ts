@@ -1,3 +1,5 @@
+import { mkdir, rm, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { startWidgetApp } from "./browser.ts";
 import { attempts, expectThemeable, kinds, SUBJECT } from "./answers.ts";
@@ -137,7 +139,7 @@ describe("<tome-exam-question>", () => {
     expect(texts.slice(1)).toEqual([
       expect.stringContaining("tests"),
       expect.stringContaining("id"),
-      expect.stringContaining("<tome-choice> or <tome-typed>"),
+      expect.stringContaining("<tome-choice>, <tome-typed> or <tome-audio>"),
     ]);
   });
 
@@ -203,5 +205,84 @@ describe("<tome-exam-question>", () => {
     await loose.getByRole("button", { name: /a/ }).first().click();
 
     await expect.poll(() => loose.locator(".tome-notice").textContent()).toContain("<tome-exam-question>");
+  });
+});
+
+const MORSE = "morse-code";
+
+const MORSE_EXAM = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Check</title></head><body>
+<tome-exam-question id="hear-k" tests="item:letter-k item:letter-m" payload='{"wpm":20}'>
+  <p>Which letter is this?</p>
+  <tome-audio ref="item:letter-k" choices="K M"></tome-audio>
+</tome-exam-question>
+<tome-exam-question id="read-k" tests="item:letter-k">
+  <p>Which letter is dah-di-dah?</p>
+  <tome-choice answer="K"><option>K</option><option>M</option></tome-choice>
+</tome-exam-question>
+</body></html>`;
+
+async function openMorseExam() {
+  const widgets = await startWidgetApp({
+    prepare: async (root) => {
+      const dir = join(root, "subjects", MORSE);
+      await rm(join(dir, "events"), { recursive: true, force: true });
+      await mkdir(join(dir, "exams"), { recursive: true });
+      await writeFile(join(dir, "exams/check.html"), MORSE_EXAM);
+    },
+  });
+  const page = await widgets.open(`/s/${MORSE}/exams/check.html`);
+  const hear = page.locator("tome-exam-question#hear-k");
+  const read = page.locator("tome-exam-question#read-k");
+  for (const question of [hear, read]) {
+    await expect.poll(() => question.locator(".tome-exam-question").getAttribute("data-state")).toBe("ready");
+  }
+  return { ...widgets, page, hear, read };
+}
+
+describe("<tome-exam-question> on a subject with required attempt fields", () => {
+  it("records a <tome-audio> answer with its measured fields and the question's payload, moving each tested item", async () => {
+    const { app, hear, eventsUntil } = await openMorseExam();
+    const start = await app.post({ subject: MORSE, kind: "session.start", ref: "lesson:0001-k-and-m", schemaVersion: 2 });
+    const sessionId = start.body.events[0].id;
+    await app.post({ subject: MORSE, kind: "lesson.completed", ref: "lesson:0001-k-and-m", schemaVersion: 2 });
+    for (const [ref, heard] of [["item:letter-k", "K"], ["item:letter-m", "M"]]) {
+      const data = { heard, answer: heard, responseTime: 400, wpm: 20 };
+      await app.post({ subject: MORSE, kind: "attempt", ref, sessionId, outcome: "correct", grade: 4, schemaVersion: 2, data });
+    }
+    const due = async () =>
+      ((await app.get(`/api/subjects/${MORSE}/due?date=${inTwoDays()}`)).body.due as { item: { id: string }; due: string | null }[])
+        .filter((entry) => ["letter-k", "letter-m"].includes(entry.item.id));
+    expect(await due()).toEqual([]);
+
+    await hear.getByRole("button", { name: "Play the sound" }).click();
+    const wrong = hear.getByRole("button", { name: "M" });
+    await expect.poll(() => wrong.isEnabled()).toBe(true);
+    await wrong.click();
+
+    const events = await eventsUntil(MORSE, (events) => attempts(events).length === 4);
+    const posted = attempts(events).slice(2);
+    expect(posted.map((attempt) => attempt.ref).sort()).toEqual(["item:letter-k", "item:letter-m"]);
+    for (const attempt of posted) {
+      expect(attempt).toMatchObject({
+        outcome: "wrong",
+        grade: 1,
+        data: { heard: "K", answer: "M", wpm: 20, question: "hear-k" },
+      });
+      expect(attempt.data.responseTime).toBeGreaterThanOrEqual(0);
+    }
+    await expect.poll(() => hear.locator(".tome-exam-question").getAttribute("data-state")).toBe("answered");
+    expect(await hear.locator(".tome-notice").count()).toBe(0);
+    const moved = await due();
+    expect(moved.map((entry) => entry.item.id).sort()).toEqual(["letter-k", "letter-m"]);
+    for (const entry of moved) expect(Date.parse(entry.due!)).toBeLessThan(Date.now() + HOUR);
+  });
+
+  it("shows which required field is missing when the question can't supply it", async () => {
+    const { read, events } = await openMorseExam();
+
+    await read.getByRole("button", { name: /K/ }).click();
+
+    await expect.poll(() => read.locator('.tome-notice[data-state="unsaved"]').textContent()).toContain("heard");
+    expect(attempts(await events(MORSE))).toEqual([]);
   });
 });

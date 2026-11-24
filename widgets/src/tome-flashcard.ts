@@ -2,6 +2,7 @@ import { html, nothing, type PropertyValues } from "lit";
 import type { Item } from "@tomewise/core";
 import { type Grade, type Outcome, tome } from "./api.ts";
 import { adoptStyles, messageOf, TomeElement } from "./element.ts";
+import { dataOrNothing, type Payload, parsePayload } from "./payload.ts";
 import { GRADES } from "./rating.ts";
 
 type Flashcard = Extract<Item, { type: "flashcard" }>;
@@ -29,6 +30,7 @@ const CSS = `
 export class TomeFlashcard extends TomeElement {
   static override properties = {
     ref: { type: String },
+    payload: { type: String },
     timeLimit: { type: Number, attribute: "time-limit" },
     state: { state: true },
     item: { state: true },
@@ -38,6 +40,7 @@ export class TomeFlashcard extends TomeElement {
   };
 
   declare ref: string;
+  declare payload: string | undefined;
   declare timeLimit: number | undefined;
   declare state: State;
   declare item: Flashcard | undefined;
@@ -49,6 +52,7 @@ export class TomeFlashcard extends TomeElement {
   #observer: IntersectionObserver | undefined;
   #limit: ReturnType<typeof setTimeout> | undefined;
   #expired = false;
+  #extra: Payload = {};
 
   constructor() {
     super();
@@ -76,7 +80,7 @@ export class TomeFlashcard extends TomeElement {
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
-    if (changed.has("ref")) void this.#load();
+    if (changed.has("ref") || changed.has("payload")) void this.#load();
   }
 
   protected override updated(changed: PropertyValues<this>): void {
@@ -97,6 +101,7 @@ export class TomeFlashcard extends TomeElement {
     this.state = "loading";
     this.notice = undefined;
     try {
+      this.#extra = parsePayload(this.payload);
       const item = await tome.item(ref);
       if (ref !== this.ref) return;
       if (item.type !== "flashcard") throw new Error(`"${ref}" is a ${item.type} item, not a flashcard.`);
@@ -129,7 +134,7 @@ export class TomeFlashcard extends TomeElement {
     this.chosen = grade;
     this.outcome = outcome;
     try {
-      await tome.attempt({ ref: `item:${this.item.id}`, outcome, grade, duration }, this);
+      await tome.attempt({ ref: `item:${this.item.id}`, outcome, grade, duration, ...dataOrNothing(this.#extra) }, this);
       this.state = "saved";
       this.dispatchEvent(
         new CustomEvent("tome-answered", {

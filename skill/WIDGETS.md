@@ -15,7 +15,8 @@ Define the item once in the subject's `items/`, then name it by ref:
 | `routine`         | `<tome-routine ref="item:warm-up"></tome-routine>`                  |
 
 - Flashcards and routines are self-rated Again / Hard / Good / Easy; the others grade themselves.
-- `<tome-audio>` without `choices` asks the learner to type. `payload` adds fixed fields the subject's payload schema requires (here `wpm`); the widget measures the rest.
+- `<tome-audio>` without `choices` asks the learner to type. `payload` adds fixed fields the subject's payload schema requires (here `wpm`); the widget measures the rest. Every item widget takes `payload`.
+- Drills and the built-in review have no page to carry `payload`. Put fixed fields in `subject.json` as `"drillPayload": { "wpm": 20 }`, or in a drill file as `"payload"` (it wins over `drillPayload`). Without them, a subject that requires a fixed field rejects every drill and review answer.
 - `time-limit="<seconds>"` on any of the first four gives the learner that long; running out records a skip.
 
 ## The other widgets
@@ -41,7 +42,7 @@ On an exam page, write each question in the page and name the items it tests. A 
 </tome-exam-question>
 ```
 
-Use `<tome-typed answer="…">` with `<option>`s for other accepted answers in place of `<tome-choice>`.
+Use `<tome-typed answer="…">` with `<option>`s for other accepted answers in place of `<tome-choice>`. To ask by sound, use `<tome-audio ref="item:<id>" choices="…">` instead; it measures what it hears. If the subject's payload schema requires fields, give the question a `payload` with the fixed ones (`payload='{"wpm":20}'`). A required field no control can measure or fix, such as Morse's `heard` on a `<tome-choice>`, gets the answer rejected, so pick a control that supplies it.
 
 End every exam with `<tome-done></tome-done>`: it reads "Finish exam" and shows the score as the learner's score display setting says. The app scores the session over every question on the page and records it as `score` on the exam's `session.end`, even when the score is hidden from the learner. A score at or above the pass mark (the milestone's `passMark`, else the subject's) marks the milestone that names the exam done; a fail changes nothing. To go over results, read the latest `session.end` with `ref` `exam:<id>` and its session's attempts (`data.question` names the question).
 

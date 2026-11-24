@@ -60,6 +60,13 @@
         }
       },
       "additionalProperties": false
+    },
+    "payload": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
     }
   },
   "required": [

@@ -1,7 +1,7 @@
 import { isDeepStrictEqual } from "node:util";
 import { z } from "zod";
 import { type EventKind, eventKinds } from "./events.ts";
-import { formatPath, type ValidationIssue } from "./issues.ts";
+import { formatPath, issuesFrom, type ValidationIssue } from "./issues.ts";
 
 const scalarTypes = ["number", "integer", "string", "boolean"] as const;
 const Unit = z.string().min(1).optional();
@@ -138,6 +138,25 @@ export function dataSchema(version: PayloadSchemaVersion, kind: EventKind): z.Zo
   }
   if (kind === "attempt") shape[QUESTION_FIELD] = z.string().min(1).optional();
   return z.strictObject(shape);
+}
+
+export function newestVersion(versions: readonly PayloadSchemaVersion[]): PayloadSchemaVersion {
+  const [first, ...rest] = versions.length > 0 ? versions : NO_PAYLOAD;
+  return rest.reduce((a, b) => (b.version > a.version ? b : a), first!);
+}
+
+export function fixedPayloadIssues(
+  payload: Record<string, unknown> | undefined,
+  versions: readonly PayloadSchemaVersion[],
+  file: string,
+  field: string,
+): ValidationIssue[] {
+  if (!payload) return [];
+  if (QUESTION_FIELD in payload) {
+    return [{ file, path: formatPath([field, QUESTION_FIELD]), message: `"${QUESTION_FIELD}" is set by exam questions; remove it` }];
+  }
+  const parsed = dataSchema(newestVersion(versions), "attempt").omit({ question: true }).partial().safeParse(payload);
+  return parsed.success ? [] : issuesFrom(file, parsed.error, [field]);
 }
 
 export function knownFields(versions: readonly PayloadSchemaVersion[], kind: EventKind): Map<string, PayloadField> {

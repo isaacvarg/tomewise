@@ -16,7 +16,7 @@ import {
   missingUnlockingLessons,
   unknownDrillTags,
 } from "./references.ts";
-import { NO_PAYLOAD, payloadSchemaIssues, type PayloadSchemaVersion } from "./payload.ts";
+import { fixedPayloadIssues, NO_PAYLOAD, payloadSchemaIssues, type PayloadSchemaVersion } from "./payload.ts";
 import { type AssessmentOverrides, type AssessmentSettings, type Goal, SubjectFile, type TomewiseConfig } from "./schemas.ts";
 
 export const SUBJECTS_DIR = "subjects";
@@ -47,6 +47,7 @@ export interface Subject {
   drills: Drill[];
   curriculum?: Curriculum;
   payloadSchemas: PayloadSchemaVersion[];
+  drillPayload?: Record<string, unknown>;
   goals: Goal[];
   charts: Chart[];
 }
@@ -186,6 +187,8 @@ export async function readSubject(root: string, id: string): Promise<SubjectRead
   if (subjectFile) {
     const allDrills = [reviewDrill, ...drills.map((drill) => drill.value)];
     issues.push(...chartReferences(subjectFile.charts, subjectFileName, subjectFile.payloadSchemas, located.map((item) => item.value), allDrills));
+    issues.push(...fixedPayloadIssues(subjectFile.drillPayload, subjectFile.payloadSchemas, subjectFileName, "drillPayload"));
+    for (const { value, file } of drills) issues.push(...fixedPayloadIssues(value.payload, subjectFile.payloadSchemas, file, "payload"));
   }
   if (curriculum) {
     issues.push(...curriculumReferences(curriculum, curriculumFile, lessons, lessonsDir));
@@ -206,6 +209,7 @@ export async function readSubject(root: string, id: string): Promise<SubjectRead
       drills: [reviewDrill, ...drills.map((drill) => drill.value)],
       ...(curriculum && { curriculum }),
       payloadSchemas: subjectFile.payloadSchemas.length > 0 ? subjectFile.payloadSchemas : NO_PAYLOAD,
+      ...(subjectFile.drillPayload && { drillPayload: subjectFile.drillPayload }),
       goals: subjectFile.goals,
       charts: subjectFile.charts,
     },

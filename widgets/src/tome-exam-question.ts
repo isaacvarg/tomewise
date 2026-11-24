@@ -1,33 +1,37 @@
 import { html, nothing, type PropertyValues } from "lit";
-import type { Answer, AnswerElement } from "./answer.ts";
+import type { Answer, Recordable } from "./answer.ts";
 import { tome } from "./api.ts";
 import { adoptStyles, messageOf, TomeElement } from "./element.ts";
+import { type Payload, parsePayload } from "./payload.ts";
 
 export type QuestionState = "loading" | "error" | "ready" | "answered";
 
-const CONTROLS = "tome-choice, tome-typed";
+const CONTROLS = "tome-choice, tome-typed, tome-audio";
 
 const CSS = `
 .tome-exam-question { display: flex; flex-direction: column; gap: .8rem; padding: 1rem; background: var(--t-surface); color: var(--t-ink); border: 1px solid var(--t-rule); border-radius: var(--t-radius); font-family: var(--t-ui); }
 .tome-exam-question .tome-question { display: flex; flex-direction: column; gap: .8rem; }
 .tome-exam-question .tome-question > * { margin: 0; }
-.tome-exam-question :is(.tome-choice, .tome-typed) { padding: 0; background: transparent; border: 0; }
+.tome-exam-question :is(.tome-choice, .tome-typed, .tome-audio) { padding: 0; background: transparent; border: 0; }
 .tome-exam-question[data-state="error"] .tome-question { opacity: .45; }
 `;
 
 export class TomeExamQuestion extends TomeElement {
   static override properties = {
     tests: { type: String },
+    payload: { type: String },
     state: { state: true },
     notice: { state: true },
   };
 
   declare tests: string;
+  declare payload: string | undefined;
   declare state: QuestionState;
   declare notice: string | undefined;
 
   #content: Node[] | undefined;
-  #control: AnswerElement<never> | null = null;
+  #control: Recordable | null = null;
+  #extra: Payload = {};
   #refs: string[] = [];
   #answer: Answer | undefined;
   #saved = new Set<string>();
@@ -45,14 +49,14 @@ export class TomeExamQuestion extends TomeElement {
     super.connectedCallback();
     adoptStyles("tome-exam-question", CSS);
     if (this.#content) return;
-    this.#control = this.querySelector<AnswerElement<never>>(CONTROLS);
+    this.#control = this.querySelector<Recordable>(CONTROLS);
     this.#control?.setAttribute("inert", "");
     this.#content = [...this.childNodes];
     this.replaceChildren();
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
-    if (changed.has("tests")) void this.#check();
+    if (changed.has("tests") || changed.has("payload")) void this.#check();
   }
 
   async #check(): Promise<void> {
@@ -63,7 +67,12 @@ export class TomeExamQuestion extends TomeElement {
     const problems: string[] = [];
     if (!this.id) problems.push('This exam question needs an id, such as id="q1", so its attempts can name it.');
     if (refs.length === 0) problems.push('Name the items this question tests, such as tests="item:letter-k item:letter-r".');
-    if (!this.#control) problems.push("Put a <tome-choice> or <tome-typed> with an answer inside this exam question.");
+    if (!this.#control) problems.push("Put a <tome-choice>, <tome-typed> or <tome-audio> with an answer inside this exam question.");
+    try {
+      this.#extra = parsePayload(this.payload);
+    } catch (error) {
+      problems.push(messageOf(error));
+    }
     const found = await Promise.allSettled(refs.map((ref) => tome.item(ref)));
     if (tests !== this.tests) return;
     for (const result of found) if (result.status === "rejected") problems.push(messageOf(result.reason));
@@ -73,12 +82,12 @@ export class TomeExamQuestion extends TomeElement {
       return;
     }
     this.#refs = refs;
-    this.#control.recorder = (answer) => this.#record(answer);
+    this.#control.recorder = (answer, data) => this.#record(answer, data);
     this.#control.removeAttribute("inert");
     this.state = "ready";
   }
 
-  async #record(answer: Answer): Promise<void> {
+  async #record(answer: Answer, data: Payload): Promise<void> {
     if (answer !== this.#answer) {
       this.#answer = answer;
       this.#saved.clear();
@@ -86,7 +95,7 @@ export class TomeExamQuestion extends TomeElement {
     const { outcome, grade, duration } = answer;
     for (const ref of this.#refs) {
       if (this.#saved.has(ref)) continue;
-      await tome.attempt({ ref, outcome, grade, duration, data: { question: this.id } }, this);
+      await tome.attempt({ ref, outcome, grade, duration, data: { ...data, ...this.#extra, question: this.id } }, this);
       this.#saved.add(ref);
     }
   }

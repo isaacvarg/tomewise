@@ -3,10 +3,15 @@ import type { Item } from "@tomewise/core";
 import { type Grade, type Outcome, tome } from "./api.ts";
 import { adoptStyles, messageOf, TomeElement } from "./element.ts";
 import { showUnsaved } from "./notice.ts";
+import { dataOrNothing, type Payload, parsePayload } from "./payload.ts";
 
 export type AnswerState = "loading" | "error" | "ready" | "saving" | "failed" | "saved";
 
-export type Recorder = (answer: Answer) => Promise<unknown>;
+export type Recorder = (answer: Answer, data: Payload) => Promise<unknown>;
+
+export interface Recordable extends HTMLElement {
+  recorder: Recorder | undefined;
+}
 
 export interface Answer {
   ref: string;
@@ -61,6 +66,7 @@ const CSS = `
 export abstract class AnswerElement<T extends Prompted> extends TomeElement {
   static override properties = {
     ref: { type: String },
+    payload: { type: String },
     timeLimit: { type: Number, attribute: "time-limit" },
     state: { state: true },
     item: { state: true },
@@ -69,6 +75,7 @@ export abstract class AnswerElement<T extends Prompted> extends TomeElement {
   };
 
   declare ref: string;
+  declare payload: string | undefined;
   declare timeLimit: number | undefined;
   declare state: AnswerState;
   declare item: T | undefined;
@@ -84,6 +91,7 @@ export abstract class AnswerElement<T extends Prompted> extends TomeElement {
   #observer: IntersectionObserver | undefined;
   #limit: ReturnType<typeof setTimeout> | undefined;
   #inline: T | undefined;
+  #extra: Payload = {};
   #read = false;
 
   constructor() {
@@ -118,7 +126,7 @@ export abstract class AnswerElement<T extends Prompted> extends TomeElement {
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
-    if (changed.has("ref")) void this.#load();
+    if (changed.has("ref") || changed.has("payload")) void this.#load();
   }
 
   protected override updated(changed: PropertyValues<this>): void {
@@ -146,14 +154,14 @@ export abstract class AnswerElement<T extends Prompted> extends TomeElement {
   }
 
   protected record(answer: Answer): Promise<unknown> {
-    if (this.recorder) return this.recorder(answer);
+    if (this.recorder) return this.recorder(answer, this.#extra);
     const { ref, outcome, grade, duration } = answer;
     if (!ref) {
       const message = "An answer written in the page is only recorded inside <tome-exam-question>.";
       showUnsaved(this, message);
       return Promise.reject(new Error(message));
     }
-    return tome.attempt({ ref, outcome, grade, duration }, this);
+    return tome.attempt({ ref, outcome, grade, duration, ...dataOrNothing(this.#extra) }, this);
   }
 
   protected abstract inlineItem(answer: string, options: string[]): T;
@@ -165,12 +173,13 @@ export abstract class AnswerElement<T extends Prompted> extends TomeElement {
     this.state = "loading";
     this.notice = undefined;
     this.result = undefined;
-    if (!ref && this.#inline) {
-      this.item = this.#inline;
-      this.state = "ready";
-      return;
-    }
     try {
+      this.#extra = parsePayload(this.payload);
+      if (!ref && this.#inline) {
+        this.item = this.#inline;
+        this.state = "ready";
+        return;
+      }
       const item = await tome.item(ref);
       if (ref !== this.ref) return;
       if (item.type !== this.itemType) throw new Error(`"${ref}" is a ${item.type} item, not ${this.itemLabel}.`);

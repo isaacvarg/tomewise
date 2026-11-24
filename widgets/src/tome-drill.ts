@@ -5,6 +5,7 @@ import { judged, percent, type ScoreResult } from "@tomewise/core/score";
 import { adoptStyles, messageOf, TomeElement } from "./element.ts";
 import { labelOf, median, planDrill, present, WIDGET_FOR } from "./drill-plan.ts";
 import { widgets } from "./loader.ts";
+import { parsePayload } from "./payload.ts";
 
 type State = "loading" | "error" | "empty" | "running" | "done";
 
@@ -107,6 +108,7 @@ export class TomeDrill extends TomeElement {
   #subjectName = "";
   #definition: Drill | undefined;
   #plan: Item[] = [];
+  #payload = "";
   #run = 0;
   #autoplay = false;
   #pause: ReturnType<typeof setTimeout> | undefined;
@@ -181,6 +183,8 @@ export class TomeDrill extends TomeElement {
       this.#passMark = subject.settings.assessments.passMark;
       this.#definition = drill;
       this.#plan = plan;
+      const payload = { ...subject.drillPayload, ...drill.payload, ...parsePayload(this.payload) };
+      this.#payload = Object.keys(payload).length > 0 ? JSON.stringify(payload) : "";
       const total = drill.timeLimits?.totalSeconds;
       this.left = total === undefined ? undefined : total * 1000;
       if (this.#plan.length === 0) {
@@ -219,7 +223,7 @@ export class TomeDrill extends TomeElement {
   #show(): void {
     const drill = this.#definition!;
     const item = this.#plan[this.index]!;
-    const { tag, attributes } = present(item, drill, this.#plan, this.payload);
+    const { tag, attributes } = present(item, drill, this.#plan, this.#payload);
     void widgets[tag]?.();
     const widget = document.createElement(tag);
     for (const [name, value] of Object.entries(attributes)) widget.setAttribute(name, value);

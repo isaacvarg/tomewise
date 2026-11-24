@@ -318,6 +318,13 @@
         "additionalProperties": false
       }
     },
+    "drillPayload": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
     "charts": {
       "default": [],
       "type": "array",

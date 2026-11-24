@@ -211,4 +211,24 @@ describe("validating the curriculum", () => {
       },
     ]);
   });
+
+  it("checks drill and subject payloads against the newest attempt schema", async () => {
+    const payloadSchemas = [
+      { version: 1, kinds: { attempt: { properties: { wpm: { type: "number" } }, required: ["wpm"] } } },
+    ];
+    const home = await buildHome({
+      ...base,
+      "subjects/spanish/subject.json": { name: "Spanish", payloadSchemas, drillPayload: { wpm: "fast" } },
+      "subjects/spanish/items/0001-greetings.json": [card("hola")],
+      "subjects/spanish/drills/ok.json": { name: "OK", select: { from: "due" }, payload: { wpm: 20 } },
+      "subjects/spanish/drills/extra.json": { name: "Extra", select: { from: "due" }, payload: { tempo: 3 } },
+      "subjects/spanish/drills/asks.json": { name: "Asks", select: { from: "due" }, payload: { question: "q1" } },
+    });
+
+    expect(await validateLearningHome(home)).toEqual([
+      { file: "subjects/spanish/subject.json", path: "drillPayload.wpm", message: expect.any(String) },
+      { file: "subjects/spanish/drills/asks.json", path: "payload.question", message: expect.stringContaining("exam questions") },
+      { file: "subjects/spanish/drills/extra.json", path: "payload.tempo", message: "Unknown field" },
+    ]);
+  });
 });

@@ -128,11 +128,35 @@ customElements.define("morse-key", MorseKey);
 
 The full widget is `widgets/test/fixtures/subjects/morse-code/assets/morse-key.js`; `widgets/test/custom-widget.test.ts` runs it in the Morse subject.
 
+## Required attempt fields
+
+A subject's payload schema can require attempt fields, as Morse requires `heard`, `answer`, `responseTime` and `wpm`. The app rejects an attempt missing one, and the widget shows the reason and "Save again". Every source of attempts fills them the same way:
+
+- **Measured fields.** A widget attaches what it measures that the subject's newest payload schema declares. Only `<tome-audio>` measures anything (`heard`, `answer`, `responseTime`, `replays`). The other built-ins measure nothing.
+- **Fixed fields.** Values that don't change per answer, such as `wpm`, come from a `payload` JSON object. Where it comes from depends on the source:
+
+| Source | Fixed fields from |
+| ------ | ----------------- |
+| Lesson or quiz page | The item widget's `payload` attribute |
+| Drill file | The drill file's `payload`, over the subject's `drillPayload` |
+| Built-in review and the daily quiz | The subject's `drillPayload` |
+| `<tome-drill>` on a page | Its `payload` attribute, over the drill's |
+| Exam question | Its `payload` attribute, over the answer control's |
+
+Where two apply, the later one wins field by field. The app checks `drillPayload` in `subject.json` and `payload` in drill files against the newest payload schema when it loads the subject, and reports a field the schema doesn't declare or a value of the wrong type.
+
+```json
+{ "name": "Morse code", "drillPayload": { "wpm": 20 }, "payloadSchemas": [ ... ] }
+```
+
+A field neither measured nor fixed has to come from somewhere real. An exam question on Morse that asks with `<tome-choice>` has no sound, so no `heard`, and its answer is rejected. Ask with `<tome-audio>` instead, or don't require the field.
+
 ## `<tome-flashcard>`
 
 | Attribute | Meaning                                  |
 | --------- | ---------------------------------------- |
 | `ref`     | `item:<id>` of a `flashcard` item        |
+| `payload` | Optional. JSON object of fixed payload fields added to the attempt's `data` |
 
 Shows the item's `front`. "Show answer" reveals `back` and asks Again / Hard / Good / Easy. The rating is the grade (1–4); Again is `wrong`, the rest `correct`. One attempt is posted per card, timed from when the card first scrolled into view.
 
@@ -354,7 +378,13 @@ Keyboard: Tab into the text box, Ctrl+Enter (⌘+Enter) saves. Touch: tap Save e
 
 ## `<tome-exam-question>`
 
-An exam question on an exam page. Write the question inside the tag, then one `<tome-choice>` or `<tome-typed>` whose answer is written in the page instead of coming from an item: `answer` holds the right answer, and `<option>` children hold the choices (`<tome-choice>`) or other accepted answers (`<tome-typed>`).
+An exam question on an exam page. Write the question inside the tag, then one answer control: a `<tome-choice>` or `<tome-typed>` whose answer is written in the page instead of coming from an item (`answer` holds the right answer, and `<option>` children hold the choices or other accepted answers), or a `<tome-audio>` with a `ref` to the item it plays.
+
+| Attribute | Meaning |
+| --------- | ------- |
+| `id`      | The question's name within the exam |
+| `tests`   | Space-separated items the question tests |
+| `payload` | Optional. JSON object of fixed payload fields added to each attempt's `data`, e.g. `payload='{"wpm":20}'` |
 
 ```html
 <tome-exam-question id="q1" tests="item:letter-k item:letter-r">
@@ -366,9 +396,14 @@ An exam question on an exam page. Write the question inside the tag, then one `<
   <p>Thank someone warmly.</p>
   <tome-typed answer="muchas gracias"><option>mil gracias</option></tome-typed>
 </tome-exam-question>
+
+<tome-exam-question id="q3" tests="item:letter-k" payload='{"wpm":20}'>
+  <p>Which letter is this?</p>
+  <tome-audio ref="item:letter-k" choices="K M R"></tome-audio>
+</tome-exam-question>
 ```
 
-`id` names the question within the exam and `tests` lists the items it tests. The answer is graded as in `<tome-choice>` and `<tome-typed>`, then posted as one attempt per tested item: `ref` is the item, the outcome, grade and duration are the same for each, and `data.question` is the question's `id`. A miss is a wrong attempt on each of those items, so they come due sooner. The exam question itself is never scheduled. On an exam page the session's `ref` is the exam.
+`id` names the question within the exam and `tests` lists the items it tests. The answer is graded as in `<tome-choice>` and `<tome-typed>`, then posted as one attempt per tested item: `ref` is the item, the outcome, grade and duration are the same for each, and `data` is the answer control's data (what `<tome-audio>` measures, plus the control's own `payload`), then the question's `payload`, then `question`: the question's `id`. A miss is a wrong attempt on each of those items, so they come due sooner. The exam question itself is never scheduled. On an exam page the session's `ref` is the exam.
 
 End the exam with a `<tome-done>`: on an exam page it reads "Finish exam" and shows the score.
 
@@ -436,9 +471,10 @@ Completion is sent once per page, so a lesson may have both a `final` widget and
 
 ## Item widgets in sequence
 
-`<tome-flashcard>`, `<tome-choice>`, `<tome-typed>` and `<tome-audio>` share two features, which `<tome-drill>` relies on.
+`<tome-flashcard>`, `<tome-choice>`, `<tome-typed>` and `<tome-audio>` share three features, which `<tome-drill>` relies on.
 
 - **`time-limit="<seconds>"`** gives the learner that long to answer. It counts from when the widget first scrolled into view, or for `<tome-audio>` from when the sound finished (the tighter of `time-limit` and the item's `timeLimitSeconds` applies). Running out posts a `skipped` attempt with grade 1, as `<tome-audio>` does.
+- **`payload='<json>'`** adds fixed fields to each attempt's `data`, after what the widget measures. See [required attempt fields](#required-attempt-fields).
 - **`tome-answered`.** Once an attempt is saved, the widget dispatches a bubbling `tome-answered` event with `detail: { ref, outcome, grade, duration }`.
 
 `<tome-audio>` also has a `play()` method, which starts the sound as the play button does.
@@ -448,7 +484,7 @@ Completion is sent once per page, so a lesson may have both a `final` widget and
 | Attribute | Meaning                                                                                                  |
 | --------- | -------------------------------------------------------------------------------------------------------- |
 | `drill`   | Optional. Drill id: a file in the subject's `drills/` (no extension), or `review`. Defaults to the page's id on a drill page, else `review`. |
-| `payload` | Optional. JSON object passed to each item widget as its `payload`, e.g. `payload='{"wpm":20}'`.          |
+| `payload` | Optional. JSON object of fixed payload fields, over the drill's, e.g. `payload='{"wpm":20}'`.            |
 | `close`   | Optional. Address for an "End session" link (`.tome-close`, ×) at the start of the bar, e.g. `close="/"`. |
 
 ```html
@@ -459,6 +495,7 @@ Runs a drill as a sequence of the item widgets, one item at a time. `review` is 
 
 - **Selection.** `select.from: "due"` takes the items the schedule says are due, most overdue first. `"unlocked"` takes every unretired item with no `unlockedBy` or whose lesson is completed, shuffled. With `select.tags`, an item needs at least one of them. `count` caps the run; an unlocked pool smaller than `count` is drawn again in fresh shuffled rounds, so each item comes up about equally (12 sounds from 3 letters). Due items never repeat. Routine items are left out.
 - **Format.** Each item is shown in its own widget (`flashcard` → `<tome-flashcard>`, `multiple-choice` → `<tome-choice>`, `typed-answer` → `<tome-typed>`, `timed-audio` → `<tome-audio>`). In a `multiple-choice` drill, timed-audio items get the run's distinct answers as `choices` (K M R); in other formats they are typed. A format an item can't take falls back to its own type.
+- **Payload.** Each item widget gets as its `payload` the subject's `drillPayload`, then the drill file's `payload`, then the `payload` attribute, merged field by field. The built-in review and the daily quiz have no file, so they take `drillPayload` alone.
 - **Time limits.** `timeLimits.perItemSeconds` is each widget's `time-limit`. `timeLimits.totalSeconds` starts at the learner's first tap or key press in the drill; when it runs out the run ends and the item on screen posts nothing.
 - **Attempts and session.** Each answer posts one attempt on its item, through the item widget, so every attempt updates that item's schedule. The session is the page's: on a drill page (`tome-page-kind` `drill`, `tome-drill` the drill id) its ref is `drill:<id>`. Finishing the run posts `session.end`; "Run again" selects afresh and starts a new session.
 - **Pace.** After an answer the drill moves on by itself (0.9 s when right, 1.6 s otherwise), or at once with Next. From the second item on, audio items play by themselves.

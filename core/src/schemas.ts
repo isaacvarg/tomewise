@@ -254,6 +254,7 @@ export const SubjectFile = z.strictObject({
   settings: SubjectSettings.default({}),
   goals: z.array(Goal).default([]),
   payloadSchemas: PayloadSchemas,
+  drillPayload: z.record(z.string(), z.unknown()).optional(),
   charts: z.array(Chart).default([]),
 });
 

@@ -1,5 +1,6 @@
 {
   "name": "Morse code",
+  "drillPayload": { "wpm": 20 },
   "payloadSchemas": [
     {
       "version": 1,

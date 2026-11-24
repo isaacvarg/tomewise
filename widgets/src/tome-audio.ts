@@ -1,7 +1,9 @@
 import { html, nothing, type PropertyValues } from "lit";
 import type { Item } from "@tomewise/core";
 import { type Grade, type Outcome, tome } from "./api.ts";
+import type { Answer, Recorder } from "./answer.ts";
 import { adoptStyles, messageOf, TomeElement } from "./element.ts";
+import { declared, type Payload, parsePayload } from "./payload.ts";
 
 type TimedAudio = Extract<Item, { type: "timed-audio" }>;
 type State = "loading" | "error" | "ready" | "listening" | "answering" | "saving" | "saved" | "unsaved";
@@ -76,8 +78,10 @@ export class TomeAudio extends TomeElement {
   declare notice: string | undefined;
   declare playing: boolean;
   declare result: Result | undefined;
+  declare recorder: Recorder | undefined;
 
-  #extra: Record<string, unknown> = {};
+  #extra: Payload = {};
+  #answer: Answer | undefined;
   #audio: HTMLAudioElement | undefined;
   #heardAt = 0;
   #replays = 0;
@@ -136,7 +140,7 @@ export class TomeAudio extends TomeElement {
     this.result = undefined;
     this.#replays = 0;
     try {
-      this.#extra = this.#parsePayload();
+      this.#extra = parsePayload(this.payload);
       const item = await tome.item(ref);
       if (ref !== this.ref) return;
       if (item.type !== "timed-audio") throw new Error(`"${ref}" is a ${item.type} item, not a timed-audio item.`);
@@ -148,20 +152,6 @@ export class TomeAudio extends TomeElement {
       this.state = "error";
       this.notice = messageOf(error);
     }
-  }
-
-  #parsePayload(): Record<string, unknown> {
-    if (!this.payload) return {};
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(this.payload);
-    } catch {
-      parsed = undefined;
-    }
-    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-      throw new Error(`The payload attribute must be a JSON object, such as payload='{"wpm":20}'.`);
-    }
-    return parsed as Record<string, unknown>;
   }
 
   async #play(): Promise<void> {
@@ -212,6 +202,7 @@ export class TomeAudio extends TomeElement {
       responseTime: Math.max(0, Math.round(performance.now() - this.#heardAt)),
       replays: this.#replays,
     };
+    this.#answer = undefined;
     void this.#save();
   }
 
@@ -220,14 +211,12 @@ export class TomeAudio extends TomeElement {
     if (!result || !this.item) return;
     this.state = "saving";
     this.notice = undefined;
+    const ref = `item:${this.item.id}`;
+    this.#answer ??= { ref, outcome: result.outcome, grade: result.grade, duration: result.responseTime, given: result.given };
     try {
-      await tome.attempt({
-        ref: `item:${this.item.id}`,
-        outcome: result.outcome,
-        grade: result.grade,
-        duration: result.responseTime,
-        data: await this.#data(result),
-      }, this);
+      const data = await this.#data(result);
+      if (this.recorder) await this.recorder(this.#answer, data);
+      else await tome.attempt({ ref, outcome: result.outcome, grade: result.grade, duration: result.responseTime, data }, this);
       this.state = "saved";
       this.dispatchEvent(
         new CustomEvent("tome-answered", {
@@ -241,18 +230,14 @@ export class TomeAudio extends TomeElement {
     }
   }
 
-  async #data(result: Result): Promise<Record<string, unknown>> {
-    const subject = await tome.subject();
-    const newest = subject.payloadSchemas.reduce((a, b) => (b.version > a.version ? b : a));
-    const declared = newest.kinds.attempt?.properties ?? {};
-    const measured: Record<string, unknown> = {
+  async #data(result: Result): Promise<Payload> {
+    const measured = await declared({
       heard: this.item!.answer,
       answer: result.given,
       responseTime: result.responseTime,
       replays: result.replays,
-    };
-    const known = Object.entries(measured).filter(([name]) => name in declared);
-    return { ...Object.fromEntries(known), ...this.#extra };
+    });
+    return { ...measured, ...this.#extra };
   }
 
   #keyFor(choice: string, index: number, options: string[]): string {

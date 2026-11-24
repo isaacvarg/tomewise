@@ -18,6 +18,7 @@ export const DrillFile = z.strictObject({
       totalSeconds: z.number().positive().optional(),
     })
     .optional(),
+  payload: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type DrillFile = z.output<typeof DrillFile>;

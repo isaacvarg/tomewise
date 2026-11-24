@@ -6,24 +6,11 @@ import { appClasses } from "@tomewise/core";
 import { startDashboard, type Width } from "./browser.ts";
 
 type Dashboard = Awaited<ReturnType<typeof startDashboard>>;
-type Event = { id: string; kind: string; ref?: string; sessionId?: string; outcome?: string; grade?: number; duration?: number; subject: string };
+type Event = { id: string; kind: string; ref?: string; sessionId?: string; outcome?: string; grade?: number; duration?: number; subject: string; data?: Record<string, unknown> };
 
 const MORSE_ITEMS = "subjects/morse-code/items";
 
-async function wpmOptional(root: string) {
-  const file = join(root, "subjects/morse-code/subject.json");
-  const subject = JSON.parse(await readFile(file, "utf8"));
-  const latest = subject.payloadSchemas.at(-1);
-  const attempt = latest.kinds.attempt;
-  subject.payloadSchemas.push({
-    version: latest.version + 1,
-    kinds: { attempt: { ...attempt, required: attempt.required.filter((name: string) => name !== "wpm") } },
-  });
-  await writeFile(file, JSON.stringify(subject));
-}
-
 async function quickLetterR(root: string) {
-  await wpmOptional(root);
   const file = join(root, MORSE_ITEMS, "0002-r.json");
   const items = JSON.parse(await readFile(file, "utf8")) as Record<string, unknown>[];
   await writeFile(file, JSON.stringify(items.map((item) => (item.id === "letter-r" ? { ...item, timeLimitSeconds: 0.5 } : item))));
@@ -54,7 +41,6 @@ const texts = (page: Page, selector: string) =>
   page.locator(selector).evaluateAll((els) => els.map((el) => (el as HTMLElement).innerText.trim()));
 
 async function shortListenDrill(root: string) {
-  await wpmOptional(root);
   const file = join(root, "subjects/morse-code/drills/listen-kmrsu.json");
   await writeFile(file, JSON.stringify({ ...JSON.parse(await readFile(file, "utf8")), count: 2 }));
 }
@@ -111,6 +97,11 @@ describe.each(["phone", "desktop"] as const)("the runner at %s width", (width) =
       ["item:letter-r", "skipped", 1],
       ["item:letter-k", "correct", 3],
     ]);
+    expect(rest.slice(0, 3).map((event) => event.data)).toEqual([
+      expect.objectContaining({ heard: "M", answer: "K", wpm: 20 }),
+      expect.objectContaining({ heard: "R", answer: "", wpm: 20 }),
+      expect.objectContaining({ heard: "K", answer: "K", wpm: 20 }),
+    ]);
 
     const summary = runner.locator(".tome-runner-summary");
     expect(await summary.locator(".tome-score").textContent()).toBe("33%");
@@ -151,6 +142,9 @@ describe.each(["phone", "desktop"] as const)("the runner at %s width", (width) =
     expect(events.map((event) => event.kind)).toEqual(["session.start", "attempt", "attempt", "session.end"]);
     expect(events[0]!.ref).toBe("drill:listen-kmrsu");
     expect(events.filter((event) => event.kind === "attempt").map((event) => event.ref)).toEqual(refs);
+    for (const attempt of events.filter((event) => event.kind === "attempt")) {
+      expect(attempt.data).toMatchObject({ answer: attempt.ref!.replace("item:letter-", "").toUpperCase(), wpm: 20 });
+    }
 
     await runner.locator(".tome-again").tap();
     await waitForItem(runner, 1, 2);
@@ -186,7 +180,7 @@ describe.each(["phone", "desktop"] as const)("the runner at %s width", (width) =
   }, 30_000);
 
   it("ends the session when closed mid-run", async () => {
-    const dashboard = await openRun(width, "/run/due?subject=morse-code", wpmOptional);
+    const dashboard = await openRun(width, "/run/due?subject=morse-code");
     const { page, runner } = dashboard;
     const before = await eventIds(dashboard, "morse-code");
     await waitForItem(runner, 1, 3);
@@ -228,7 +222,7 @@ describe.each(["phone", "desktop"] as const)("the runner at %s width", (width) =
 
 describe("the runner", () => {
   it("runs one subject after another in the same page, each in its own session", async () => {
-    const dashboard = await openRun("phone", "/run/due?subject=spanish", wpmOptional);
+    const dashboard = await openRun("phone", "/run/due?subject=spanish");
     const { page, runner } = dashboard;
     const spanishBefore = await eventIds(dashboard, "spanish");
     const morseBefore = await eventIds(dashboard, "morse-code");
