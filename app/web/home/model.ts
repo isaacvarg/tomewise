@@ -1,4 +1,4 @@
-import type { Activity, DueItem, Subject } from "../api.ts";
+import type { Activity, DueItem, QuizSlot, Subject } from "../api.ts";
 
 type ActivityDay = Activity["days"][number];
 
@@ -76,22 +76,34 @@ export interface DueRow {
 
 export interface DueToday {
   rows: DueRow[];
+  quizzes: { subject: Subject; quiz: QuizSlot }[];
   items: number;
   minutes: number;
 }
 
 export const minutesFor = (items: number) => Math.ceil((items * SECONDS_PER_ITEM) / 60);
 
-export function dueToday(subjects: { subject: Subject; due: DueItem[] }[]): DueToday {
+export function dueToday(subjects: { subject: Subject; due: DueItem[]; quiz?: QuizSlot | null }[]): DueToday {
   const rows = subjects
     .map(({ subject, due }) => ({ subject, items: due.length }))
     .filter((row) => row.items > 0)
     .map((row) => ({ ...row, minutes: minutesFor(row.items) }));
   return {
     rows,
+    quizzes: subjects.flatMap(({ subject, quiz }) => (quiz ? [{ subject, quiz }] : [])),
     items: rows.reduce((sum, row) => sum + row.items, 0),
     minutes: rows.reduce((sum, row) => sum + row.minutes, 0),
   };
 }
 
 export const count = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+
+export const quizPath = (subject: string) => `/run/quiz?subject=${encodeURIComponent(subject)}`;
+
+export const writtenQuizPath = (subject: string, quiz: string) => `/s/${encodeURIComponent(subject)}/quizzes/${encodeURIComponent(quiz)}.html`;
+
+export function dueMeta(items: number, quizzes: number): string {
+  const quizCount = count(quizzes, "quiz", "quizzes");
+  if (quizzes === 0) return count(items, "item");
+  return items === 0 ? quizCount : `${count(items, "item")} · ${quizCount}`;
+}

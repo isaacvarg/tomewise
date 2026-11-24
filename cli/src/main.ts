@@ -33,6 +33,7 @@ import { listenOptions, serveHome } from "./serve.ts";
 import { importWorkspace } from "./import.ts";
 import type { PromptStreams } from "./prompt.ts";
 import { THEME_USAGE, themeCheck } from "./theme-check.ts";
+import { VAULT_USAGE, vault } from "./vault.ts";
 import type { ToolDirs } from "@tomewise/app";
 
 export interface Io {
@@ -64,6 +65,7 @@ export const USAGE = [
   "  tome service status [--json]",
   "  tome import <dir> [--slug <slug>] [--name <name>]",
   THEME_USAGE,
+  VAULT_USAGE,
 ].join("\n");
 
 export const NO_APP_URL = "No app URL set (appUrl in ~/.config/tomewise/config.json or TOMEWISE_URL)";
@@ -244,8 +246,8 @@ function duration(ms: number): string {
   return `${s}s`;
 }
 
-function plural(count: number, word: string): string {
-  return `${count} ${word}${count === 1 ? "" : "s"}`;
+export function plural(count: number, word: string, many = `${word}s`): string {
+  return `${count} ${count === 1 ? word : many}`;
 }
 
 function statsLines(result: Stats, subject: string | undefined): string[] {
@@ -418,6 +420,7 @@ export async function run(args: string[], io: Io): Promise<number> {
   if (command === "service") return service(io, rest);
   if (command === "import") return importWorkspace(io, rest);
   if (command === "theme") return themeCheck(io, rest, USAGE);
+  if (command === "vault") return vault(io, rest);
   io.stderr(USAGE);
   return 2;
 }

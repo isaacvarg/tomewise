@@ -1,4 +1,4 @@
-import type { Drill, ExamResult, Item, LearningEvent, Subject } from "@tomewise/core";
+import type { Drill, ExamResult, Item, LearningEvent, QuizResult, Subject } from "@tomewise/core";
 import { clearUnsaved, showUnsaved } from "./notice.ts";
 
 export type PageKind = "lesson" | "quiz" | "exam" | "drill";
@@ -66,8 +66,10 @@ export interface EndedSession {
 
 export interface FinishedExam {
   event: LearningEvent;
-  result: ExamResult;
+  result: ExamResult | QuizResult;
 }
+
+type Sent = { events: LearningEvent[]; exams?: ExamResult[]; quizzes?: QuizResult[] };
 
 export class Tome {
   readonly #window: Window;
@@ -288,12 +290,12 @@ export class Tome {
 
   async #postFinished(): Promise<FinishedExam> {
     const { kind } = this.context;
-    if (kind !== "exam") throw new TomeError(`Only an exam can be finished; this page is a ${kind}.`);
+    if (kind !== "exam" && kind !== "quiz") throw new TomeError(`Only an exam or a quiz can be finished; this page is a ${kind}.`);
     const session = await this.start();
     const duration = Math.max(0, Math.round(this.#window.performance.now() - session.startedAt));
     const body = await this.#send({ kind: "session.end", ref: session.ref, sessionId: session.id, duration, data: {} });
-    const result = body.exams?.[0];
-    if (!result) throw new TomeError("The app saved the end of this exam but sent back no score.");
+    const result = body.exams?.[0] ?? body.quizzes?.[0];
+    if (!result) throw new TomeError(`The app saved the end of this ${kind} but sent back no score.`);
     if (this.#current === session) {
       this.#current = undefined;
       this.#session = undefined;
@@ -310,7 +312,7 @@ export class Tome {
     return (await this.#send(fields)).events[0]!;
   }
 
-  async #send(fields: Record<string, unknown>): Promise<{ events: LearningEvent[]; exams?: ExamResult[] }> {
+  async #send(fields: Record<string, unknown>): Promise<Sent> {
     let response: Response;
     try {
       response = await this.#window.fetch(EVENTS_URL, {
@@ -322,9 +324,9 @@ export class Tome {
       throw new TomeError(UNREACHABLE);
     }
     const body = (await response.json().catch(() => undefined)) as
-      | { events?: LearningEvent[]; exams?: ExamResult[]; issues?: Issue[] }
+      | (Partial<Sent> & { issues?: Issue[] })
       | undefined;
-    if (response.status === 201 && body?.events?.[0]) return body as { events: LearningEvent[]; exams?: ExamResult[] };
+    if (response.status === 201 && body?.events?.[0]) return body as Sent;
     if (response.status === 400 && body?.issues) {
       const details = body.issues.map((issue) => `${issue.path ? `${issue.path}: ` : ""}${issue.message}`).join("; ");
       throw new TomeError(`The app didn't accept this: ${details}`, body.issues);

@@ -31,7 +31,7 @@ function ignored(file: string | null): boolean {
   if (file === null) return false;
   const parts = file.split(sep);
   if (parts[0] === ".git") return true;
-  return parts[0] === "subjects" && parts[2] === "events";
+  return parts[0] === "subjects" && (parts[2] === "events" || (parts.length === 3 && parts[2] === "curriculum.md"));
 }
 
 export async function watchLearningHome(home: LearningHome, options: WatchOptions = {}): Promise<WatchedHome> {

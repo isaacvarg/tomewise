@@ -59,8 +59,8 @@ describe("the theme contract's widget classes", () => {
   });
 });
 
-describe("skill/WIDGETS.md", () => {
-  const skill = readFileSync(new URL("../../skill/WIDGETS.md", import.meta.url), "utf8");
+describe("skill/skills/teach/WIDGETS.md", () => {
+  const skill = readFileSync(new URL("../../skill/skills/teach/WIDGETS.md", import.meta.url), "utf8");
 
   it.each(TAGS)("points agents at <%s>", (tag) => {
     expect(skill).toContain(`<${tag}`);

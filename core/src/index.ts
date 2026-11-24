@@ -8,8 +8,8 @@ export type { Drill } from "./drills.ts";
 export { quizDrill } from "./drills.ts";
 export type { Curriculum, MilestoneStatus } from "./curriculum.ts";
 export { examsOn, milestoneStatusesOf } from "./milestones.ts";
-export { closeExams, examEvents, examMilestone, examPassMark, examQuestions, examResult } from "./exams.ts";
-export type { ClosedExams, ExamResult } from "./exams.ts";
+export { closeExams, examEvents, examMilestone, examPassMark, examQuestions, examResult, quizResult } from "./exams.ts";
+export type { ClosedExams, ExamResult, QuizResult } from "./exams.ts";
 export { judged, passes, percent, scoreView, sessionScore } from "./score.ts";
 export type { Score, ScoreResult, ScoreView } from "./score.ts";
 export { validateLearningHome } from "./validate.ts";
@@ -17,7 +17,7 @@ export { formatIssue } from "./issues.ts";
 export type { ValidationIssue } from "./issues.ts";
 export { AssessmentOverrides, AssessmentSettings, DEFAULT_ASSESSMENTS, QUIZ_FREQUENCIES, SCORE_DISPLAYS } from "./schemas.ts";
 export { resolveAssessments, subjectPath } from "./subject.ts";
-export { DEFAULT_GIT_CADENCE, DEFAULT_THEME, GIT_CADENCES, GitSettings, START_MODES, ThemeManifest, ThemeName, TomewiseConfig, SUPPORTED_FORMAT_VERSION } from "./schemas.ts";
+export { DEFAULT_GIT_CADENCE, DEFAULT_THEME, GIT_CADENCES, GitSettings, DEFAULT_NOTES_FOLDER, START_MODES, ThemeManifest, ThemeName, TomewiseConfig, SUPPORTED_FORMAT_VERSION, VaultSettings } from "./schemas.ts";
 export { APP_SETTINGS, isAppSetting, readSubjectAssessments, setKey, writeSetting, writeSubjectAssessments } from "./settings.ts";
 export type { AppSetting } from "./settings.ts";
 export {
@@ -29,6 +29,7 @@ export {
   QueryError,
   SubjectNotFoundError,
   UnsupportedFormatVersionError,
+  VaultDisabledError,
 } from "./errors.ts";
 export { appendEvent, appendEvents, machineName, readEvents } from "./event-store.ts";
 export type { AppendedEvent, AppendOptions, EventRange, EventTarget } from "./event-store.ts";
@@ -36,6 +37,8 @@ export type { LearningEvent, EventKind } from "./events.ts";
 export type { PayloadSchemaVersion } from "./payload.ts";
 export { dueItems, nextDue, quizItems } from "./due.ts";
 export { completedLessons } from "./progress.ts";
+export { dueQuiz, quizSlots } from "./quiz-due.ts";
+export type { QuizSlot } from "./quiz-due.ts";
 export type { DueItem, ScheduledItem } from "./due.ts";
 export { agentPrompts, explanations } from "./prompts.ts";
 export type { AgentPrompt, Explanation, Grade, PromptMilestone } from "./prompts.ts";
@@ -55,3 +58,11 @@ export type { ContractToken, TokenKind } from "./theme-contract.ts";
 export type { JsonSchema, SchemaFile } from "./json-schemas.ts";
 export { checkInitSettings, DEFAULT_APP_URL, initLearningHome } from "./init.ts";
 export type { InitOptions, InitProblem, InitResult, InitSetting, InitSettings } from "./init.ts";
+export { GENERATED_MARKER, isGeneratedFile, writeGeneratedFiles } from "./generated-files.ts";
+export type { GeneratedFile, GeneratedStatus, WrittenFiles } from "./generated-files.ts";
+export { sessionNotes, writeSessionNote } from "./session-notes.ts";
+export type { SessionNote, SessionSummary } from "./session-notes.ts";
+export { generatedFileGlobs, rebuildVault, regenerateVaultFiles } from "./vault.ts";
+export type { VaultRebuild } from "./vault.ts";
+export { curriculumCopy, writeCurriculumCopies } from "./curriculum-copy.ts";
+export { writeSessionsBase } from "./sessions-base.ts";

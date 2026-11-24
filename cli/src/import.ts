@@ -1,4 +1,4 @@
-import { cp, mkdtemp, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { hostname } from "node:os";
 import { basename, join, resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -238,6 +238,7 @@ export async function importWorkspace(io: Io, args: string[]): Promise<number> {
   try {
     for (const entry of present) await cp(join(dir, entry), join(staging, entry), { recursive: true });
     await writeFile(join(staging, "subject.json"), `${JSON.stringify({ name }, null, 2)}\n`);
+    await mkdir(join(root, "subjects"), { recursive: true });
     await rename(staging, dest);
     placed = true;
 

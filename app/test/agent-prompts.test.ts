@@ -69,7 +69,7 @@ describe("ask-your-agent prompts on the subject home", () => {
     const { page } = await open("/s/morse-code");
 
     expect(await page.locator(".tome-prompts").count()).toBe(0);
-    expect(await page.locator(".tome-explanations").count()).toBe(0);
+    expect(await page.locator(".tome-explanation-from").allInnerTexts()).toEqual(["R"]);
   });
 
   it("say what to ask the agent, between the heatmap and what's due", async () => {
@@ -163,7 +163,7 @@ describe("the agent's feedback", () => {
   it("shows next to the explanation it grades", async () => {
     const { page } = await open("/s/morse-code", [saved, graded]);
 
-    const shown = page.locator(".tome-explanation");
+    const shown = page.locator(".tome-explanation", { hasText: saved.data.text });
     expect(await shown.count()).toBe(1);
     expect(await shown.locator(".tome-explanation-from").innerText()).toBe("The late bump");
     expect(await shown.locator(".tome-explanation-text").innerText()).toBe(saved.data.text);
@@ -172,11 +172,11 @@ describe("the agent's feedback", () => {
 
   it("appears once the agent grades an explanation", async () => {
     const { app, page } = await open("/s/morse-code", [saved]);
-    expect(await page.locator(".tome-explanation").count()).toBe(0);
+    expect(await page.locator(".tome-explanation").count()).toBe(1);
 
     await app.post(graded);
 
-    await expect.poll(() => page.locator(".tome-explanation-feedback").count()).toBe(1);
+    await expect.poll(() => page.locator(".tome-explanation-feedback").count()).toBe(2);
     expect(await prompts(page)).toEqual([]);
   });
 });
@@ -216,7 +216,7 @@ describe("prompts in /styleguide", () => {
     expect(await page.evaluate(() => document.documentElement.dataset.styleguideErrors ?? "")).toBe("");
     expect(await page.locator('.styleguide-nav a[href="#prompts"]').innerText()).toBe("Prompts");
     const kinds = await page.locator("#prompts .tome-ask").evaluateAll((els) => els.map((el) => el.getAttribute("data-prompt")));
-    expect(kinds).toEqual(["milestone-done", "exam-unwritten", "exam-ready", "ungraded-explanations"]);
+    expect(kinds).toEqual(["milestone-done", "exam-unwritten", "exam-ready", "quiz-unwritten", "ungraded-explanations"]);
     expect(await page.locator("#prompts .tome-explanation-feedback").count()).toBeGreaterThan(0);
     const overview = '#subject-home [data-styleguide-subject="overview"]';
     expect(await page.locator(`${overview} .tome-ask`).count()).toBe(2);

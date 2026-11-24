@@ -33,7 +33,7 @@ Every lesson ends in `<tome-done>` or a `final` widget, or the app never learns 
 
 ## Exam questions
 
-On an exam page, write each question in the page and name the items it tests. A miss brings those items forward; the question itself is never scheduled.
+On a quiz or exam page, write each question in the page and name the items it tests. A miss brings those items forward; the question itself is never scheduled.
 
 ```html
 <tome-exam-question id="q1" tests="item:letter-k item:letter-r">
@@ -42,9 +42,7 @@ On an exam page, write each question in the page and name the items it tests. A 
 </tome-exam-question>
 ```
 
-Use `<tome-typed answer="…">` with `<option>`s for other accepted answers in place of `<tome-choice>`. To ask by sound, use `<tome-audio ref="item:<id>" choices="…">` instead; it measures what it hears. If the subject's payload schema requires fields, give the question a `payload` with the fixed ones (`payload='{"wpm":20}'`). A required field no control can measure or fix, such as Morse's `heard` on a `<tome-choice>`, gets the answer rejected, so pick a control that supplies it.
-
-End every exam with `<tome-done></tome-done>`: it reads "Finish exam" and shows the score as the learner's score display setting says. The app scores the session over every question on the page and records it as `score` on the exam's `session.end`, even when the score is hidden from the learner. A score at or above the pass mark (the milestone's `passMark`, else the subject's) marks the milestone that names the exam done; a fail changes nothing. To go over results, read the latest `session.end` with `ref` `exam:<id>` and its session's attempts (`data.question` names the question).
+Use `<tome-typed answer="…">` with `<option>`s for other accepted answers in place of `<tome-choice>`. To ask by sound, use `<tome-audio ref="item:<id>" choices="…">` instead; it measures what it hears. If the subject's payload schema requires fields, give the question a `payload` with the fixed ones (`payload='{"wpm":20}'`). A required field no control can measure or fix, such as Morse's `heard` on a `<tome-choice>`, gets the answer rejected, so pick a control that supplies it. Read [ASSESSMENTS-FORMAT.md](./ASSESSMENTS-FORMAT.md) before writing a quiz or exam page: where it goes, when it comes due, and how it is scored.
 
 ## Custom widgets
 

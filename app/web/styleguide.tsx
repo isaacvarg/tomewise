@@ -63,6 +63,7 @@ const demoPrompts: AgentPrompt[] = [
   { kind: "milestone-done", milestone: { id: "koch", title: "Hear the Koch rhythm" }, say: "Mark the “Hear the Koch rhythm” milestone done." },
   { kind: "exam-unwritten", milestone: firstFive, exam: "first-five", say: "Prepare the exam for “Copy K, M, R, S and U”." },
   { kind: "exam-ready", milestone: firstFive, exam: "first-five", say: "Go over my exam results for “Copy K, M, R, S and U”." },
+  { kind: "quiz-unwritten", quiz: { opened: "2026-11-16T00:00:00.000Z" }, say: "Write the Morse code quiz that's due." },
   { kind: "ungraded-explanations", count: 2, refs: ["lesson:0004-the-late-bump", "item:letter-k"], say: "Grade my Morse code explanations." },
 ];
 

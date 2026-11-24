@@ -40,6 +40,7 @@ async function home({ passMark, settings, milestoneStatus = "current" }: Options
     ],
     [`subjects/${SUBJECT}/exams/first-letters.html`]: EXAM,
     [`subjects/${SUBJECT}/exams/practice.html`]: `<tome-exam-question id="p1" tests="item:letter-k"></tome-exam-question>`,
+    [`subjects/${SUBJECT}/quizzes/after-k.html`]: EXAM,
     [`subjects/${SUBJECT}/curriculum.json`]: {
       units: [
         {
@@ -168,7 +169,28 @@ describe("ending an exam session", () => {
     const loaded = await home();
     const lessonEnd = { ...end(), ref: "drill:review" };
 
-    expect(await closeExams(loaded, [lessonEnd, "not an event"])).toEqual({ inputs: [lessonEnd, "not an event"], exams: [] });
+    expect(await closeExams(loaded, [lessonEnd, "not an event"])).toEqual({ inputs: [lessonEnd, "not an event"], exams: [], quizzes: [] });
+  });
+});
+
+describe("ending a written quiz session", () => {
+  const quizEnd = (extra: Record<string, unknown> = {}) => ({ ...end(), ref: "quiz:after-k", ...extra });
+
+  it("records the score against the subject's pass mark and marks no milestone", async () => {
+    const loaded = await home({ passMark: 90 });
+    const quizStart = { ...start(), ref: "quiz:after-k" };
+    await appendEvents(loaded, [quizStart, answer("q1", "correct"), answer("q2", "correct"), answer("q3", "wrong")], { target: "main" });
+
+    const closed = await closeExams(loaded, [quizEnd({ score: 100 })]);
+
+    expect(closed.exams).toEqual([]);
+    expect(closed.quizzes).toEqual([{ subject: SUBJECT, quiz: "after-k", sessionId: SESSION, right: 2, total: 4, score: 50, passMark: 60, passed: false }]);
+    expect(closed.inputs).toEqual([{ ...quizEnd(), score: 50 }]);
+  });
+
+  it("passes through the end of a quiz with no file", async () => {
+    const stray = { ...end(), ref: "quiz:nope" };
+    expect(await closeExams(await home(), [stray])).toEqual({ inputs: [stray], exams: [], quizzes: [] });
   });
 });
 

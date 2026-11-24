@@ -11,6 +11,10 @@ export function isAppChoice(value: string): value is AppChoice {
 }
 
 const CONTAINER_PORT = 4777;
+const REPO = "isaacvarg/tomewise";
+const MARKETPLACE = "tomewise";
+const PLUGIN = "tomewise";
+const TEACH_COMMAND = `/${PLUGIN}:teach`;
 
 export function listenFor(io: Io, appUrl: string | undefined): Listen | string {
   const { port } = new URL(appUrl ?? DEFAULT_APP_URL);
@@ -23,15 +27,17 @@ function shellQuote(value: string): string {
 
 function printSkillInstall(io: Io): void {
   io.stdout("");
-  io.stdout("Install the Tomewise skill so your agent knows the format. It isn't published as a plugin yet; until it is,");
-  io.stdout("copy the skill/ folder of https://github.com/isaacvarg/tomewise into your agent's skills folder,");
-  io.stdout("such as ~/.claude/skills/teach for Claude Code.");
+  io.stdout("Install the Tomewise plugin so your agent knows the format. In Claude Code:");
+  io.stdout(`  claude plugin marketplace add ${REPO}`);
+  io.stdout(`  claude plugin install ${PLUGIN}@${MARKETPLACE}`);
+  io.stdout("For other agents, install its skills with:");
+  io.stdout(`  npx skills add ${REPO}`);
 }
 
 function printFirstSubject(io: Io, root: string, subject: string | undefined): void {
   io.stdout("");
   io.stdout("Give your agent this message to create your first subject:");
-  io.stdout(`  /teach Set up a new subject in ${root}${subject ? `: ${subject}` : "."}`);
+  io.stdout(`  ${TEACH_COMMAND} Set up a new subject in ${root}${subject ? `: ${subject}` : "."}`);
 }
 
 function printDocker(io: Io, root: string, listen: Listen): void {

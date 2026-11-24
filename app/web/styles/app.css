@@ -51,6 +51,9 @@
   .tome-due-what { font-weight: 600; min-width: 0; }
   .tome-due-how { color: var(--t-muted); text-align: right; font-variant-numeric: tabular-nums; }
   .tome-due .tome-hint { font-size: .88rem; }
+  .tome-due-quiz { flex: 1; display: flex; justify-content: space-between; gap: 1rem; color: inherit; text-decoration: none; }
+  .tome-due-quiz .tome-due-what { color: var(--t-accent); }
+  .tome-due-quiz:focus-visible { outline: 2px solid var(--t-accent); outline-offset: 2px; }
 
   .tome-streak { display: flex; align-items: baseline; gap: .55rem; }
   .tome-streak-num { font-family: var(--t-display); font-size: 2.3rem; line-height: 1; font-variant-numeric: tabular-nums; }

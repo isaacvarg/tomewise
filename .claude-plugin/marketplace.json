@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "tomewise",
+  "description": "Tomewise: teach yourself anything in a self-hosted learning home.",
+  "owner": {
+    "name": "Isaac Vargas",
+    "url": "https://github.com/isaacvarg"
+  },
+  "plugins": [
+    {
+      "name": "tomewise",
+      "source": "./skill",
+      "description": "Teach yourself anything in a Tomewise learning home: lessons, practice, quizzes and review driven by your history.",
+      "category": "learning"
+    }
+  ]
+}

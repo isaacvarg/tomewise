@@ -1,5 +1,5 @@
 import type { Dirent } from "node:fs";
-import { readdir } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
 import { Curriculum } from "./curriculum.ts";
@@ -40,6 +40,7 @@ export interface Subject {
   settings: SubjectSettingsResolved;
   lessons: string[];
   quizzes: string[];
+  quizAfter: Record<string, string>;
   exams: string[];
   references: string[];
   itemSets: ItemSet[];
@@ -152,6 +153,38 @@ async function readDrills(root: string, id: string, issues: ValidationIssue[]): 
   return drills;
 }
 
+const META = /<meta\b[^>]*>/gi;
+const ATTRIBUTE = /([\w-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/g;
+
+const COMMENT = /<!--[\s\S]*?-->/g;
+
+export function pageMeta(html: string, name: string): string | undefined {
+  for (const [tag] of html.replace(COMMENT, "").matchAll(META)) {
+    const attributes = Object.fromEntries([...tag.matchAll(ATTRIBUTE)].map((match) => [match[1]!.toLowerCase(), match[2] ?? match[3] ?? match[4]!]));
+    if (attributes.name === name) return attributes.content;
+  }
+  return undefined;
+}
+
+async function readQuizAfter(root: string, id: string, quizzes: readonly string[], lessons: readonly string[], issues: ValidationIssue[]): Promise<Record<string, string>> {
+  const after: Record<string, string> = {};
+  const files = quizzes.map((quiz) => subjectPath(id, "quizzes", `${quiz}.html`));
+  const pages = await Promise.all(files.map((file) => readFile(join(root, file), "utf8")));
+  for (const [index, quiz] of quizzes.entries()) {
+    const file = files[index]!;
+    const declared = pageMeta(pages[index]!, "tome-after");
+    if (declared === undefined) continue;
+    const lesson = /^lesson:(.+)$/.exec(declared)?.[1];
+    if (lesson === undefined) {
+      issues.push({ file, path: "", message: `tome-after is "${declared}"; name the lesson this quiz follows as lesson:<id>` });
+      continue;
+    }
+    if (!lessons.includes(lesson)) issues.push({ file, path: "", message: `tome-after names lesson "${lesson}", which is not in ${subjectPath(id, "lessons")}` });
+    after[quiz] = declared;
+  }
+  return after;
+}
+
 export async function readSubject(root: string, id: string): Promise<SubjectRead> {
   const issues: ValidationIssue[] = [];
   const dir = join(root, SUBJECTS_DIR, id);
@@ -163,6 +196,7 @@ export async function readSubject(root: string, id: string): Promise<SubjectRead
   const lessons = await namesIn(join(dir, "lessons"), ".html");
   const quizzes = await namesIn(join(dir, "quizzes"), ".html");
   const exams = await namesIn(join(dir, "exams"), ".html");
+  const quizAfter = await readQuizAfter(root, id, quizzes, lessons, issues);
   const references = await namesIn(join(dir, "reference"), ".html");
 
   const itemSets: ItemSet[] = [];
@@ -202,6 +236,7 @@ export async function readSubject(root: string, id: string): Promise<SubjectRead
       file: subjectFile,
       lessons,
       quizzes,
+      quizAfter,
       exams,
       references,
       itemSets,

@@ -65,7 +65,7 @@ describe("goal.changed", () => {
       file: mainFile(),
       subject: "morse-code",
       kind: "goal.changed",
-      schemaVersion: 2,
+      schemaVersion: 3,
       data: { from: [], to: [tenMinutes] },
     });
   });

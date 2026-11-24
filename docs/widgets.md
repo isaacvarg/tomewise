@@ -40,13 +40,23 @@ The app injects `tome.js` and the page context into every lesson's `<head>`. A l
 
 The session ref is `<kind>:<id>`, such as `quiz:week-1`. A page with no context posts nothing.
 
+### A written quiz's lesson
+
+A quiz page in `quizzes/` declares the lesson it follows in its own `<head>`:
+
+```html
+<meta name="tome-after" content="lesson:0002-r">
+```
+
+The quiz fills the first quiz slot that opens once that lesson is completed: what's due then links this page instead of the app-built quiz, and the "quiz due with none written" prompt goes away. The quiz stays in later slots until a session of it ends with a score; after that it fills none. Two quizzes after the same lesson take turns in file-name order. A quiz with no `tome-after` never fills a slot. Validation flags a `tome-after` that isn't `lesson:<id>`, or that names a lesson the subject doesn't have.
+
 ## Sessions
 
 - Loading a page posts nothing.
 - The first `pointerdown` or `keydown` on the page posts `session.start` with `ref` set to the page (`lesson:0001-greetings`). So does the first attempt, if it comes first.
 - `pagehide` posts `session.end` with the session's duration in whole ms, through `navigator.sendBeacon`. Attempts are posted as they happen, so a crash keeps them.
 - A page restored from the back/forward cache starts a new session on its next interaction.
-- Completing the lesson (`<tome-done>`, a `final` widget or `tome.complete()`) ends the session; later interaction starts no new one, so leaving posts no second `session.end`. Finishing an exam (`<tome-done>` on an exam page, or `tome.finish()`) does the same.
+- Completing the lesson (`<tome-done>`, a `final` widget or `tome.complete()`) ends the session; later interaction starts no new one, so leaving posts no second `session.end`. Finishing an exam or a written quiz (`<tome-done>` on its page, or `tome.finish()`) does the same.
 
 ## The `tome` API
 
@@ -378,7 +388,7 @@ Keyboard: Tab into the text box, Ctrl+Enter (⌘+Enter) saves. Touch: tap Save e
 
 ## `<tome-exam-question>`
 
-An exam question on an exam page. Write the question inside the tag, then one answer control: a `<tome-choice>` or `<tome-typed>` whose answer is written in the page instead of coming from an item (`answer` holds the right answer, and `<option>` children hold the choices or other accepted answers), or a `<tome-audio>` with a `ref` to the item it plays.
+An exam question on an exam or written quiz page. Write the question inside the tag, then one answer control: a `<tome-choice>` or `<tome-typed>` whose answer is written in the page instead of coming from an item (`answer` holds the right answer, and `<option>` children hold the choices or other accepted answers), or a `<tome-audio>` with a `ref` to the item it plays.
 
 | Attribute | Meaning |
 | --------- | ------- |
@@ -403,15 +413,17 @@ An exam question on an exam page. Write the question inside the tag, then one an
 </tome-exam-question>
 ```
 
-`id` names the question within the exam and `tests` lists the items it tests. The answer is graded as in `<tome-choice>` and `<tome-typed>`, then posted as one attempt per tested item: `ref` is the item, the outcome, grade and duration are the same for each, and `data` is the answer control's data (what `<tome-audio>` measures, plus the control's own `payload`), then the question's `payload`, then `question`: the question's `id`. A miss is a wrong attempt on each of those items, so they come due sooner. The exam question itself is never scheduled. On an exam page the session's `ref` is the exam.
+`id` names the question within the exam and `tests` lists the items it tests. The answer is graded as in `<tome-choice>` and `<tome-typed>`, then posted as one attempt per tested item: `ref` is the item, the outcome, grade and duration are the same for each, and `data` is the answer control's data (what `<tome-audio>` measures, plus the control's own `payload`), then the question's `payload`, then `question`: the question's `id`. A miss is a wrong attempt on each of those items, so they come due sooner. The exam question itself is never scheduled. The session's `ref` is the page: `exam:<id>` or `quiz:<id>`.
 
-End the exam with a `<tome-done>`: on an exam page it reads "Finish exam" and shows the score.
+End the exam or quiz with a `<tome-done>`: it reads "Finish exam" or "Finish quiz" and shows the score.
 
 ### Exam scores
 
 When an exam's `session.end` reaches the app, by "Finish exam" or by the learner leaving the page, the app scores the session and writes the score into that event's `score`: the percentage of the exam's questions whose latest answer was right, rounded down to two decimals. Every `<tome-exam-question>` in the exam file counts, so one left unanswered counts as missed. A score the page sends is replaced. The score is recorded whatever `scoreDisplay` says, so the agent can read it.
 
 The exam passes when the score is at or above the pass mark: the `passMark` of the milestone that names the exam in `curriculum.json`, otherwise the subject's resolved `passMark` setting. A pass appends `milestone.status` with `data.status` `done` for that milestone, in the same session, unless it is already done. A fail appends nothing and locks nothing. The response to that `POST /api/events` carries `exams`: one `{ subject, exam, sessionId, milestone, right, total, score, passMark, passed }` per exam it closed.
+
+A written quiz is scored the same way when its `session.end` (`quiz:<id>`) reaches the app, against the subject's resolved `passMark`; it marks no milestone. Every attempt in the session counts, so a quiz may hold item widgets as well as exam questions. The response carries `quizzes`: one `{ subject, quiz, sessionId, right, total, score, passMark, passed }` per quiz it closed.
 
 `question` is reserved in attempt payloads for this id, so a subject's payload schema can't define an attempt field with that name.
 
@@ -436,11 +448,11 @@ A question with no `id`, no `tests`, an unknown item in `tests` or no answer con
 
 | Attribute | Meaning                                  |
 | --------- | ---------------------------------------- |
-| `label`   | Button text; `Done` if absent, `Finish exam` on an exam page |
+| `label`   | Button text; `Done` if absent, `Finish exam` on an exam page, `Finish quiz` on a quiz page |
 
 Marks the end of a lesson. Pressing the button calls `tome.complete(this)`: it posts `lesson.completed` (ref = the lesson) and `session.end`, then shows "Lesson complete" and disables itself. If the post fails, it shows the notice and stays pressable.
 
-On an exam page it finishes the exam instead. Pressing it calls `tome.finish(this)`, which posts `session.end`. The app scores the session and records the score on that `session.end` (see [exam scores](#exam-scores)). The widget then makes the exam questions inert and shows the score as the subject's `scoreDisplay` says: the percentage (`number`), "Passed" or "Not passed" (`pass-fail`), or no score at all (`hidden`).
+On an exam or quiz page it finishes the exam or quiz instead. Pressing it calls `tome.finish(this)`, which posts `session.end`. The app scores the session and records the score on that `session.end` (see [exam scores](#exam-scores)). The widget then makes the exam questions inert and shows the score as the subject's `scoreDisplay` says: the percentage (`number`), "Passed" or "Not passed" (`pass-fail`), or no score at all (`hidden`).
 
 Keyboard: Tab to the button, Enter or Space. Touch: tap it.
 
@@ -449,8 +461,8 @@ Keyboard: Tab to the button, Enter or Space. Touch: tap it.
   <div class="tome-done" data-state="ready | saving | done">
     <button class="tome-done-button">Done</button>
     <p class="tome-verdict" role="status">Lesson complete</p>   <!-- once done, on a lesson -->
-    <div class="tome-exam-score" role="status" data-display="number | pass-fail | hidden" data-passed="true | false">  <!-- once done, on an exam; no data-passed when hidden -->
-      <p class="tome-verdict">Exam finished</p>
+    <div class="tome-exam-score" role="status" data-display="number | pass-fail | hidden" data-passed="true | false">  <!-- once done, on an exam or quiz; no data-passed when hidden -->
+      <p class="tome-verdict">Exam finished</p>                    <!-- "Quiz finished" on a quiz -->
       <span class="tome-score">80%</span>                          <!-- "Passed" or "Not passed" for pass-fail; absent when hidden -->
       <span class="tome-score-sub">8 of 10 right · pass mark 70%</span>
     </div>

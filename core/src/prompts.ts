@@ -1,5 +1,6 @@
 import { type LearningEvent, parseRef } from "./events.ts";
 import { examsOn, milestoneStatusesOf } from "./milestones.ts";
+import { dueQuiz, type QuizSlot } from "./quiz-due.ts";
 import type { Subject } from "./subject.ts";
 
 export interface PromptMilestone {
@@ -11,6 +12,7 @@ export type AgentPrompt =
   | { kind: "milestone-done"; milestone: PromptMilestone; say: string }
   | { kind: "exam-unwritten"; milestone: PromptMilestone; exam: string; say: string }
   | { kind: "exam-ready"; milestone: PromptMilestone; exam: string; say: string }
+  | { kind: "quiz-unwritten"; quiz: QuizSlot; say: string }
   | { kind: "ungraded-explanations"; count: number; refs: string[]; say: string };
 
 export interface Grade {
@@ -58,7 +60,7 @@ function milestonePrompt(subject: Subject, milestone: NonNullable<Subject["curri
   return { kind: "exam-unwritten", milestone: named, exam: milestone.exam, say: `Prepare the exam for “${milestone.title}”.` };
 }
 
-export function agentPrompts(subject: Subject, events: readonly LearningEvent[]): AgentPrompt[] {
+export function agentPrompts(subject: Subject, events: readonly LearningEvent[], now = new Date()): AgentPrompt[] {
   const done = new Set<string>();
   for (const event of events) {
     const ref = event.kind === "lesson.completed" && event.ref !== undefined ? parseRef(event.ref) : undefined;
@@ -69,6 +71,8 @@ export function agentPrompts(subject: Subject, events: readonly LearningEvent[])
     .flatMap((unit) => unit.milestones)
     .filter((milestone) => !FINISHED.has(statuses[milestone.id]!) && milestone.lessons.length > 0 && milestone.lessons.every((id) => done.has(id)))
     .map((milestone) => milestonePrompt(subject, milestone));
+  const quiz = dueQuiz(subject, events, now);
+  if (quiz && quiz.quiz === undefined) prompts.push({ kind: "quiz-unwritten", quiz, say: `Write the ${subject.name} quiz that's due.` });
   const ungraded = explanations(events)
     .filter((explanation) => explanation.grade === undefined)
     .reverse();

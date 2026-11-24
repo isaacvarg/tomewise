@@ -231,6 +231,8 @@
     }
     if (url.pathname === "/api/subjects/morse-code/progress") return json({ completedLessons: morseLessons.slice(0, 4), milestones: { "first-five": "current", "next-five": "upcoming" } });
     if (url.pathname === "/api/subjects") return json({ subjects: homeSubjects.map(({ due, ...subject }) => subject) });
+    if (url.pathname === "/api/subjects/morse-code/quiz/due") return json({ quiz: { opened: "2026-11-16T00:00:00.000Z" } });
+    if (/^\/api\/subjects\/[^/]+\/quiz\/due$/.test(url.pathname)) return json({ quiz: null });
     const homeSubject = homeSubjects.find((candidate) => url.pathname === `/api/subjects/${candidate.id}/due`);
     if (homeSubject) return json({ due: dueFor(homeSubject) });
     if (url.pathname === subject) return json(data.subject);

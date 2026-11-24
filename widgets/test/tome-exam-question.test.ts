@@ -1,4 +1,4 @@
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { startWidgetApp } from "./browser.ts";
@@ -228,6 +228,10 @@ async function openMorseExam() {
       await rm(join(dir, "events"), { recursive: true, force: true });
       await mkdir(join(dir, "exams"), { recursive: true });
       await writeFile(join(dir, "exams/check.html"), MORSE_EXAM);
+      const file = join(dir, "subject.json");
+      const subject = JSON.parse(await readFile(file, "utf8"));
+      subject.payloadSchemas = subject.payloadSchemas.filter((schema: { version: number }) => schema.version <= 2);
+      await writeFile(file, JSON.stringify(subject));
     },
   });
   const page = await widgets.open(`/s/${MORSE}/exams/check.html`);

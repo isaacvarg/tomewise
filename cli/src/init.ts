@@ -1,5 +1,5 @@
-import { access } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { access, stat } from "node:fs/promises";
+import { isAbsolute, join, normalize, resolve, sep } from "node:path";
 import { parseArgs } from "node:util";
 import {
   CONFIG_FILE,
@@ -12,9 +12,11 @@ import {
   type InitProblem,
   type InitSetting,
   type InitSettings,
+  loadLearningHome,
   type QuizFrequency,
   SCORE_DISPLAYS,
   type Timed,
+  writeSessionsBase,
 } from "@tomewise/core";
 import { GIT_REMOTE, setUpGit } from "./git.ts";
 import { APP_CHOICES, handOff, isAppChoice, listenFor, type AppChoice, type Launch } from "./handoff.ts";
@@ -22,7 +24,7 @@ import type { Io } from "./main.ts";
 import { createPrompter, PromptCancelled, type Prompter } from "./prompt.ts";
 
 export const INIT_USAGE = [
-  "  tome init [<dir>] [--timezone <IANA zone>] [--week-start <weekday>] [--rest-days <0-6>] [--app-url <url>]",
+  "  tome init [<dir> | --vault <vault> [--vault-folder <subfolder>] | --no-vault] [--timezone <IANA zone>] [--week-start <weekday>] [--rest-days <0-6>] [--app-url <url>]",
   "            [--git [--remote <url>] [--cadence <session|hourly|daily>] [--push | --no-push] | --no-git]",
   "            [--assessments | --no-assessments] [--quiz-frequency <lessons|weekly|on-demand>] [--quiz-length <n>]",
   "            [--exams | --no-exams] [--timed <minutes|off>] [--score-display <number|pass-fail|hidden>] [--pass-mark <0-100>]",
@@ -43,8 +45,16 @@ const flagFor: Record<InitSetting, string> = {
   passMark: "--pass-mark",
 };
 
+export const DEFAULT_VAULT_FOLDER = "Tomewise";
+
+interface VaultAnswer {
+  path: string;
+  folder?: string;
+}
+
 interface Answers {
   dir?: string;
+  vault?: VaultAnswer | false;
   settings: InitSettings;
   remoteUrl?: string;
   app?: AppChoice;
@@ -52,6 +62,11 @@ interface Answers {
 }
 
 type Parsed = { answers: Answers; problems: InitProblem[] };
+
+interface FlagProblem {
+  flag: string;
+  message: string;
+}
 
 function parseInitArgs(args: string[]): Parsed | string {
   let values: Record<string, string | boolean | undefined>;
@@ -79,12 +94,21 @@ function parseInitArgs(args: string[]): Parsed | string {
         "pass-mark": { type: "string" },
         app: { type: "string" },
         subject: { type: "string" },
+        vault: { type: "string" },
+        "no-vault": { type: "boolean" },
+        "vault-folder": { type: "string" },
       },
     }));
   } catch (error) {
     return (error as Error).message;
   }
   if (positionals.length > 1) return `Expected one folder, got ${positionals.length}`;
+  const vault = values.vault as string | false | undefined;
+  const vaultFlags = args.filter((arg) => arg === "--no-vault" || arg === "--vault" || arg.startsWith("--vault="));
+  if (vaultFlags.includes("--no-vault") && vaultFlags.some((flag) => flag !== "--no-vault")) return "--vault and --no-vault conflict; use one";
+  const vaultFolder = values["vault-folder"] as string | undefined;
+  if (vaultFolder !== undefined && typeof vault !== "string") return "--vault-folder needs --vault";
+  if (typeof vault === "string" && positionals.length > 0) return "With --vault, give the folder inside the vault with --vault-folder, not as <dir>";
   const gitFlags = [
     values.remote !== undefined && "--remote",
     values.cadence !== undefined && "--cadence",
@@ -116,6 +140,7 @@ function parseInitArgs(args: string[]): Parsed | string {
   return {
     answers: {
       dir: positionals[0],
+      vault: typeof vault === "string" ? { path: vault, folder: vaultFolder } : vault,
       settings: {
         timezone: values.timezone as string | undefined,
         weekStart: values["week-start"] as string | undefined,
@@ -180,7 +205,32 @@ function parsePassMark(raw: string): number | Problem {
 }
 
 function coreSettings(answers: Answers): InitSettings {
-  return { ...answers.settings, remote: answers.remoteUrl === undefined ? undefined : GIT_REMOTE };
+  return { ...answers.settings, remote: answers.remoteUrl === undefined ? undefined : GIT_REMOTE, vault: answers.vault ? true : undefined };
+}
+
+function homeDir(answers: Pick<Answers, "dir" | "vault">): string {
+  return answers.vault ? join(answers.vault.path, answers.vault.folder ?? DEFAULT_VAULT_FOLDER) : (answers.dir ?? ".");
+}
+
+async function vaultProblem(path: string): Promise<string | undefined> {
+  const found = await stat(path).catch(() => undefined);
+  return found?.isDirectory() ? undefined : `${path} is not a folder; give the folder that holds your vault`;
+}
+
+function vaultFolderProblem(folder: string): string | undefined {
+  const normalized = normalize(folder);
+  const outside = isAbsolute(folder) || /[\\:]/.test(folder) || normalized === "." || normalized === ".." || normalized.startsWith(`..${sep}`);
+  return outside ? `Use a folder inside the vault, such as "${DEFAULT_VAULT_FOLDER}", not "${folder}"` : undefined;
+}
+
+async function vaultProblems(cwd: string, vault: Answers["vault"]): Promise<FlagProblem[]> {
+  if (!vault) return [];
+  const problems: FlagProblem[] = [];
+  const pathMessage = await vaultProblem(resolve(cwd, vault.path));
+  if (pathMessage !== undefined) problems.push({ flag: "--vault", message: pathMessage });
+  const folderMessage = vault.folder === undefined ? undefined : vaultFolderProblem(vault.folder);
+  if (folderMessage !== undefined) problems.push({ flag: "--vault-folder", message: folderMessage });
+  return problems;
 }
 
 function problemWith(setting: InitSetting, settings: InitSettings): string | undefined {
@@ -238,10 +288,37 @@ async function exists(path: string): Promise<boolean> {
   }
 }
 
+async function askChecked(
+  prompter: Prompter,
+  question: string,
+  fallback: string,
+  check: (answer: string) => Promise<string | undefined> | string | undefined,
+): Promise<string> {
+  for (;;) {
+    const answer = await prompter.ask(question, fallback);
+    const problem = await check(answer);
+    if (problem === undefined) return answer;
+    prompter.say(problem);
+  }
+}
+
+async function askWhere(io: Io, prompter: Prompter, answers: Answers): Promise<Pick<Answers, "dir" | "vault">> {
+  let vault = answers.vault;
+  if (answers.dir === undefined && vault === undefined && (await askYesNo(prompter, "Using Obsidian?", false))) {
+    const path = await askChecked(prompter, "Vault folder", io.cwd, (answer) => vaultProblem(resolve(io.cwd, answer)));
+    vault = { path: resolve(io.cwd, path) };
+  }
+  if (vault) {
+    const folder = vault.folder ?? (await askChecked(prompter, "Subfolder of the vault for the learning home", DEFAULT_VAULT_FOLDER, vaultFolderProblem));
+    return { vault: { ...vault, folder } };
+  }
+  return { dir: answers.dir ?? (await prompter.ask("Where should the learning home go?", io.cwd)), vault };
+}
+
 async function ask(io: Io, prompter: Prompter, answers: Answers): Promise<Answers | { exists: string }> {
   const settings = { ...answers.settings };
-  const dir = answers.dir ?? (await prompter.ask("Where should the learning home go?", io.cwd));
-  const root = resolve(io.cwd, dir);
+  const where = await askWhere(io, prompter, answers);
+  const root = resolve(io.cwd, homeDir(where));
   if (await exists(join(root, CONFIG_FILE))) return { exists: root };
 
   settings.timezone ??= await askSetting(prompter, "timezone", "Timezone", Intl.DateTimeFormat().resolvedOptions().timeZone, (raw) => raw);
@@ -269,7 +346,7 @@ async function ask(io: Io, prompter: Prompter, answers: Answers): Promise<Answer
     const answer = await prompter.ask("What do you want to learn first? (blank to skip)");
     subject = answer === "" ? false : answer;
   }
-  return { dir, settings, remoteUrl, app, subject };
+  return { ...where, settings, remoteUrl, app, subject };
 }
 
 const ASSESSMENT_MODES = ["defaults", "off", "choose"] as const;
@@ -299,8 +376,12 @@ async function askAssessments(prompter: Prompter, settings: InitSettings): Promi
   settings.passMark = await askSetting(prompter, "passMark", "Pass mark (%)", String(DEFAULT_ASSESSMENTS.passMark), parsePassMark);
 }
 
-function report(io: Io, problems: InitProblem[]): void {
-  for (const problem of problems) io.stderr(`${flagFor[problem.setting]}: ${problem.message}`);
+function flagged(problems: InitProblem[]): FlagProblem[] {
+  return problems.map((problem) => ({ flag: flagFor[problem.setting], message: problem.message }));
+}
+
+function report(io: Io, problems: FlagProblem[]): void {
+  for (const problem of problems) io.stderr(`${problem.flag}: ${problem.message}`);
   io.stderr("Nothing was written.");
 }
 
@@ -314,8 +395,9 @@ export async function init(io: Io, args: string[], usage: string): Promise<numbe
   const checked = checkInitSettings(coreSettings(parsed.answers));
   const remoteStillAsked = io.prompt !== undefined && parsed.answers.remoteUrl === undefined;
   const problems = [
-    ...parsed.problems,
-    ...(checked.ok ? [] : checked.problems.filter((problem) => !(remoteStillAsked && problem.setting === "push"))),
+    ...flagged(parsed.problems),
+    ...flagged(checked.ok ? [] : checked.problems.filter((problem) => !(remoteStillAsked && problem.setting === "push"))),
+    ...(await vaultProblems(io.cwd, parsed.answers.vault)),
   ];
   if (problems.length > 0) {
     report(io, problems);
@@ -353,11 +435,12 @@ export async function init(io: Io, args: string[], usage: string): Promise<numbe
     launch = { app, listen };
   }
 
-  const result = await initLearningHome(answers.dir ?? ".", coreSettings(answers), { cwd: io.cwd, env: io.env });
+  const result = await initLearningHome(homeDir(answers), coreSettings(answers), { cwd: io.cwd, env: io.env });
   switch (result.kind) {
     case "created": {
       io.stdout(`Created a learning home in ${result.root}.`);
       io.stdout(`Saved it as your learning home in ${result.globalConfig}.`);
+      if (answers.vault) await writeSessionsBase(await loadLearningHome(result.root));
       if (answers.settings.git) {
         const git = await setUpGit(result.root, answers.remoteUrl);
         if (!git.ok) {
@@ -372,7 +455,7 @@ export async function init(io: Io, args: string[], usage: string): Promise<numbe
       io.stderr(`${result.root} is already a learning home; nothing was changed.`);
       return 1;
     case "invalid":
-      report(io, result.problems);
+      report(io, flagged(result.problems));
       return 1;
     case "global-config":
       io.stderr(result.message);

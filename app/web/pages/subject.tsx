@@ -1,8 +1,9 @@
 import { type KeyboardEvent, type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router";
-import { type Activity, type AgentPrompt, api, type DueItem, type Explanation, type Progress, type Subject, type SubjectPrompts } from "../api.ts";
+import { type Activity, type AgentPrompt, api, type DueItem, type Explanation, type Progress, type QuizSlot, type Subject, type SubjectPrompts } from "../api.ts";
+import { DueQuiz } from "../due-quiz.tsx";
 import { Heatmap } from "../heatmap.tsx";
-import { count, minutesFor } from "../home/model.ts";
+import { count, dueMeta, minutesFor, quizPath } from "../home/model.ts";
 import { useLoad } from "../load.ts";
 import { Failed, Screen } from "../screen.tsx";
 import { Stats } from "../subject/stats.tsx";
@@ -31,17 +32,19 @@ interface SubjectData {
   activity: Activity;
   progress: Progress;
   due: DueItem[];
+  quiz: QuizSlot | null;
   prompts: SubjectPrompts;
 }
 
 async function loadSubjectHome(id: string): Promise<SubjectData> {
-  const [subject, activity, progress, prompts] = await Promise.all([
+  const [subject, activity, progress, prompts, quiz] = await Promise.all([
     api.subject(id),
     api.activity(id),
     api.progress(id),
     api.prompts(id),
+    api.dueQuiz(id),
   ]);
-  return { subject, activity, progress, prompts, due: await api.due(id, activity.today) };
+  return { subject, activity, progress, prompts, quiz, due: await api.due(id, activity.today) };
 }
 
 const backLink = (
@@ -235,7 +238,7 @@ export function Prompts({ subject, prompts }: { subject: Subject; prompts: Agent
   );
 }
 
-const promptKey = (prompt: AgentPrompt) => (prompt.kind === "ungraded-explanations" ? prompt.kind : `${prompt.kind}:${prompt.milestone.id}`);
+const promptKey = (prompt: AgentPrompt) => ("milestone" in prompt ? `${prompt.kind}:${prompt.milestone.id}` : prompt.kind);
 
 function PromptText({ subject, prompt }: { subject: Subject; prompt: AgentPrompt }) {
   switch (prompt.kind) {
@@ -266,6 +269,15 @@ function PromptText({ subject, prompt }: { subject: Subject; prompt: AgentPrompt
           <a className="tome-ask-go" href={subjectPath(subject.id, "exams", `${prompt.exam}.html`)}>
             Take the exam
           </a>
+        </>
+      );
+    case "quiz-unwritten":
+      return (
+        <>
+          A quiz is due and none is written yet.{" "}
+          <Link className="tome-ask-go" to={quizPath(subject.id)}>
+            Take the app-built quiz
+          </Link>
         </>
       );
     case "ungraded-explanations": {
@@ -335,29 +347,36 @@ export function Feedback({ explanations }: { explanations: Explanation[] }) {
 }
 
 function Due({ data }: { data: SubjectData }) {
-  const { subject, due } = data;
+  const { subject, due, quiz } = data;
   const minutes = minutesFor(due.length);
   return (
     <section className="tome-section tome-due">
       <div className="tome-section-head">
         <h3>Due here</h3>
-        <span className="tome-meta">{count(due.length, "item")}</span>
+        <span className="tome-meta">{dueMeta(due.length, quiz ? 1 : 0)}</span>
       </div>
-      {due.length === 0 ? (
+      {due.length === 0 && !quiz ? (
         <p className="tome-hint">Nothing due here today.</p>
       ) : (
         <ul>
-          <li>
-            <span className="tome-due-what">Review</span>
-            <span className="tome-due-how">
-              {count(due.length, "item")} · {minutes} min
-            </span>
-          </li>
+          {due.length > 0 && (
+            <li>
+              <span className="tome-due-what">Review</span>
+              <span className="tome-due-how">
+                {count(due.length, "item")} · {minutes} min
+              </span>
+            </li>
+          )}
+          {quiz && (
+            <li>
+              <DueQuiz subject={subject} quiz={quiz} />
+            </li>
+          )}
         </ul>
       )}
       {due.length === 0 ? (
         <a className="tome-start" aria-disabled="true">
-          Start {subject.name} <small>nothing due</small>
+          Start {subject.name} <small>{quiz ? "no items due" : "nothing due"}</small>
         </a>
       ) : (
         <Link className="tome-start" to={`/run/due?subject=${encodeURIComponent(subject.id)}`}>
@@ -367,8 +386,8 @@ function Due({ data }: { data: SubjectData }) {
           </small>
         </Link>
       )}
-      {subject.settings.assessments.enabled && (
-        <Link className="tome-quiz-me" to={`/run/quiz?subject=${encodeURIComponent(subject.id)}`}>
+      {subject.settings.assessments.enabled && !quiz && (
+        <Link className="tome-quiz-me" to={quizPath(subject.id)}>
           Quiz me
         </Link>
       )}

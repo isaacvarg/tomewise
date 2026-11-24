@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { dueItems, loadLearningHome, loadSubject, nextDue, readActivity, readEvents } from "@tomewise/core";
@@ -62,7 +62,7 @@ describe("GET /api/subjects/:subject/events", () => {
     const response = await app.get("/api/subjects/morse-code/events");
 
     expect(response.body).toEqual({ events: await readEvents(home, "morse-code") });
-    expect(response.body.events).toHaveLength(33);
+    expect(response.body.events).toHaveLength(35);
   });
 
   it("gives 400 for a malformed date", async () => {
@@ -335,24 +335,36 @@ describe("ask-your-agent prompts", () => {
     exam: "first-five",
     say: "Prepare the exam for “Copy K, M, R, S and U”.",
   };
+  const examUnwritten = (root: string) => rm(join(root, "subjects/morse-code/exams/first-five.html"));
   const gradePrompt = { kind: "ungraded-explanations", count: 1, refs: ["lesson:0004-the-late-bump"], say: "Grade my Morse code explanation." };
+  const example = {
+    id: "01M6ERETN0YYARVDHJG0T15Q2K",
+    ts: "2026-11-02T18:31:00.000Z",
+    ref: "lesson:0002-r",
+    text: "R is dit-dah-dit. It is K backwards.",
+    grade: {
+      id: "01M6EXHSG0K3Q8WZ7N5TB2FD9C",
+      ts: "2026-11-02T20:00:00.000Z",
+      feedback: "Close. R is dit-dah-dit and K is dah-di-dah, so R is K with dits and dahs swapped, not reversed. Reversed, R reads the same.",
+    },
+  };
 
   it("are empty while nothing needs the agent", async () => {
     const app = await startTestApp();
 
-    expect((await app.get("/api/subjects/morse-code/prompts")).body).toEqual({ prompts: [], explanations: [] });
+    expect((await app.get("/api/subjects/morse-code/prompts")).body).toEqual({ prompts: [], explanations: [example] });
     expect((await app.get("/api/prompts")).body).toEqual({ subjects: [] });
   });
 
   it("come and go with the events, and explanations carry the agent's feedback", async () => {
-    const app = await startTestApp();
+    const app = await startTestApp(examUnwritten);
 
     expect((await app.post([...lessonsDone, saved])).status).toBe(201);
     const waiting = await app.get("/api/subjects/morse-code/prompts");
     expect(waiting.status).toBe(200);
     expect(waiting.body).toEqual({
       prompts: [examPrompt, gradePrompt],
-      explanations: [{ id: saved.id, ts: saved.ts, ref: saved.ref, text: saved.data.text }],
+      explanations: [{ id: saved.id, ts: saved.ts, ref: saved.ref, text: saved.data.text }, example],
     });
     expect((await app.get("/api/prompts")).body).toEqual({ subjects: [{ subject: "morse-code", prompts: [examPrompt, gradePrompt] }] });
 
@@ -362,6 +374,7 @@ describe("ask-your-agent prompts", () => {
       prompts: [examPrompt],
       explanations: [
         { id: saved.id, ts: saved.ts, ref: saved.ref, text: saved.data.text, grade: { id: graded.id, ts: graded.ts, feedback: graded.data.feedback } },
+        example,
       ],
     });
   });
@@ -370,5 +383,39 @@ describe("ask-your-agent prompts", () => {
     const app = await startTestApp();
 
     expect((await app.get("/api/subjects/klingon/prompts")).status).toBe(404);
+  });
+});
+
+describe("GET /api/subjects/:subject/quiz/due", () => {
+  const clock = (at: string) => ({ now: () => new Date(at), every: () => () => {} });
+  const weekly = async (root: string) => {
+    const file = join(root, "subjects/morse-code/subject.json");
+    const subject = JSON.parse(await readFile(file, "utf8"));
+    await writeFile(file, JSON.stringify({ ...subject, settings: { assessments: { quizFrequency: "weekly" } } }));
+    await rm(join(root, "subjects/morse-code/quizzes/k-m-r.html"));
+  };
+
+  it("gives the due quiz slot by the app's clock, and none once a quiz is taken", async () => {
+    const app = await startTestApp(weekly, undefined, { clock: clock("2026-11-21T12:00:00Z") });
+
+    expect((await app.get("/api/subjects/morse-code/quiz/due")).body).toEqual({ quiz: { opened: "2026-11-16T00:00:00.000Z" } });
+    const prompts = (await app.get("/api/subjects/morse-code/prompts")).body.prompts;
+    expect(prompts).toContainEqual({ kind: "quiz-unwritten", quiz: { opened: "2026-11-16T00:00:00.000Z" }, say: "Write the Morse code quiz that's due." });
+
+    const session = { subject: "morse-code", ref: "drill:quiz-2026-11-21", sessionId: "01KAQ0000000000000000000S1", schemaVersion: 2 };
+    const taken = [
+      { ...session, id: session.sessionId, ts: "2026-11-21T11:00:00.000Z", kind: "session.start", data: {} },
+      { ...session, id: "01KAQ0000000000000000000E1", ts: "2026-11-21T11:05:00.000Z", kind: "session.end", duration: 300_000, score: 80 },
+    ];
+    expect((await app.post(taken)).status).toBe(201);
+    expect((await app.get("/api/subjects/morse-code/quiz/due")).body).toEqual({ quiz: null });
+    expect((await app.get("/api/prompts")).body).toEqual({ subjects: [] });
+  });
+
+  it("gives none before 5 lessons are done, and 404 for an unknown subject", async () => {
+    const app = await startTestApp(undefined, undefined, { clock: clock("2026-11-21T12:00:00Z") });
+
+    expect((await app.get("/api/subjects/morse-code/quiz/due")).body).toEqual({ quiz: null });
+    expect((await app.get("/api/subjects/klingon/quiz/due")).status).toBe(404);
   });
 });

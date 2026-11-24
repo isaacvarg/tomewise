@@ -48,7 +48,7 @@ export const appClasses: readonly string[] = [
   "tome-break", "tome-break-continue", "tome-break-done", "tome-break-next", "tome-break-skip", "tome-cell",
   "tome-chart", "tome-chart-area", "tome-chart-bar", "tome-chart-dot", "tome-chart-grid", "tome-chart-line",
   "tome-chart-plot", "tome-chart-x", "tome-chart-y", "tome-charts", "tome-check", "tome-copy", "tome-curriculum",
-  "tome-drill-go", "tome-drill-name", "tome-drill-sub", "tome-drills", "tome-due", "tome-due-how", "tome-due-what",
+  "tome-drill-go", "tome-drill-name", "tome-drill-sub", "tome-drills", "tome-due", "tome-due-how", "tome-due-quiz", "tome-due-what",
   "tome-exam", "tome-explanation", "tome-explanation-feedback", "tome-explanation-from", "tome-explanation-text",
   "tome-explanations", "tome-field", "tome-field-name", "tome-fields", "tome-glossary", "tome-goal", "tome-goal-bar", "tome-goal-num", "tome-goal-week", "tome-header",
   "tome-hear", "tome-heat-days", "tome-heat-legend", "tome-heatmap", "tome-heatmap-wrap", "tome-hint",

@@ -1,0 +1,10 @@
+{
+  "name": "tomewise",
+  "description": "Teach yourself anything in a Tomewise learning home: lessons, practice, quizzes and review driven by your history.",
+  "author": {
+    "name": "Isaac Vargas"
+  },
+  "homepage": "https://github.com/isaacvarg/tomewise",
+  "repository": "https://github.com/isaacvarg/tomewise",
+  "license": "MIT"
+}

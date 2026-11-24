@@ -42,9 +42,9 @@ describe("docs/themes.md", () => {
   });
 });
 
-describe("skill/SKILL.md", () => {
+describe("skill/skills/teach/SKILL.md", () => {
   it.each(requiredTokenNames())("tells agents about %s", (token) => {
-    const skill = read("skill/SKILL.md").replace("`--t-heat-0` to `--t-heat-4`", "`--t-heat-0` `--t-heat-1` `--t-heat-2` `--t-heat-3` `--t-heat-4`");
+    const skill = read("skill/skills/teach/SKILL.md").replace("`--t-heat-0` to `--t-heat-4`", "`--t-heat-0` `--t-heat-1` `--t-heat-2` `--t-heat-3` `--t-heat-4`");
     expect(skill).toContain(`\`${token}\``);
   });
 });

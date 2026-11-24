@@ -21,7 +21,7 @@ describe("home in /styleguide", () => {
     expect(await home.getAttribute("data-state")).toBe("ready");
     expect(await texts(page, "#home .tome-kicker")).toEqual(["Saturday 21 November"]);
     expect(await texts(page, "#home .tome-subject-name")).toEqual(["3x3 cube", "Morse code", "Spanish", "Yoga"]);
-    expect(await texts(page, "#home .tome-due li")).toEqual(["Morse code\n9 items · 6 min", "Spanish\n4 items · 3 min"]);
+    expect(await texts(page, "#home .tome-due li")).toEqual(["Morse code\n9 items · 6 min", "Spanish\n4 items · 3 min", "Morse code quiz\nup to 10 questions"]);
     expect(await texts(page, "#home .tome-streak-num")).toEqual(["6"]);
     expect(await page.locator("#home .tome-heatmap [data-level]").count()).toBeGreaterThan(100);
     expect(await page.locator("#home .tome-start").innerText()).toMatch(/^Start\s+13 items, about 9 min$/);

@@ -132,3 +132,32 @@ describe("<tome-done> on an exam page", () => {
     expect(events[2]).toMatchObject({ score: 50 });
   });
 });
+
+describe("<tome-done> on a written quiz page", () => {
+  it("finishes the quiz: records the score against the subject's pass mark and marks no milestone", async () => {
+    const widgets = await startWidgetApp({
+      prepare: async (root) => {
+        const dir = join(root, "subjects/spanish");
+        await mkdir(join(dir, "quizzes"), { recursive: true });
+        await writeFile(join(dir, "quizzes/after-colours.html"), PAGE.replace("<title>", '<meta name="tome-after" content="lesson:0001-greetings"><title>'));
+      },
+    });
+    const page = await widgets.open("/s/spanish/quizzes/after-colours.html");
+    const done = page.locator("tome-done");
+    const button = done.getByRole("button", { name: "Finish quiz" });
+    await expect.poll(() => button.count()).toBe(1);
+    for (const [id, choice] of [["colour", "rojo"], ["thanks", "hola"]] as const) {
+      await expect.poll(() => page.locator(`#${id} .tome-exam-question`).getAttribute("data-state")).toBe("ready");
+      await page.locator(`#${id}`).getByRole("button", { name: new RegExp(choice) }).click();
+      await expect.poll(() => page.locator(`#${id} .tome-exam-question`).getAttribute("data-state")).toBe("answered");
+    }
+
+    await button.click();
+
+    const events = await widgets.eventsUntil(SUBJECT, (events) => kinds(events).includes("session.end"));
+    expect(kinds(events)).toEqual(["session.start", "attempt", "attempt", "session.end"]);
+    expect(events.at(-1)).toMatchObject({ ref: "quiz:after-colours", sessionId: events[0]!.id, score: 50 });
+    await expect.poll(() => done.locator(".tome-exam-score").count()).toBe(1);
+    expect(await score(done)).toEqual({ display: "number", passed: "false", text: ["Quiz finished", "50%", "1 of 2 right · pass mark 70%"] });
+  });
+});

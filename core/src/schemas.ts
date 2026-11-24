@@ -128,6 +128,23 @@ export const GitSettings = z
 
 export type GitSettings = z.output<typeof GitSettings>;
 
+export const DEFAULT_NOTES_FOLDER = "sessions";
+
+const NotesFolder = z.string().regex(/^(?!\.{1,2}(?:\/|$))[^/\\:]+(?:\/(?!\.{1,2}(?:\/|$))[^/\\:]+)*\/?$/, {
+  error: (issue) => `Notes folder ${JSON.stringify(issue.input)} must be a folder inside the learning home, such as "${DEFAULT_NOTES_FOLDER}"`,
+});
+
+export const VaultSettings = z
+  .strictObject({
+    enabled: z.boolean().default(true).meta({ description: "Whether the app writes Obsidian-friendly notes alongside the plain files." }),
+    notesFolder: NotesFolder.default(DEFAULT_NOTES_FOLDER).meta({
+      description: "Folder inside the learning home, relative to tomewise.json, that holds the generated session notes.",
+    }),
+  })
+  .meta({ description: "Vault mode settings. Leave the block out to keep vault mode off; a block turns it on unless enabled is false." });
+
+export type VaultSettings = z.output<typeof VaultSettings>;
+
 export const START_MODES = ["sequence", "ask"] as const;
 
 export type StartMode = (typeof START_MODES)[number];
@@ -235,6 +252,7 @@ export const TomewiseConfig = z.strictObject({
   }),
   git: GitSettings.prefault({ enabled: false }),
   assessments: AssessmentSettings.prefault({}),
+  vault: VaultSettings.prefault({ enabled: false }),
 });
 
 export type TomewiseConfig = z.output<typeof TomewiseConfig>;
