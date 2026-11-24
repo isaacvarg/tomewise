@@ -16,9 +16,9 @@ export { validateLearningHome } from "./validate.ts";
 export { formatIssue } from "./issues.ts";
 export type { ValidationIssue } from "./issues.ts";
 export { AssessmentOverrides, AssessmentSettings, DEFAULT_ASSESSMENTS, QUIZ_FREQUENCIES, SCORE_DISPLAYS } from "./schemas.ts";
-export { resolveAssessments } from "./subject.ts";
+export { resolveAssessments, subjectPath } from "./subject.ts";
 export { DEFAULT_GIT_CADENCE, DEFAULT_THEME, GIT_CADENCES, GitSettings, START_MODES, ThemeManifest, ThemeName, TomewiseConfig, SUPPORTED_FORMAT_VERSION } from "./schemas.ts";
-export { APP_SETTINGS, isAppSetting, readSubjectAssessments, writeSetting, writeSubjectAssessments } from "./settings.ts";
+export { APP_SETTINGS, isAppSetting, readSubjectAssessments, setKey, writeSetting, writeSubjectAssessments } from "./settings.ts";
 export type { AppSetting } from "./settings.ts";
 export {
   GlobalConfigError,

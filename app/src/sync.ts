@@ -1,9 +1,11 @@
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
+import { readFile, rm } from "node:fs/promises";
 import { resolve } from "node:path";
 import { Hono } from "hono";
-import { type GitCadence, isoDate, type LearningEvent, type LearningHome, localDay, readEvents } from "@tomewise/core";
+import { type GitCadence, isoDate, type LearningEvent, type LearningHome, localDay, readEvents, setKey } from "@tomewise/core";
 import { HISTORY_PREFIX, historyMessage } from "./history.ts";
+import { isSettingMessage, type SettingChange } from "./setting-commits.ts";
 
 export interface Clock {
   now: () => Date;
@@ -34,6 +36,7 @@ export interface GitSync {
   status: () => SyncStatus;
   syncNow: () => Promise<SyncStatus>;
   recorded: (events: LearningEvent[]) => void;
+  saved: (change: SettingChange) => void;
   exclusive: Exclusive;
   close: () => Promise<void>;
 }
@@ -45,20 +48,27 @@ const CADENCE_CHECK_MS = 60_000;
 const REJECTED = /\[rejected\]|non-fast-forward|fetch first/;
 const AUTH_FAILED = /Permission denied \(|Permission to \S+ denied|Host key verification failed|Authentication failed|could not read (Username|Password)|terminal prompts disabled|returned error: 40[13]/i;
 
-function git(cwd: string, args: string[]): Promise<string> {
+interface GitOptions {
+  input?: string;
+  raw?: boolean;
+  env?: Record<string, string>;
+}
+
+function git(cwd: string, args: string[], { input, raw = false, env = {} }: GitOptions = {}): Promise<string> {
   return new Promise((resolve, reject) => {
-    execFile(
+    const child = execFile(
       "git",
       args,
-      { cwd, timeout: GIT_TIMEOUT_MS, maxBuffer: GIT_MAX_BUFFER, env: { ...process.env, GIT_TERMINAL_PROMPT: "0" } },
+      { cwd, timeout: GIT_TIMEOUT_MS, maxBuffer: GIT_MAX_BUFFER, env: { ...process.env, GIT_TERMINAL_PROMPT: "0", ...env } },
       (error, stdout, stderr) => {
-        if (!error) return resolve(stdout.trim());
+        if (!error) return resolve(raw ? stdout : stdout.trim());
         if ((error as NodeJS.ErrnoException).code === "ENOENT") {
           return reject(new Error("git isn't installed or isn't on PATH"));
         }
         reject(new Error(`git ${args.join(" ")}: ${stderr.trim() || error.message}`));
       },
     );
+    child.stdin?.end(input);
   });
 }
 
@@ -73,6 +83,7 @@ export const syncOff: GitSync = {
   status: () => ({ enabled: false, stopped: false, lastPull: null, lastCommit: null, lastPush: null, lastError: null }),
   syncNow: async () => syncOff.status(),
   recorded: () => {},
+  saved: () => {},
   exclusive: (work) => work(),
   close: async () => {},
 };
@@ -89,6 +100,7 @@ export function startSync(home: () => LearningHome, { clock = systemClock, pulle
   const state: SyncStatus = { enabled: true, stopped: false, lastPull: null, lastCommit: null, lastPush: null, lastError: null };
   let queue: Promise<unknown> = Promise.resolve();
   let closed = false;
+  const unsaved = new Map<string, SettingChange>();
 
   function exclusive<T>(work: () => Promise<T>): Promise<T> {
     const next = queue.then(work);
@@ -138,7 +150,7 @@ export function startSync(home: () => LearningHome, { clock = systemClock, pulle
     if (!settings.push) return;
     const unpushed = (await git(root, ["log", "--format=%s", "FETCH_HEAD..HEAD"])).split("\n").filter((line) => line !== "");
     if (unpushed.length === 0) return;
-    const others = unpushed.filter((line) => !line.startsWith(HISTORY_PREFIX));
+    const others = unpushed.filter((line) => !line.startsWith(HISTORY_PREFIX) && !isSettingMessage(line));
     if (others.length > 0) {
       throw new Error(
         `The learning home has commits the app didn't make that aren't on "${remote}" yet (${others.map((line) => JSON.stringify(line)).join(", ")}); the app only pushes its own history. Push or drop them by hand, then sync again.`,
@@ -181,23 +193,74 @@ export function startSync(home: () => LearningHome, { clock = systemClock, pulle
     return added;
   }
 
-  async function commitHistory() {
-    if ((await git(root, ["status", "--porcelain", "--", EVENT_FILES])) === "") return;
-    const remote = settings.remote;
-    const target = remote === undefined ? await checkedBranch() : await pull(remote);
+  async function commitEvents() {
     await git(root, ["add", "--all", "--", EVENT_FILES]);
     const added = await addedEvents();
     if (added.length === 0) throw new Error("Event files changed without new events; check subjects/*/events/ with git status");
     const message = historyMessage(added, config.timezone);
     await git(root, ["commit", "--quiet", "--only", "--message", message, "--", EVENT_FILES]);
     state.lastCommit = clock.now().toISOString();
+  }
+
+  async function headFile(file: string): Promise<{ mode: string; blob: string } | undefined> {
+    const entry = await git(root, ["ls-tree", "HEAD", "--", file]);
+    if (entry === "") return undefined;
+    const [mode, , blob] = entry.split(/\s+/);
+    return { mode: mode!, blob: blob! };
+  }
+
+  async function commitSetting({ file, path, value, message }: SettingChange) {
+    const parent = await git(root, ["rev-parse", "--verify", "HEAD"]);
+    const before = await headFile(file);
+    const text = before === undefined
+      ? await readFile(resolve(root, file), "utf8")
+      : setKey(await git(root, ["cat-file", "blob", before.blob], { raw: true }), path, value);
+    const blob = await git(root, ["hash-object", "-w", "--stdin"], { input: text });
+    if (blob === before?.blob) return;
+    const entry = `${before?.mode ?? "100644"},${blob},${file}`;
+    const index = resolve(root, await git(root, ["rev-parse", "--git-path", "tomewise-setting.index"]));
+    const env = { GIT_INDEX_FILE: index };
+    try {
+      await git(root, ["read-tree", "HEAD"], { env });
+      await git(root, ["update-index", "--add", "--cacheinfo", entry], { env });
+      const tree = await git(root, ["write-tree"], { env });
+      const commit = await git(root, ["commit-tree", tree, "-p", parent, "-m", message]);
+      const staged = (await git(root, ["ls-files", "--stage", "--", file])).split(/\s+/)[1];
+      await git(root, ["update-ref", "-m", message, "HEAD", commit, parent]);
+      if (staged === before?.blob || (before === undefined && staged === undefined)) {
+        await git(root, ["update-index", "--add", "--cacheinfo", entry]);
+      }
+    } finally {
+      await rm(index, { force: true });
+    }
+    state.lastCommit = clock.now().toISOString();
+  }
+
+  async function commitSettings() {
+    for (const [id, change] of unsaved) {
+      await commitSetting(change);
+      unsaved.delete(id);
+    }
+  }
+
+  async function commitChanges({ events }: { events: boolean }) {
+    const eventsChanged = events && (await git(root, ["status", "--porcelain", "--", EVENT_FILES])) !== "";
+    if (!eventsChanged && unsaved.size === 0) return;
+    const remote = settings.remote;
+    const target = remote === undefined ? await checkedBranch() : await pull(remote);
+    if (eventsChanged) await commitEvents();
+    await commitSettings();
     if (remote !== undefined) await pushPending(remote, target);
   }
 
+  const commitHistory = () => commitChanges({ events: true });
+
   async function pullContent() {
     const remote = settings.remote;
-    if (remote === undefined) return;
-    await pushPending(remote, await pull(remote));
+    if (remote === undefined) return commitChanges({ events: false });
+    const target = await pull(remote);
+    await commitSettings();
+    await pushPending(remote, target);
   }
 
   function step(work: () => Promise<void>, { retry = false } = {}): Promise<SyncStatus> {
@@ -235,6 +298,11 @@ export function startSync(home: () => LearningHome, { clock = systemClock, pulle
     if (settings.cadence === "session" && events.some((event) => event.kind === "session.end")) void step(commitHistory);
   }
 
+  function saved(change: SettingChange) {
+    unsaved.set(JSON.stringify([change.file, ...change.path]), change);
+    void step(() => commitChanges({ events: false }));
+  }
+
   const stopTimers = [
     settings.remote === undefined ? () => {} : clock.every(settings.pullIntervalMinutes * 60_000, () => step(pullContent)),
     settings.cadence === "session" ? () => {} : onTheClock(settings.cadence),
@@ -244,6 +312,7 @@ export function startSync(home: () => LearningHome, { clock = systemClock, pulle
     status,
     syncNow,
     recorded,
+    saved,
     exclusive,
     async close() {
       closed = true;

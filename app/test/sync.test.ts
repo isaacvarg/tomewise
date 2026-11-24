@@ -315,6 +315,7 @@ describe("git sync", () => {
       lastError: null,
     });
     expect((await app.send("POST", "/api/sync")).status).toBe(409);
+    expect((await app.send("PUT", "/api/settings/theme", { value: "meadow" })).status).toBe(200);
     await advanceMinutes(60);
     expect(timers.size).toBe(0);
     expect(await appGitCalls(app.root)).toEqual([]);
@@ -653,6 +654,72 @@ describe("pushing history", () => {
 
     expect(response.body).toMatchObject({ stopped: false, lastPush: expect.any(String), lastError: null });
     expect(await subjects(remote)).toEqual([ONE_SESSION, "chore: start"]);
+  });
+});
+
+describe("settings commits", () => {
+  it("commits a setting saved in the app on its own and pushes it", async () => {
+    const { app, remote } = await cloneSeam({ remote: "origin", push: true });
+
+    expect((await app.send("PUT", "/api/settings/theme", { value: "meadow" })).status).toBe(200);
+
+    await poll(() => subjects(remote)).toEqual(["chore(home): set theme to meadow", "chore: start"]);
+    expect(await git(app.root, "show", "--name-only", "--format=", "HEAD")).toBe("tomewise.json");
+    expect(JSON.parse(await git(remote, "show", "main:tomewise.json")).theme).toBe("meadow");
+    expect(await git(app.root, "status", "--porcelain")).toBe("");
+  });
+
+  it("commits only the key the learner saved, leaving the agent's uncommitted edits alone", async () => {
+    const { app } = await cloneSeam({});
+    const config = JSON.parse(await readFile(join(app.root, "tomewise.json"), "utf8"));
+    await writeFile(join(app.root, "tomewise.json"), JSON.stringify({ ...config, weekStart: "sunday" }, null, 2));
+    await writeFiles(app.root, { "draft.md": "staged by hand\n" });
+    await git(app.root, "add", "draft.md");
+
+    expect((await app.send("PUT", "/api/settings/start", { value: "ask" })).status).toBe(200);
+
+    await poll(() => subjects(app.root)).toEqual(["chore(home): set start to ask", "chore: start"]);
+    expect(await git(app.root, "show", "--name-only", "--format=", "HEAD")).toBe("tomewise.json");
+    const committed = JSON.parse(await git(app.root, "show", "HEAD:tomewise.json"));
+    expect(committed).toMatchObject({ start: "ask", weekStart: "monday" });
+    expect(JSON.parse(await readFile(join(app.root, "tomewise.json"), "utf8"))).toMatchObject({ start: "ask", weekStart: "sunday" });
+    expect((await git(app.root, "status", "--porcelain")).split("\n").sort()).toEqual([" M tomewise.json", "A  draft.md"]);
+  });
+
+  it("commits a subject's assessment settings under the subject's scope", async () => {
+    const { app, remote } = await cloneSeam({ remote: "origin", push: true });
+    const value = { passMark: 90, scoreDisplay: "pass-fail" };
+
+    expect((await app.send("PUT", "/api/settings/subjects/morse-code/assessments", { value })).status).toBe(200);
+
+    await poll(() => subjects(remote)).toEqual(["chore(morse-code): set assessments", "chore: start"]);
+    expect(await git(app.root, "show", "--name-only", "--format=", "HEAD")).toBe(`${SUBJECT}/subject.json`);
+    expect(JSON.parse(await git(remote, "show", `main:${SUBJECT}/subject.json`)).settings.assessments).toEqual(value);
+    expect(await git(app.root, "status", "--porcelain")).toBe("");
+  });
+
+  it("commits a setting saved while sync was stopped on Sync now", async () => {
+    const { app, remote } = await cloneSeam({ remote: "origin", push: true });
+    await refuseSshPush(app.root);
+    expect((await app.send("PUT", "/api/settings/theme", { value: "meadow" })).status).toBe(200);
+    await poll(async () => (await app.get("/api/sync")).body.stopped).toBe(true);
+    expect((await app.send("PUT", "/api/settings/start", { value: "ask" })).status).toBe(200);
+
+    await git(app.root, "config", "--unset", "remote.origin.pushurl");
+    const response = await app.send("POST", "/api/sync");
+
+    expect(response.body).toMatchObject({ stopped: false, lastError: null });
+    expect(await subjects(remote)).toEqual(["chore(home): set start to ask", "chore(home): set theme to meadow", "chore: start"]);
+  });
+
+  it("commits a setting with no remote, and pushes nothing with push off", async () => {
+    const { app, remote } = await cloneSeam({ remote: "origin" });
+
+    expect((await app.send("PUT", "/api/settings/subjects", { value: ["morse-code"] })).status).toBe(200);
+
+    await poll(() => subjects(app.root)).toEqual(["chore(home): set subject order", "chore: start"]);
+    expect(await subjects(remote)).toEqual(["chore: start"]);
+    expect(await appGitCalls(app.root)).not.toContainEqual(expect.stringMatching(/^push\b/));
   });
 });
 

@@ -53,8 +53,11 @@ export async function startTestApp(
     return { status: response.status, body: (await response.json()) as any };
   }
 
-  async function send(method: string, path: string) {
-    const response = await fetch(`${server.url}${path}`, { method });
+  async function send(method: string, path: string, body?: unknown) {
+    const response = await fetch(
+      `${server.url}${path}`,
+      body === undefined ? { method } : { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) },
+    );
     return { status: response.status, body: (await response.json()) as any };
   }
 
