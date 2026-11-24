@@ -82,7 +82,7 @@ Finding the learning home: walk up from the current directory to `tomewise.json`
 - Widgets are served under a major-version path (`/widgets/v1/tome.js`). Within a major version they only gain features; a v2 ships alongside v1 and both stay served, so old lessons keep working.
 - Watches the learning home so new content shows up live. One server-sent event stream tells open pages what changed (content or events) and they refetch.
 - No auth; meant for localhost or a private network. The expected setup is the app on a home server, reached from phone and laptop over Tailscale. A second learner in the same household runs their own instance with their own learning home (the docs include a two-instance compose example). Ships as an OCI image and via `npx`.
-- The app is the only writer of history: `tome log` posts to it, and falls back to a per-machine event file when it's unreachable. Content travels by git: the agent pushes, the app pulls, commits events and pushes (ADR 0011).
+- The app is the only writer of history: `tome log` posts to it, and falls back to a per-machine event file when it's unreachable. Content travels by git: the agent pushes, the app pulls, commits events and the settings the learner saves in it, and pushes (ADR 0011, ADR 0014).
 - Themes are modular from day one (see below).
 - Pages:
   - home, top to bottom: activity heatmap; a visual grid of subjects (no progress shown); what's due; streak; one Start button. Wide screens keep that order but use the width: the heatmap spans a year, subjects sit four across, and due and streak sit side by side;
@@ -121,6 +121,7 @@ feat(morse): add lesson 5 (A, the short pair)       agent: new content
 fix(morse): correct item R audio speed              agent: content fix
 chore(morse): update curriculum, milestone 1 done   agent: curriculum or settings
 chore(history): 2026-11-21 · morse 3 sessions, 18 min, 96 attempts   app: events
+chore(home): set theme to meadow                    app: a setting saved in the app
 ```
 
 `tome import <dir>` copies a `teach` workspace into a new subject, then the agent converts its interactive drills into widgets that follow the event contract (generic ones become built-ins, subject-specific ones go in the subject's `assets/`) and rewrites the lessons to use them. Lessons that existed are marked complete; history kept only in the browser (`localStorage`) is dropped, and the learning records and `NOTES.md` carry what was learned.

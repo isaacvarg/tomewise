@@ -13,6 +13,7 @@ import {
   writeSetting,
   writeSubjectAssessments,
 } from "@tomewise/core";
+import { homeSettingChange, subjectAssessmentsChange } from "./setting-commits.ts";
 import type { GitSync } from "./sync.ts";
 import { listThemes, onlyOnce, type Theme, type Warn } from "./themes.ts";
 import type { ToolDirs } from "./tool-files.ts";
@@ -68,7 +69,9 @@ export function settingsRoutes(home: () => LearningHome, { tool, sync, warn, rel
   routes.put("/subjects/:subject/assessments", async (c) => {
     const body = await valueOf(c);
     if (body instanceof Response) return body;
-    await sync.exclusive(() => writeSubjectAssessments(home().root, c.req.param("subject"), body.value));
+    const subject = c.req.param("subject");
+    const saved = await sync.exclusive(() => writeSubjectAssessments(home().root, subject, body.value));
+    sync.saved(subjectAssessmentsChange(subject, saved));
     await reload();
     return settings(c, home().config);
   });
@@ -86,6 +89,7 @@ export function settingsRoutes(home: () => LearningHome, { tool, sync, warn, rel
       }
     }
     const config = await sync.exclusive(() => writeSetting(home().root, key, value));
+    sync.saved(homeSettingChange(key, config));
     await reload();
     return settings(c, config);
   });

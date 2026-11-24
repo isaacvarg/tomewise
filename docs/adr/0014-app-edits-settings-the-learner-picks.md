@@ -11,6 +11,6 @@ ADR 0011 makes the agent the only writer of content. This is a narrow exception:
 
 ## Consequences
 
-- The git sync commits the changed `tomewise.json` with the app's next commit, like any other change it makes.
+- With git sync on, each save is its own commit, made at once rather than on the history cadence and pushed when push is on: `chore(home): set theme to meadow`, or `chore(<subject>): set assessments` for a subject. The commit holds only the saved key, built from the committed file, so edits the agent hasn't committed in the same file stay uncommitted. A save the app couldn't commit, because sync had stopped, is committed on the next Sync now. With sync off, the learner commits settings by hand.
 - The agent and the app can both edit `tomewise.json`. Because the app touches one key per save, a conflict needs both to change the same key between syncs.
 - Adding a setting to the page means adding its key to the list above.
