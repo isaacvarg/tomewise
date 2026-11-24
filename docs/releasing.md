@@ -16,7 +16,7 @@ npm only lets you set up trusted publishing for a package that already exists, s
 ```sh
 npm login
 pnpm build
-npm publish build/tomewise --access public
+npm publish ./build/tomewise --access public
 ```
 
 `npm login` opens the browser to sign in. `npm publish` asks for a 2FA code. Check the result at [npmjs.com/package/tomewise](https://www.npmjs.com/package/tomewise).
