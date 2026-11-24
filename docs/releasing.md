@@ -26,7 +26,7 @@ npm publish ./build/tomewise --access public
 After that, GitHub Actions publishes with OIDC: no npm token is stored in the repository.
 
 1. On npmjs.com, open the `tomewise` package → **Settings** → **Trusted Publisher** → **GitHub Actions**.
-2. Fill in organization or user `isaacvarg`, repository `tomewise`, workflow filename `release.yml`, environment `npm`.
+2. Fill in organization or user `isaacvarg`, repository `tomewise`, workflow filename `release.yml`, environment `npm`. Under **Allowed actions**, check **Allow `npm publish`**: without it the connection only allows `npm stage publish`, and the workflow runs `npm publish`. Leave **Allow `npm dist-tag`** unchecked. These fields can't be changed once the connection is saved.
 3. Save. On the same page, under **Publishing access**, choose **Require two-factor authentication and disallow tokens**, so only the workflow and you (with 2FA) can publish.
 4. On GitHub, create the `npm` environment: repository **Settings** → **Environments** → **New environment** → `npm`. Add yourself under **Required reviewers** if each npm publish should wait for your approval.
 
