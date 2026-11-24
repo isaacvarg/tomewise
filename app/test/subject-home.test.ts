@@ -48,7 +48,7 @@ async function morseWithMore(root: string) {
             },
           ],
         },
-        { title: "More letters", milestones: [{ id: "next-five", title: "Copy the next five letters", status: "upcoming", lessons: ["0005-a"] }] },
+        { title: "More letters", milestones: [{ id: "next-five", title: "Copy the next five letters", status: "upcoming", lessons: ["0005-a"], reference: ["a-and-n"] }] },
       ],
     },
     [`${MORSE}/lessons/0005-a.html`]: "<h1>A</h1>",
@@ -56,6 +56,7 @@ async function morseWithMore(root: string) {
     [`${MORSE}/items/0005-a.json`]: [{ id: "letter-a", type: "timed-audio", prompt: "A", answer: "A", unlockedBy: "0005-a", tags: ["second-five"] }],
     [`${MORSE}/drills/listen-a.json`]: { name: "Listen · A N", select: { from: "unlocked", tags: ["second-five"] }, count: 12 },
     [`${MORSE}/reference/wpm-timing.html`]: "<h1>How WPM timing works</h1>",
+    [`${MORSE}/reference/a-and-n.html`]: "<h1>A and N side by side</h1>",
     [`${MORSE}/events/2026-11.fixture.jsonl`]: lines([
       ...session("01", "2026-11-16T08:00:00.000Z", 12),
       ...session("02", "2026-11-18T08:00:00.000Z", 4),
@@ -376,12 +377,45 @@ describe("reference", () => {
 
     expect(await texts(page, ".tome-reference li")).toEqual([
       "Glossary\n3 items · hear each one · built in\nOpen",
+      "A and n\nSheet from your agent · after Unit 1\nOpen",
       "Wpm timing\nSheet from your agent\nOpen",
     ]);
     await page.locator('[data-sheet="wpm-timing"] .tome-row').click();
 
     await page.waitForURL(/\/s\/morse-code\/reference\/wpm-timing\.html$/);
     expect(await page.locator("h1").innerText()).toBe("How WPM timing works");
+  });
+
+  it("mutes a sheet in an upcoming milestone but still opens it", async () => {
+    const { page } = await openSubject("/s/morse-code/reference");
+
+    const colour = (selector: string) => page.locator(selector).first().evaluate((el) => getComputedStyle(el).color);
+    expect(await page.locator(".tome-reference [data-later]").evaluateAll((els) => els.map((el) => el.getAttribute("data-sheet")))).toEqual(["a-and-n"]);
+    expect(await colour('[data-sheet="a-and-n"] .tome-drill-name')).toBe(await colour(".tome-reference .tome-meta"));
+    expect(await colour('[data-sheet="wpm-timing"] .tome-drill-name')).not.toBe(await colour(".tome-reference .tome-meta"));
+    await page.locator('[data-sheet="a-and-n"] .tome-row').click();
+
+    await page.waitForURL(/\/s\/morse-code\/reference\/a-and-n\.html$/);
+    expect(await page.locator("h1").innerText()).toBe("A and N side by side");
+  });
+
+  it("stops muting a sheet once a milestone.status event moves its milestone on", async () => {
+    const { app, page } = await openSubject("/s/morse-code/reference");
+    const later = () => page.locator(".tome-reference [data-later]").count();
+    expect(await later()).toBe(1);
+
+    const marked = await app.post({
+      id: "01KAZ0000000000000000000M1",
+      ts: "2026-11-21T11:00:00.000Z",
+      subject: "morse-code",
+      kind: "milestone.status",
+      ref: "milestone:next-five",
+      schemaVersion: 2,
+      data: { status: "current" },
+    });
+    expect(marked.status).toBe(201);
+
+    await expect.poll(later).toBe(0);
   });
 
   it("lists the glossary first, opening it in the SPA", async () => {

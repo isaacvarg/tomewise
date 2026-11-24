@@ -89,10 +89,35 @@ export interface SheetRow {
   id: string;
   name: string;
   href: string;
+  later?: string;
 }
 
-export const sheetRows = (subject: Subject): SheetRow[] =>
-  subject.references.map((id) => ({ id, name: capitalised(spaced(id)), href: subjectPath(subject.id, "reference", `${id}.html`) }));
+export function sheetRows(subject: Subject, statuses: Readonly<Record<string, MilestoneStatus>> = {}): SheetRow[] {
+  const later = laterMilestones(subject, statuses);
+  const milestoneOf = new Map<string, string>();
+  for (const unit of subject.curriculum?.units ?? []) {
+    for (const milestone of unit.milestones) {
+      for (const sheet of milestone.reference) if (!milestoneOf.has(sheet)) milestoneOf.set(sheet, milestone.id);
+    }
+  }
+  return subject.references.map((id) => {
+    const after = later.get(milestoneOf.get(id) ?? "");
+    return { id, name: capitalised(spaced(id)), href: subjectPath(subject.id, "reference", `${id}.html`), ...(after !== undefined && { later: after }) };
+  });
+}
+
+function laterMilestones(subject: Subject, statuses: Readonly<Record<string, MilestoneStatus>>): Map<string, string> {
+  const later = new Map<string, string>();
+  let previous: { unit: number; title: string } | undefined;
+  (subject.curriculum?.units ?? []).forEach((unit, u) => {
+    for (const milestone of unit.milestones) {
+      const after = !previous ? "later" : previous.unit === u ? `after ${previous.title}` : `after Unit ${previous.unit + 1}`;
+      previous = { unit: u, title: milestone.title };
+      if ((statuses[milestone.id] ?? milestone.status) === "upcoming") later.set(milestone.id, after);
+    }
+  });
+  return later;
+}
 
 export interface LessonRow {
   id: string;
@@ -145,14 +170,12 @@ export function curriculumView(
     ...(later !== undefined && { later }),
   });
   const placed = new Set<string>();
-  let previous: { unit: number; title: string } | undefined;
+  const laterOf = laterMilestones(subject, statuses);
   const units = (subject.curriculum?.units ?? []).map((unit, u): UnitView => ({
     title: `Unit ${u + 1} · ${unit.title}`,
     milestones: unit.milestones.map((milestone): MilestoneView => {
-      const after = !previous ? "later" : previous.unit === u ? `after ${previous.title}` : `after Unit ${previous.unit + 1}`;
-      previous = { unit: u, title: milestone.title };
       const status = statuses[milestone.id] ?? milestone.status;
-      const later = status === "upcoming" ? after : undefined;
+      const later = laterOf.get(milestone.id);
       const lessons = milestone.lessons.filter((id) => subject.lessons.includes(id));
       lessons.forEach((id) => placed.add(id));
       return {

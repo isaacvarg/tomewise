@@ -82,8 +82,8 @@
     ],
     curriculum: {
       units: [
-        { title: "Koch letters", milestones: [{ id: "first-five", title: "Copy K, M, R, S and U", status: "current", lessons: morseLessons.slice(0, 4), exam: "first-five" }] },
-        { title: "More letters", milestones: [{ id: "next-five", title: "Copy the next five letters", status: "upcoming", lessons: morseLessons.slice(4, 6) }] },
+        { title: "Koch letters", milestones: [{ id: "first-five", title: "Copy K, M, R, S and U", status: "current", lessons: morseLessons.slice(0, 4), reference: [], exam: "first-five" }] },
+        { title: "More letters", milestones: [{ id: "next-five", title: "Copy the next five letters", status: "upcoming", lessons: morseLessons.slice(4, 6), reference: ["a-and-n-side-by-side"] }] },
       ],
     },
     payloadSchemas: [],

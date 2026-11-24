@@ -144,11 +144,12 @@ describe("loading a subject", () => {
             title: "Getting by",
             milestones: [
               { id: "say-hello", title: "Say hello", status: "current", lessons: ["0001-greetings"], exam: "say-hello" },
-              { id: "order-food", title: "Order food", status: "upcoming" },
+              { id: "order-food", title: "Order food", status: "upcoming", reference: ["menu"] },
             ],
           },
         ],
       },
+      "subjects/spanish/reference/menu.html": "<h1>Menu</h1>",
     });
     const home = await loadLearningHome(root);
 
@@ -157,8 +158,8 @@ describe("loading a subject", () => {
         {
           title: "Getting by",
           milestones: [
-            { id: "say-hello", title: "Say hello", status: "current", lessons: ["0001-greetings"], exam: "say-hello" },
-            { id: "order-food", title: "Order food", status: "upcoming", lessons: [] },
+            { id: "say-hello", title: "Say hello", status: "current", lessons: ["0001-greetings"], reference: [], exam: "say-hello" },
+            { id: "order-food", title: "Order food", status: "upcoming", lessons: [], reference: ["menu"] },
           ],
         },
       ],

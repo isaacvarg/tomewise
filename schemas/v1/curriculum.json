@@ -44,6 +44,15 @@
                     "minLength": 1
                   }
                 },
+                "reference": {
+                  "default": [],
+                  "description": "Reference sheet ids in reference/ that go with this milestone. In an upcoming milestone they are marked as later.",
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
                 "exam": {
                   "type": "string",
                   "minLength": 1

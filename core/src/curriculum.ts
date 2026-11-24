@@ -13,6 +13,7 @@ const Milestone = z.strictObject({
   title: z.string().min(1),
   status: milestoneStatus,
   lessons: z.array(z.string().min(1)).default([]),
+  reference: z.array(z.string().min(1)).default([]).meta({ description: "Reference sheet ids in reference/ that go with this milestone. In an upcoming milestone they are marked as later." }),
   exam: z.string().min(1).optional(),
   passMark: PassMark.optional().meta({ description: "Pass mark for this milestone's exam, as a percentage. Wins over passMark in the assessment settings." }),
 });

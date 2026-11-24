@@ -225,7 +225,7 @@ export async function readSubject(root: string, id: string): Promise<SubjectRead
     for (const { value, file } of drills) issues.push(...fixedPayloadIssues(value.payload, subjectFile.payloadSchemas, file, "payload"));
   }
   if (curriculum) {
-    issues.push(...curriculumReferences(curriculum, curriculumFile, lessons, lessonsDir));
+    issues.push(...curriculumReferences(curriculum, curriculumFile, lessons, lessonsDir, references, subjectPath(id, "reference")));
   }
 
   if (!subjectFile) return { issues };

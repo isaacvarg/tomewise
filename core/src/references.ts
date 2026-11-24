@@ -56,6 +56,8 @@ export function curriculumReferences(
   file: string,
   lessons: readonly string[],
   lessonsDir: string,
+  references: readonly string[],
+  referenceDir: string,
 ): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
   const firstPath = new Map<string, string>();
@@ -73,6 +75,11 @@ export function curriculumReferences(
       milestone.lessons.forEach((lesson, l) => {
         if (!lessons.includes(lesson)) {
           issues.push({ file, path: `${path}.lessons[${l}]`, message: `No lesson "${lesson}" in ${lessonsDir}` });
+        }
+      });
+      milestone.reference.forEach((sheet, r) => {
+        if (!references.includes(sheet)) {
+          issues.push({ file, path: `${path}.reference[${r}]`, message: `No reference sheet "${sheet}" in ${referenceDir}` });
         }
       });
     }),

@@ -613,7 +613,7 @@ function Glossary({ data }: { data: SubjectData }) {
 }
 
 function Reference({ data }: { data: SubjectData }) {
-  const sheets = sheetRows(data.subject);
+  const sheets = sheetRows(data.subject, data.progress.milestones);
   return (
     <section className="tome-section tome-reference">
       <div className="tome-section-head">
@@ -623,8 +623,8 @@ function Reference({ data }: { data: SubjectData }) {
       <ul>
         <Glossary data={data} />
         {sheets.map((sheet) => (
-          <li key={sheet.id} data-sheet={sheet.id}>
-            <Card name={sheet.name} detail="Sheet from your agent" action="Open" href={sheet.href} />
+          <li key={sheet.id} data-sheet={sheet.id} data-later={sheet.later !== undefined ? "" : undefined}>
+            <Card name={sheet.name} detail={sheet.later !== undefined ? `Sheet from your agent · ${sheet.later}` : "Sheet from your agent"} action="Open" href={sheet.href} />
           </li>
         ))}
       </ul>

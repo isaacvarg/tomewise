@@ -207,6 +207,8 @@ Subjects that lend themselves to reference:
 - Exercises and routines for fitness
 - Glossaries for any subject with its own nomenclature
 
+List a sheet in the `reference` of the milestone it belongs to in `curriculum.json` (see [CURRICULUM-FORMAT.md](./CURRICULUM-FORMAT.md)), so the app marks it as later until that milestone is under way.
+
 Once `GLOSSARY.md` exists, use its terms in every lesson.
 
 ## `NOTES.md`

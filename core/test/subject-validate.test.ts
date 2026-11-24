@@ -192,6 +192,29 @@ describe("validating the curriculum", () => {
     ]);
   });
 
+  it("reports a milestone listing a reference sheet that doesn't exist", async () => {
+    const home = await buildHome({
+      ...base,
+      "subjects/spanish/reference/verbs.html": "<h1>Verbs</h1>",
+      "subjects/spanish/curriculum.json": {
+        units: [
+          {
+            title: "Getting by",
+            milestones: [{ id: "say-hello", title: "Say hello", status: "current", reference: ["verbs", "numbers"] }],
+          },
+        ],
+      },
+    });
+
+    expect(await validateLearningHome(home)).toEqual([
+      {
+        file: "subjects/spanish/curriculum.json",
+        path: "units[0].milestones[0].reference[1]",
+        message: "No reference sheet \"numbers\" in subjects/spanish/reference",
+      },
+    ]);
+  });
+
   it("reports two milestones with the same id", async () => {
     const home = await buildHome({
       ...base,
