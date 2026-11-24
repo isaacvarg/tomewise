@@ -1,4 +1,4 @@
-import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { Page } from "playwright";
@@ -29,6 +29,7 @@ async function open(path: string, { events = lessonsDone, assessments = { exams:
   const dashboard = await startDashboard({
     width,
     prepare: async (root) => {
+      await rm(join(root, MORSE, "exams/first-five.html"));
       const subjectFile = join(root, MORSE, "subject.json");
       const subject = JSON.parse(await readFile(subjectFile, "utf8"));
       await writeFile(subjectFile, JSON.stringify({ ...subject, settings: { assessments } }));

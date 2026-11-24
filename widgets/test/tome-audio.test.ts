@@ -74,7 +74,7 @@ describe("<tome-audio>", () => {
       sessionId: events[0]!.id,
       outcome: "correct",
       grade: 3,
-      schemaVersion: 2,
+      schemaVersion: 3,
       data: { heard: "K", answer: "K", wpm: 20 },
     });
     expect(Object.keys(attempt.data).sort()).toEqual(["answer", "heard", "responseTime", "wpm"]);
@@ -148,11 +148,11 @@ describe("<tome-audio>", () => {
       prepare: async (root) => {
         const file = join(root, MORSE, "subject.json");
         const subject = JSON.parse(await readFile(file, "utf8"));
-        const v2 = subject.payloadSchemas[1];
+        const latest = subject.payloadSchemas.at(-1);
         subject.payloadSchemas.push({
-          version: 3,
+          version: latest.version + 1,
           kinds: {
-            attempt: { ...v2.kinds.attempt, properties: { ...v2.kinds.attempt.properties, replays: { type: "integer" } } },
+            attempt: { ...latest.kinds.attempt, properties: { ...latest.kinds.attempt.properties, replays: { type: "integer" } } },
           },
         });
         await writeFile(file, JSON.stringify(subject));
@@ -167,7 +167,7 @@ describe("<tome-audio>", () => {
     await k.getByRole("button", { name: "K" }).tap();
 
     const [, attempt] = await eventsUntil(SUBJECT, (events) => attempts(events).length === 1);
-    expect(attempt).toMatchObject({ schemaVersion: 3, outcome: "correct", data: { replays: 2, wpm: 20 } });
+    expect(attempt).toMatchObject({ schemaVersion: 4, outcome: "correct", data: { replays: 2, wpm: 20 } });
   });
 
   it("works by keyboard", async () => {

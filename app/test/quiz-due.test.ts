@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { Locator, Page } from "playwright";
@@ -8,10 +8,11 @@ import { startDashboard, type Width } from "./browser.ts";
 const MORSE = "subjects/morse-code/subject.json";
 
 async function weeklyQuizzes(root: string) {
+  await rm(join(root, "subjects/morse-code/quizzes"), { recursive: true, force: true });
   const file = join(root, MORSE);
   const subject = JSON.parse(await readFile(file, "utf8"));
   const latest = subject.payloadSchemas.at(-1);
-  const attempt = { ...latest.kinds.attempt, required: latest.kinds.attempt.required.filter((name: string) => name !== "wpm") };
+  const attempt = { ...latest.kinds.attempt, required: (latest.kinds.attempt.required ?? []).filter((name: string) => name !== "wpm") };
   subject.payloadSchemas.push({ version: latest.version + 1, kinds: { attempt } });
   await writeFile(file, JSON.stringify({ ...subject, settings: { assessments: { quizFrequency: "weekly", quizLength: 3 } } }));
 }

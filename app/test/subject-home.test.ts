@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { Page } from "playwright";
@@ -251,7 +251,10 @@ const lessonRows = (page: Page) =>
 
 describe("curriculum", () => {
   it("nests lessons under their milestones in order, then other lessons", async () => {
-    const { page } = await openSubject("/s/morse-code/curriculum");
+    const { page } = await openSubject("/s/morse-code/curriculum", "phone", async (root) => {
+      await morseWithMore(root);
+      await rm(join(root, MORSE, "exams/first-five.html"));
+    });
 
     expect(await texts(page, ".tome-curriculum .tome-meta")).toEqual(["2 of 6 lessons done"]);
     expect(await contents(page, ".tome-unit h4")).toEqual(["Unit 1 · Koch letters", "Unit 2 · More letters", "Other lessons"]);

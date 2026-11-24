@@ -1,4 +1,4 @@
-import { rm, writeFile } from "node:fs/promises";
+import { readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { type LearningEvent, startWidgetApp } from "./browser.ts";
@@ -9,10 +9,16 @@ const MORSE = "subjects/morse-code";
 
 const attempts = (events: LearningEvent[]) => events.filter((event) => event.kind === "attempt");
 
-async function openLesson(attributes: string) {
+async function openLesson(attributes: string, { required = false } = {}) {
   const widgets = await startWidgetApp({
     prepare: async (root) => {
       await rm(join(root, MORSE, "events"), { recursive: true, force: true });
+      if (required) {
+        const file = join(root, MORSE, "subject.json");
+        const subject = JSON.parse(await readFile(file, "utf8"));
+        subject.payloadSchemas = subject.payloadSchemas.filter((schema: { version: number }) => schema.version <= 2);
+        await writeFile(file, JSON.stringify(subject));
+      }
       await writeFile(
         join(root, MORSE, "lessons/0001-k-and-m.html"),
         [
@@ -51,7 +57,7 @@ describe("a custom widget in assets/", () => {
       sessionId: start!.id,
       outcome: "correct",
       grade: 3,
-      schemaVersion: 2,
+      schemaVersion: 3,
       data: { heard: "K", answer: "k", wpm: 20 },
     });
     expect(attempt!.data.responseTime).toBe(attempt!.duration);
@@ -69,7 +75,7 @@ describe("a custom widget in assets/", () => {
   });
 
   it("shows the app's reason in the widget when the payload doesn't match the subject's schema", async () => {
-    const { page, widget, events } = await openLesson("");
+    const { page, widget, events } = await openLesson("", { required: true });
 
     await answer(widget, "K");
 

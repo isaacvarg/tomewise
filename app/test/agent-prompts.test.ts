@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { Page } from "playwright";
@@ -40,6 +40,7 @@ async function open(path: string, events: object[] = [], width: Width = "phone")
   const dashboard = await startDashboard({
     width,
     prepare: async (root) => {
+      await rm(join(root, MORSE, "exams/first-five.html"));
       if (events.length === 0) return;
       await mkdir(join(root, MORSE, "events"), { recursive: true });
       await writeFile(join(root, MORSE, "events/2026-11.prompts.jsonl"), events.map((event) => `${JSON.stringify(event)}\n`).join(""));
@@ -78,7 +79,7 @@ describe("ask-your-agent prompts on the subject home", () => {
     expect(await prompts(page)).toEqual([examUnwritten, ungraded]);
     expect(await page.locator(".tome-prompts .tome-section-head").innerText()).toMatch(/Ask your agent\s+2 waiting/);
     const order = await page.locator(".tome-overview > *").evaluateAll((els) => els.map((el) => el.classList[1]));
-    expect(order).toEqual(["tome-goal", "tome-activity", "tome-prompts", "tome-due"]);
+    expect(order).toEqual(["tome-goal", "tome-activity", "tome-prompts", "tome-due", "tome-explanations"]);
     expect(pageErrors).toEqual([]);
   });
 
