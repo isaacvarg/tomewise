@@ -378,6 +378,7 @@ describe("reference", () => {
     expect(await texts(page, ".tome-reference li")).toEqual([
       "Glossary\n3 items · hear each one · built in\nOpen",
       "A and n\nSheet from your agent · after Unit 1\nOpen",
+      "First five letters\nSheet from your agent\nOpen",
       "Wpm timing\nSheet from your agent\nOpen",
     ]);
     await page.locator('[data-sheet="wpm-timing"] .tome-row').click();

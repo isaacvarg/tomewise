@@ -189,7 +189,7 @@ describe("a subject's reference sheets", () => {
 
     const response = await app.get("/api/subjects/morse-code");
 
-    expect(response.body.references).toEqual(["wpm-timing"]);
+    expect(response.body.references).toEqual(["first-five-letters", "wpm-timing"]);
   });
 });
 

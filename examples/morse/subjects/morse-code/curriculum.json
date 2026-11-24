@@ -8,6 +8,7 @@
           "title": "Copy K, M, R, S and U",
           "status": "current",
           "lessons": ["0001-k-and-m", "0002-r", "0003-s", "0004-the-late-bump"],
+          "reference": ["first-five-letters"],
           "exam": "first-five"
         },
         {
