@@ -87,6 +87,7 @@ describe("the tomewise npm package", () => {
     expect(manifest.name).toBe("tomewise");
     expect(manifest.bin).toEqual({ tomewise: "lib/tome.js", tome: "lib/tome.js" });
     expect(manifest.dependencies).toBeUndefined();
+    expect(manifest.repository.url).toBe("git+https://github.com/isaacvarg/tomewise.git");
     const { stdout } = await exec(process.execPath, [join(out, "lib/tome.js"), "validate"], {
       cwd: await copyExample("morse"),
     });

@@ -54,11 +54,7 @@ The service runs the `tome` you installed it with. Installing it from `npx` poin
 
 The image runs `tome serve` against the learning home mounted at `/learning-home`. Inside the container it listens on all interfaces (`0.0.0.0:4777`), so what reaches it is decided by how you publish the port.
 
-Build it from a checkout of this repository:
-
-```sh
-docker build -t tomewise .
-```
+Each release publishes an image for `linux/amd64` and `linux/arm64` to `ghcr.io/isaacvarg/tomewise`, tagged `latest`, the version (e.g. `0.1.0`) and the minor (e.g. `0.1`). Pin a version to choose when you upgrade.
 
 Run it, publishing the port on localhost only:
 
@@ -66,8 +62,10 @@ Run it, publishing the port on localhost only:
 docker run -d --name tomewise \
   -p 127.0.0.1:4777:4777 \
   -v ~/learning:/learning-home \
-  tomewise
+  ghcr.io/isaacvarg/tomewise:0.1
 ```
+
+To build the image yourself from a checkout of this repository, run `docker build -t tomewise .` and use `tomewise` as the image name.
 
 Podman takes the same arguments.
 
@@ -83,7 +81,7 @@ Each learner gets their own instance, their own learning home and their own port
 # compose.yaml
 services:
   alex:
-    image: tomewise
+    image: ghcr.io/isaacvarg/tomewise:0.1
     restart: unless-stopped
     volumes:
       - /srv/learning/alex:/learning-home
@@ -91,7 +89,7 @@ services:
       - "127.0.0.1:4777:4777"
 
   sam:
-    image: tomewise
+    image: ghcr.io/isaacvarg/tomewise:0.1
     restart: unless-stopped
     volumes:
       - /srv/learning/sam:/learning-home
