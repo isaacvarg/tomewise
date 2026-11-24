@@ -25,6 +25,7 @@ describe("home in /styleguide", () => {
     expect(await texts(page, "#home .tome-streak-num")).toEqual(["6"]);
     expect(await page.locator("#home .tome-heatmap [data-level]").count()).toBeGreaterThan(100);
     expect(await page.locator("#home .tome-start").innerText()).toMatch(/^Start\s+13 items, about 9 min$/);
+    expect(await page.locator("#home .tome-header").getByRole("link", { name: "Settings" }).isVisible()).toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect(pageErrors).toEqual([]);
   }, 20_000);

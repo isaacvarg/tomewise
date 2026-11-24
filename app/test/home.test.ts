@@ -159,6 +159,21 @@ describe.each(["phone", "desktop"] as const)("home at %s width", (width) => {
     else expect(streak).toBe(due);
   });
 
+  it("links to settings from the header, reachable by keyboard", async () => {
+    const { page } = await openHome(width);
+
+    const link = page.locator(".tome-header").getByRole("link", { name: "Settings" });
+    expect(await link.isVisible()).toBe(true);
+    expect(await link.getAttribute("href")).toBe("/settings");
+    await page.keyboard.press("Tab");
+    expect(await link.evaluate((el) => el === document.activeElement)).toBe(true);
+
+    await page.keyboard.press("Enter");
+
+    await page.waitForURL(/\/settings$/);
+    await expect.poll(() => page.locator(".tome-title").textContent()).toBe("Settings");
+  });
+
   it("doesn't scroll sideways", async () => {
     const { page } = await openHome(width);
 

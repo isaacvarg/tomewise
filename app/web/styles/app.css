@@ -188,9 +188,15 @@
     background: transparent; color: var(--t-ink); font: inherit; cursor: pointer;
   }
   .tome-order-move:disabled { opacity: .35; cursor: default; }
-  .tome-option:has(input:focus-visible), .tome-order-move:focus-visible, .tome-settings-save:focus-visible, .tome-settings-cancel:focus-visible, .tome-home-link:focus-visible {
+  .tome-option:has(input:focus-visible), .tome-order-move:focus-visible, .tome-settings-save:focus-visible, .tome-settings-cancel:focus-visible, .tome-home-link:focus-visible, .tome-settings-link:focus-visible {
     outline: 2px solid var(--t-accent); outline-offset: 2px;
   }
+
+  .tome-settings-link {
+    position: absolute; top: -.35rem; right: -.5rem; padding: .35rem .5rem;
+    font-size: .82rem; color: var(--t-muted); text-decoration: none; border-radius: var(--t-radius);
+  }
+  .tome-settings-link:hover { color: var(--t-ink); }
 
   .tome-header > .tome-home-link { align-self: flex-start; font-size: .82rem; color: var(--t-muted); margin-bottom: .5rem; }
   .tome-title:has(> .tome-mark) { display: flex; align-items: center; gap: .7rem; }

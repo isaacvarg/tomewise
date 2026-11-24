@@ -3,6 +3,7 @@ import type { Loaded } from "./load.ts";
 
 export interface ScreenProps {
   back?: ReactNode;
+  aside?: ReactNode;
   kicker?: ReactNode;
   title: ReactNode;
   lede?: ReactNode;
@@ -10,11 +11,12 @@ export interface ScreenProps {
   children?: ReactNode;
 }
 
-export function Screen({ back, kicker, title, lede, state = "ready", children }: ScreenProps) {
+export function Screen({ back, aside, kicker, title, lede, state = "ready", children }: ScreenProps) {
   return (
     <div className="tome-app" data-state={state}>
       <header className="tome-header">
         {back}
+        {aside}
         {kicker && <p className="tome-kicker">{kicker}</p>}
         <h2 className="tome-title">{title}</h2>
         {lede && <p className="tome-lede">{lede}</p>}

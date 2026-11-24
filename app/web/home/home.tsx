@@ -12,18 +12,24 @@ async function loadHome() {
   return { ...today, asks: Object.fromEntries(prompts.map((entry) => [entry.subject, entry.prompts.length])) };
 }
 
+const settingsLink = (
+  <Link className="tome-settings-link" to="/settings">
+    Settings
+  </Link>
+);
+
 export function Home() {
   const loaded = useLoad(loadHome, [], { refetchOn: ["content", "events"] });
   if (loaded.state === "loading") {
     return (
-      <Screen title="Today" state="loading">
+      <Screen title="Today" aside={settingsLink} state="loading">
         <p className="tome-hint">Loading…</p>
       </Screen>
     );
   }
   if (loaded.state === "error") {
     return (
-      <Screen title="Today" state="error">
+      <Screen title="Today" aside={settingsLink} state="error">
         <Failed error={loaded.error} />
       </Screen>
     );
@@ -31,7 +37,7 @@ export function Home() {
   const { subjects, activity, due, asks } = loaded.data;
   const weekStart: WeekStart = subjects[0]?.settings.weekStart ?? "monday";
   return (
-    <Screen kicker={longDate(activity.today)} title="Today">
+    <Screen kicker={longDate(activity.today)} title="Today" aside={settingsLink}>
       <Heatmap cells={heatmapCells(activity, weekStart, bySubjectsPractised(subjects.length))} weekStart={weekStart} label="Activity heatmap" />
       <Subjects subjects={subjects} asks={asks} />
       <Due due={due} />
