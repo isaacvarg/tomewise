@@ -79,7 +79,7 @@ describe("ask-your-agent prompts on the subject home", () => {
     expect(await prompts(page)).toEqual([examUnwritten, ungraded]);
     expect(await page.locator(".tome-prompts .tome-section-head").innerText()).toMatch(/Ask your agent\s+2 waiting/);
     const order = await page.locator(".tome-overview > *").evaluateAll((els) => els.map((el) => el.classList[1]));
-    expect(order).toEqual(["tome-goal", "tome-activity", "tome-prompts", "tome-due", "tome-explanations"]);
+    expect(order).toEqual(["tome-goal", "tome-activity", "tome-next-lesson", "tome-prompts", "tome-due", "tome-explanations"]);
     expect(pageErrors).toEqual([]);
   });
 

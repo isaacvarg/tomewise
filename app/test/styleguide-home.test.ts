@@ -62,7 +62,7 @@ describe("home in /styleguide", () => {
     const tab = (view: string) => `#subject-home [data-styleguide-subject="${view}"]`;
     expect(await texts(page, `${tab("overview")} .tome-goal-num`)).toEqual(["6\nof 10 min today · 4 to go"]);
     expect(await page.locator(`${tab("overview")} .tome-heatmap [data-level]`).count()).toBeGreaterThan(20);
-    expect(await page.locator(`${tab("overview")} .tome-start`).getAttribute("href")).toBe("/run/due?subject=morse-code");
+    expect(await page.locator(`${tab("overview")} .tome-due .tome-start`).getAttribute("href")).toBe("/run/due?subject=morse-code");
     expect(await page.locator(`${tab("curriculum")} .tome-lessons [data-done]`).count()).toBe(4);
     expect(await page.locator(`${tab("curriculum")} .tome-lessons [data-later]`).count()).toBe(2);
     expect(await page.locator(`${tab("curriculum")} .tome-milestone-done`).count()).toBe(0);

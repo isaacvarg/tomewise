@@ -54,7 +54,7 @@ export const appClasses: readonly string[] = [
   "tome-hear", "tome-heat-days", "tome-heat-legend", "tome-heatmap", "tome-heatmap-wrap", "tome-hint",
   "tome-home-link", "tome-kicker", "tome-lede", "tome-lessons", "tome-look-again", "tome-look-item", "tome-look-why",
   "tome-mark", "tome-mark-letter", "tome-meta", "tome-meta-narrow", "tome-meta-wide", "tome-milestone",
-  "tome-milestone-done", "tome-milestone-head", "tome-milestone-plain", "tome-notice", "tome-num", "tome-option", "tome-option-name",
+  "tome-milestone-done", "tome-milestone-head", "tome-milestone-plain", "tome-next-lesson", "tome-notice", "tome-num", "tome-option", "tome-option-name",
   "tome-option-text", "tome-options", "tome-order", "tome-order-handle", "tome-order-move", "tome-order-name",
   "tome-order-row", "tome-overview", "tome-pick", "tome-pick-how", "tome-pick-name", "tome-picks", "tome-prompts",
   "tome-quiz-answer", "tome-quiz-answers", "tome-quiz-given", "tome-quiz-mark", "tome-quiz-me", "tome-quiz-prompt",
