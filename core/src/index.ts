@@ -66,3 +66,5 @@ export { generatedFileGlobs, rebuildVault, regenerateVaultFiles } from "./vault.
 export type { VaultRebuild } from "./vault.ts";
 export { curriculumCopy, writeCurriculumCopies } from "./curriculum-copy.ts";
 export { writeSessionsBase } from "./sessions-base.ts";
+export { checkForUpdate, fetchLatest, IMAGE, installOf, isNewer, REGISTRY_LATEST, UPDATE_CHECK_MS, updateCachePath, updateChecksOff, updateFor, updateNotice } from "./updates.ts";
+export type { Install, Update, UpdateCheckOptions } from "./updates.ts";

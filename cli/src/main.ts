@@ -21,10 +21,13 @@ import {
   type Stats,
   SubjectNotFoundError,
   UnsupportedFormatVersionError,
+  type Update,
+  updateNotice,
   validateLearningHome,
   type Aggregate,
   type QueryResult,
   type ValidationIssue,
+  checkForUpdate,
 } from "@tomewise/core";
 import { due } from "./due.ts";
 import { INIT_USAGE, init } from "./init.ts";
@@ -33,6 +36,7 @@ import { listenOptions, serveHome } from "./serve.ts";
 import { importWorkspace } from "./import.ts";
 import type { PromptStreams } from "./prompt.ts";
 import { THEME_USAGE, themeCheck } from "./theme-check.ts";
+import { cliUpdateCheck, SERVER_TIMEOUT_MS, VERSION } from "./update.ts";
 import { VAULT_USAGE, vault } from "./vault.ts";
 import type { ToolDirs } from "@tomewise/app";
 
@@ -47,6 +51,7 @@ export interface Io {
   service?: Partial<ServiceHost>;
   prompt?: PromptStreams;
   tool?: ToolDirs;
+  updates?: () => Promise<Update | null>;
 }
 
 export const USAGE = [
@@ -426,11 +431,16 @@ export async function run(args: string[], io: Io): Promise<number> {
 }
 
 if (import.meta.main) {
-  process.exitCode = await run(process.argv.slice(2), {
+  const args = process.argv.slice(2);
+  const updating = cliUpdateCheck({ args, env: process.env, interactive: process.stderr.isTTY === true });
+  process.exitCode = await run(args, {
     cwd: process.cwd(),
     env: process.env,
     stdout: (line) => console.log(line),
     stderr: (line) => console.error(line),
     prompt: process.stdin.isTTY ? { input: process.stdin, output: process.stdout, terminal: true } : undefined,
+    updates: () => checkForUpdate({ current: VERSION, env: process.env, timeoutMs: SERVER_TIMEOUT_MS }),
   });
+  const update = await updating;
+  if (update) console.error(`\n${updateNotice(update)}`);
 }

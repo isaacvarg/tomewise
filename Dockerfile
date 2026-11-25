@@ -16,7 +16,8 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 COPY --from=build /src/build/tomewise /opt/tomewise
 RUN ln -s /opt/tomewise/lib/tome.js /usr/local/bin/tome
-ENV TOMEWISE_HOST=0.0.0.0 \
+ENV TOMEWISE_INSTALL=docker \
+  TOMEWISE_HOST=0.0.0.0 \
   TOMEWISE_PORT=4777 \
   TOMEWISE_HOME=/learning-home
 WORKDIR /learning-home

@@ -2,7 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { request } from "node:http";
 import { join } from "node:path";
 import { onTestFinished } from "vitest";
-import { loadLearningHome } from "@tomewise/core";
+import { loadLearningHome, type Update } from "@tomewise/core";
 import { copyExample } from "../../core/test/helpers.ts";
 import { type Clock, startServer, type ToolDirs } from "../src/index.ts";
 
@@ -11,7 +11,7 @@ export const EVENTS = "subjects/morse-code/events";
 export async function startTestApp(
   prepare?: (root: string) => Promise<void>,
   tool?: ToolDirs,
-  { spa, clock }: { spa?: string; clock?: Clock } = {},
+  { spa, clock, updates }: { spa?: string; clock?: Clock; updates?: () => Promise<Update | null> } = {},
 ) {
   const root = await copyExample("morse");
   await prepare?.(root);
@@ -24,6 +24,7 @@ export async function startTestApp(
       tool,
       spa,
       clock,
+      updates,
       warn: (message) => warnings.push(message),
       watch: { onError: (error) => reloadErrors.push(error) },
     });
