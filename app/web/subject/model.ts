@@ -197,6 +197,18 @@ export function curriculumView(
   return { units, other, done: subject.lessons.filter((id) => done.has(id)).length, total: subject.lessons.length };
 }
 
+export interface NextLesson {
+  lesson: LessonRow;
+  done: number;
+  total: number;
+}
+
+export function nextLesson(view: CurriculumView): NextLesson | undefined {
+  const lessons = [...view.units.flatMap((unit) => unit.milestones.flatMap((milestone) => milestone.lessons)), ...view.other];
+  const lesson = lessons.find((candidate) => !candidate.done) ?? lessons.at(-1);
+  return lesson && { lesson, done: view.done, total: view.total };
+}
+
 const DRILLABLE = new Set<Item["type"]>(["flashcard", "multiple-choice", "typed-answer", "timed-audio"]);
 
 const FORMATS: Partial<Record<Drill["format"], string>> = {

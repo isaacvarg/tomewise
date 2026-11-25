@@ -28,6 +28,8 @@ export interface DrillDone {
 
 const PAUSE_RIGHT = 900;
 const PAUSE_MISSED = 1600;
+const PAUSE_REPLAYED = 2400;
+const REPLAY_AFTER = 400;
 const FOCUSABLE = "input:not([disabled]):not([readonly]), button:not([disabled])";
 
 const CSS = `
@@ -79,6 +81,11 @@ function clock(ms: number): string {
 export class TomeDrill extends TomeElement {
   static override properties = {
     drill: { type: String },
+    items: { type: String },
+    count: { type: Number },
+    format: { type: String },
+    name: { type: String },
+    timeLimit: { type: Number, attribute: "time-limit" },
     quiz: { type: Boolean },
     payload: { type: String },
     close: { type: String },
@@ -93,6 +100,11 @@ export class TomeDrill extends TomeElement {
   };
 
   declare drill: string;
+  declare items: string | undefined;
+  declare count: number | undefined;
+  declare format: string | undefined;
+  declare name: string | undefined;
+  declare timeLimit: number | undefined;
   declare quiz: boolean;
   declare payload: string;
   declare close: string;
@@ -112,6 +124,7 @@ export class TomeDrill extends TomeElement {
   #run = 0;
   #autoplay = false;
   #pause: ReturnType<typeof setTimeout> | undefined;
+  #replay: ReturnType<typeof setTimeout> | undefined;
   #deadline: number | undefined;
   #ticker: ReturnType<typeof setInterval> | undefined;
   #watcher: MutationObserver | undefined;
@@ -138,18 +151,52 @@ export class TomeDrill extends TomeElement {
   override connectedCallback(): void {
     super.connectedCallback();
     adoptStyles("tome-drill", CSS);
+    document.addEventListener("keydown", this.#onStrayKey);
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    document.removeEventListener("keydown", this.#onStrayKey);
     this.#stopTimers();
   }
 
+  #onStrayKey = (event: KeyboardEvent): void => {
+    if (this.state !== "running" || event.defaultPrevented || event.repeat) return;
+    if (event.altKey || event.ctrlKey || event.metaKey) return;
+    const active = document.activeElement;
+    if (active && active !== document.body && active !== document.documentElement) return;
+    if (!this.#onScreen()) return;
+    if (this.answered) {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      this.#next();
+      return;
+    }
+    const control = this.current?.querySelector<HTMLElement>(FOCUSABLE);
+    if (!control) return;
+    control.focus({ preventScroll: true });
+    if (control instanceof HTMLInputElement) return;
+    if (event.key === " " || event.key === "Enter") {
+      event.preventDefault();
+      control.click();
+      return;
+    }
+    const forwarded = new KeyboardEvent("keydown", { key: event.key, code: event.code, bubbles: true, cancelable: true });
+    if (!control.dispatchEvent(forwarded)) event.preventDefault();
+  };
+
+  #onScreen(): boolean {
+    const box = this.getBoundingClientRect();
+    return box.bottom > 0 && box.top < window.innerHeight;
+  }
+
   protected override willUpdate(changed: PropertyValues<this>): void {
-    if (changed.has("drill") || changed.has("quiz") || changed.has("payload")) void this.#load();
+    const inputs = ["drill", "items", "count", "format", "name", "timeLimit", "quiz", "payload"] as const;
+    if (inputs.some((input) => changed.has(input))) void this.#load();
   }
 
   get #drillId(): string {
+    if (this.items) return "items";
     if (this.drill) return this.drill;
     const { kind, id } = tome.context;
     return kind === "drill" ? id : "review";
@@ -157,6 +204,7 @@ export class TomeDrill extends TomeElement {
 
   #stopTimers(): void {
     clearTimeout(this.#pause);
+    clearTimeout(this.#replay);
     clearInterval(this.#ticker);
     this.#pause = undefined;
     this.#ticker = undefined;
@@ -207,13 +255,45 @@ export class TomeDrill extends TomeElement {
       const { drill, items } = await tome.quiz(/^quiz-(.+)$/.exec(id)?.[1]);
       return { subject, drill, plan: items.filter((item) => WIDGET_FOR[item.type] !== undefined) };
     }
+    if (this.items) return { subject, ...this.#inline(subject) };
     const drill = subject.drills.find((candidate) => candidate.id === id);
     if (!drill) {
       const known = subject.drills.map((candidate) => candidate.id).join(", ");
       throw new TomeError(`No drill "${id}" in ${subject.name}. Drills: ${known}.`);
     }
-    const candidates = drill.select.from === "due" ? await tome.due() : await tome.unlocked();
+    const candidates = drill.select.from === "due" ? await tome.due() : await this.#unlocked(subject);
     return { subject, drill, plan: planDrill(drill, candidates) };
+  }
+
+  #inline(subject: Subject): { drill: Drill; plan: Item[] } {
+    const ids = (this.items ?? "").split(/\s+/).filter(Boolean).map((id) => id.replace(/^item:/, ""));
+    const named = ids.map((id) => {
+      const item = subject.items.find((candidate) => candidate.id === id);
+      if (!item) throw new TomeError(`No item "${id}" in ${subject.name}.`);
+      return item;
+    });
+    const formats: Drill["format"][] = ["item", "flashcard", "multiple-choice", "typed-answer", "timed-audio"];
+    const format = formats.find((candidate) => candidate === this.format);
+    if (this.format && !format) throw new TomeError(`"${this.format}" is not a drill format. Formats: ${formats.join(", ")}.`);
+    const drill: Drill = {
+      id: "items",
+      builtIn: false,
+      name: this.name || "Practice",
+      select: { from: "unlocked", tags: [] },
+      format: format ?? "item",
+      ...(this.count && this.count > 0 && { count: Math.floor(this.count) }),
+      ...(this.timeLimit && this.timeLimit > 0 && { timeLimits: { perItemSeconds: this.timeLimit } }),
+    };
+    return { drill, plan: planDrill(drill, named) };
+  }
+
+  async #unlocked(subject: Subject): Promise<Item[]> {
+    const unlocked = await tome.unlocked();
+    const { kind, id } = tome.context;
+    if (kind !== "lesson") return unlocked;
+    const known = new Set(unlocked.map((item) => item.id));
+    const taught = subject.items.filter((item) => !item.retired && item.unlockedBy === id && !known.has(item.id));
+    return [...unlocked, ...taught];
   }
 
   get #quizMode(): boolean {
@@ -242,7 +322,7 @@ export class TomeDrill extends TomeElement {
     const ready = () => {
       const control = widget.querySelector<HTMLElement>(FOCUSABLE);
       if (!control) return false;
-      control.focus({ preventScroll: true });
+      if (autoplay || this.#onScreen()) control.focus({ preventScroll: true });
       if (autoplay) void (widget as HTMLElement & { play?: () => Promise<void> }).play?.();
       return true;
     };
@@ -264,13 +344,18 @@ export class TomeDrill extends TomeElement {
       this.#next();
       return;
     }
-    this.#pause = setTimeout(() => this.#next(), detail.outcome === "correct" ? PAUSE_RIGHT : PAUSE_MISSED);
+    const replayable = detail.outcome !== "correct" && widget.localName === "tome-audio";
+    if (replayable) {
+      this.#replay = setTimeout(() => void (widget as HTMLElement & { play?: () => Promise<void> }).play?.(), REPLAY_AFTER);
+    }
+    this.#pause = setTimeout(() => this.#next(), detail.outcome === "correct" ? PAUSE_RIGHT : replayable ? PAUSE_REPLAYED : PAUSE_MISSED);
     void this.updateComplete.then(() => this.querySelector<HTMLButtonElement>(".tome-next")?.focus({ preventScroll: true }));
   }
 
   #next(): void {
     if (this.state !== "running" || !this.answered) return;
     clearTimeout(this.#pause);
+    clearTimeout(this.#replay);
     this.#pause = undefined;
     if (this.index + 1 >= this.#plan.length) {
       this.#finish(false);
@@ -303,7 +388,7 @@ export class TomeDrill extends TomeElement {
       timeUp,
       results: this.results,
       ...(score && { score }),
-      session: tome.end(score ? { score: score.score } : {}),
+      session: tome.context.kind === "lesson" ? undefined : tome.end(score ? { score: score.score } : {}),
     };
     this.#hostSummary = !this.dispatchEvent(new CustomEvent("tome-drill-done", { bubbles: true, cancelable: true, detail }));
     this.state = "done";

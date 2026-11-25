@@ -39,7 +39,8 @@ function stopped(signal: AbortSignal | undefined): Promise<void> {
 }
 
 export async function serveHome(io: Io, root: string, listen: Listen): Promise<number> {
-  const issues = await validateLearningHome(root);
+  const found = await validateLearningHome(root);
+  const issues = found.filter((issue) => !issue.advice);
   if (issues.length > 0) {
     for (const issue of issues) io.stderr(formatIssue(issue));
     io.stderr(`Not serving ${root}: ${issues.length} ${issues.length === 1 ? "problem" : "problems"}. Run \`tome validate\` after fixing.`);

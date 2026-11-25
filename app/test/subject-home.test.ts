@@ -200,6 +200,40 @@ describe.each(["phone", "desktop"] as const)("overview at %s width", (width) => 
     expect(await start.getAttribute("href")).toBe("/run/due?subject=morse-code");
   });
 
+  it("links the first lesson not yet completed, then the last one once all are", async () => {
+    const { page, app } = await openSubject("/s/morse-code", width);
+    const lessons = ["0001-k-and-m", "0002-r", "0003-s", "0004-the-late-bump", "0005-a", "0006-spacing"];
+    const { completedLessons } = (await (await fetch(`${app.url}/api/subjects/morse-code/progress`)).json()) as { completedLessons: string[] };
+    const next = lessons.find((lesson) => !completedLessons.includes(lesson))!;
+
+    const section = page.locator(".tome-next-lesson");
+    expect(await section.getAttribute("data-lesson")).toBe(next);
+    expect(await section.getAttribute("data-done")).toBeNull();
+    expect(await texts(page, ".tome-next-lesson h3")).toEqual(["Next lesson"]);
+    expect(await texts(page, ".tome-next-lesson .tome-meta")).toEqual([`${completedLessons.length} of 6 lessons done`]);
+    expect(await section.locator(".tome-start").getAttribute("href")).toBe(`/s/morse-code/lessons/${next}.html`);
+    expect(await section.locator(".tome-start").innerText()).toMatch(new RegExp(`^Open lesson ${Number(next.slice(0, 4))}\\s`));
+
+    const left = lessons.filter((lesson) => !completedLessons.includes(lesson));
+    for (const [index, lesson] of left.entries()) {
+      const posted = await app.post({
+        id: `01KAZ0000000000000000000C${index}`,
+        ts: `2026-11-21T09:0${index}:00.000Z`,
+        subject: "morse-code",
+        kind: "lesson.completed",
+        ref: `lesson:${lesson}`,
+        schemaVersion: 2,
+        data: {},
+      });
+      expect(posted.status).toBe(201);
+    }
+
+    await expect.poll(() => section.getAttribute("data-lesson")).toBe("0006-spacing");
+    expect(await section.getAttribute("data-done")).toBe("");
+    expect(await texts(page, ".tome-next-lesson h3")).toEqual(["Latest lesson"]);
+    expect(await section.locator(".tome-start").innerText()).toMatch(/^Revisit lesson 6\s/);
+  });
+
   it("puts goal and activity side by side only on wide screens, with due below", async () => {
     const { page } = await openSubject("/s/morse-code", width);
 
@@ -234,6 +268,7 @@ describe("overview of a subject with no goal or curriculum", () => {
     const { page } = await openSubject("/s/yoga");
 
     expect(await texts(page, ".tome-due .tome-hint")).toEqual(["Nothing due here today."]);
+    expect(await page.locator(".tome-next-lesson").count()).toBe(0);
     expect(await page.locator(".tome-due .tome-start").getAttribute("aria-disabled")).toBe("true");
     expect(await page.locator(".tome-due .tome-start").getAttribute("href")).toBeNull();
   });

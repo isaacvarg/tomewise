@@ -14,6 +14,7 @@ import {
   goalProgress,
   type LessonRow,
   type MilestoneView,
+  nextLesson,
   refName,
   sheetRows,
   subjectPath,
@@ -154,10 +155,32 @@ function Overview({ data }: { data: SubjectData }) {
         label={`${subject.name} activity heatmap`}
         meta={streak > 0 && ` · ${count(streak, "day")} in a row`}
       />
+      <NextLesson data={data} />
       <Prompts subject={data.subject} prompts={data.prompts.prompts} />
       <Due data={data} />
       <Feedback explanations={data.prompts.explanations} />
     </>
+  );
+}
+
+function NextLesson({ data }: { data: SubjectData }) {
+  const next = nextLesson(curriculumView(data.subject, data.progress.completedLessons, data.progress.milestones));
+  if (!next) return null;
+  const { lesson, done, total } = next;
+  const number = lesson.name.number === undefined ? "" : ` ${lesson.name.number}`;
+  return (
+    <section className="tome-section tome-next-lesson" data-lesson={lesson.id} data-done={lesson.done ? "" : undefined}>
+      <div className="tome-section-head">
+        <h3>{lesson.done ? "Latest lesson" : "Next lesson"}</h3>
+        <span className="tome-meta">
+          {done} of {count(total, "lesson")} done
+        </span>
+      </div>
+      <a className="tome-start" href={lesson.href}>
+        {lesson.done ? "Revisit" : "Open"} lesson{number} <small>{lesson.name.title}</small>
+      </a>
+      {lesson.done && <p className="tome-hint">Every lesson is done. Ask your agent for the next one.</p>}
+    </section>
   );
 }
 

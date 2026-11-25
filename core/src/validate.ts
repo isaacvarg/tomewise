@@ -2,6 +2,7 @@ import { readConfig } from "./config.ts";
 import { checkAgainstSubject, historyOf } from "./event-checks.ts";
 import { monthOf, scanEvents } from "./event-store.ts";
 import type { ValidationIssue } from "./issues.ts";
+import { lessonIssues } from "./lesson-checks.ts";
 import { subjectOrderIssues } from "./references.ts";
 import { listSubjects, readSubject, type SubjectContent } from "./subject.ts";
 
@@ -37,6 +38,7 @@ export async function validateLearningHome(root: string): Promise<ValidationIssu
   for (const id of subjects) {
     const subject = await readSubject(root, id);
     issues.push(...subject.issues, ...(await eventIssues(root, id, subject.content)));
+    if (subject.content) issues.push(...(await lessonIssues(root, id, subject.content.lessons)));
   }
   return issues;
 }

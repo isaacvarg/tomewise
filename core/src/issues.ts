@@ -5,6 +5,7 @@ export interface ValidationIssue {
   line?: number;
   path: string;
   message: string;
+  advice?: true;
 }
 
 export function formatIssue(issue: ValidationIssue): string {

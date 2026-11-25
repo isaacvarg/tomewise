@@ -83,7 +83,7 @@ Write `lessons/NNNN-<name>.html`, numbered one past the last lesson. A lesson is
 </html>
 ```
 
-- **Widgets for every practice and check.** Each answer a widget records moves the review schedule. Read [WIDGETS.md](./WIDGETS.md) before writing one. End the lesson with `<tome-done>` or a `final` widget.
+- **Widgets for every practice and check.** Each answer a widget records moves the review schedule. Read [WIDGETS.md](./WIDGETS.md) before writing one. Practice over many rounds is one `<tome-drill>` or one custom widget that runs every round, never a stack of repeated item widgets; `tome validate` fails a lesson that stacks them. End the lesson with `<tome-done>` or a `final` widget.
 - **Theme tokens for every style.** The learner's theme styles the page, headings and widgets. Style anything extra only with `.tome-*` classes and `var(--t-*)` tokens: `--t-bg`, `--t-surface`, `--t-ink`, `--t-muted`, `--t-rule`, `--t-accent`, `--t-accent-ink`, `--t-good`, `--t-good-bg`, `--t-bad`, `--t-bad-bg`, `--t-heat-0` to `--t-heat-4`, `--t-display`, `--t-ui`, `--t-mono`, `--t-radius`, `--t-cell-radius`. Then the lesson follows whatever theme the learner picks.
 - **Short.** One tangible win that fits in working memory, completable in minutes.
 - **Linked.** Link earlier lessons (`./0004-the-late-bump.html`) and reference sheets (`../reference/cheat-sheet.html`) with plain anchors.
