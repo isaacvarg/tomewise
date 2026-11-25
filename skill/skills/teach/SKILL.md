@@ -32,6 +32,8 @@ Read a file's format doc before writing or changing that file. Each links a work
 
 The app is the one writer of `events/`. Read history through `tome stats`, `tome due` and `tome query`, and record anything (such as a graded explanation) with `tome log`.
 
+`tome` comes from the `tomewise` npm package and needs Node 24 or later. If the command is not found, ask the learner before installing it with `npm install -g tomewise`. Until it's installed, `npx tomewise <command>` runs the same commands.
+
 ## A teaching session
 
 A new subject, or a change to `curriculum.json`, follows [SUBJECT-SETUP.md](./SUBJECT-SETUP.md) first.
