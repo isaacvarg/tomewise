@@ -155,10 +155,10 @@ ${body}
 `;
 
 const flashcards = (lesson: string) =>
-  (ITEMS[lesson] as { id: string; tags: string[] }[])
+  `<tome-drill items="${(ITEMS[lesson] as { id: string; tags: string[] }[])
     .filter((item) => item.tags.includes("kana"))
-    .map((item) => `<tome-flashcard ref="item:${item.id}"></tome-flashcard>`)
-    .join("\n");
+    .map((item) => item.id)
+    .join(" ")}" format="flashcard" name="Read the row"></tome-drill>`;
 
 const CONVERTED: Record<string, string> = {
   "lessons/0001-the-a-row.html": page(
@@ -293,13 +293,13 @@ describe("teach scenario: convert an imported workspace", () => {
     expect(written(session.actions).filter((path) => path.includes("/events/"))).toEqual([]);
   });
 
-  it("turns the generic flashcard drill into built-in flashcards", () => {
+  it("turns the generic flashcard drill into one drill over built-in flashcards", () => {
     const old = [...imported["lessons/0001-the-a-row.html"]!.matchAll(/data-cards="([^"]+)"/g)]
       .flatMap((match) => match[1]!.split(","))
       .map((pair) => `item:kana-${pair.split(":")[1]}`);
     const shown = readPage(converted["lessons/0001-the-a-row.html"]!);
-    expect(shown.widgets.filter((tag) => tag === "tome-flashcard")).toHaveLength(old.length);
-    expect(shown.refs).toEqual(old);
+    expect(shown.widgets.filter((tag) => tag === "tome-flashcard")).toEqual([]);
+    expect(shown.drilled).toEqual(old);
     expect(converted["assets/flashcards.js"]).toBeUndefined();
   });
 
@@ -325,7 +325,8 @@ describe("teach scenario: convert an imported workspace", () => {
   it("unlocks every item a converted lesson shows by that lesson", () => {
     for (const lesson of LESSONS) {
       const items: { id: string; unlockedBy: string }[] = JSON.parse(converted[`items/${lesson}.json`]!);
-      const shown = readPage(converted[`lessons/${lesson}.html`]!).refs.map((ref) => ref.slice("item:".length));
+      const page = readPage(converted[`lessons/${lesson}.html`]!);
+      const shown = [...page.refs, ...page.drilled].map((ref) => ref.slice("item:".length));
       for (const id of shown) expect(items.find((item) => item.id === id)?.unlockedBy, id).toBe(lesson);
     }
   });

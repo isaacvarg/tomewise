@@ -193,6 +193,7 @@ export interface Page {
   unknownTags: string[];
   refs: string[];
   drills: string[];
+  drilled: string[];
   colours: string[];
 }
 
@@ -216,6 +217,7 @@ export function readPage(html: string): Page {
     unknownTags: tags.filter((tag) => !known.has(tag)),
     refs: [...html.matchAll(/\bref="([^"]+)"/g)].map((match) => match[1]!),
     drills: [...html.matchAll(/<tome-drill\b[^>]*\bdrill="([^"]+)"/g)].map((match) => match[1]!),
+    drilled: [...html.matchAll(/<tome-drill\b[^>]*\bitems="([^"]+)"/g)].flatMap((match) => match[1]!.split(/\s+/)).map((id) => `item:${id}`),
     colours: hardCodedColours(html),
   };
 }

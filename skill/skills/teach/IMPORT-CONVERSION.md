@@ -38,7 +38,7 @@ Done when each custom widget records an attempt whose `data` uses only fields fr
 
 Rewrite each lesson and reference sheet in place, keeping its teaching text and links:
 
-- Replace each drill's markup and `<script>` with its widget, one per item, and load custom widgets with `<script type="module">`.
+- Replace each drill's markup and `<script>` with one widget that runs it: `<tome-drill items="…">` naming the drill's items for a built-in type, or the custom widget, loaded with `<script type="module">`. Never write one item widget per card; validation fails a lesson that stacks them.
 - Run the lesson's drill with `<tome-drill>` and end every lesson with `<tome-done>` or a `final` widget.
 - Style the page with the theme tokens and `.tome-*` classes listed in step 3 of [SKILL.md](./SKILL.md#3-write-the-lesson), in place of the old stylesheet and inline colours.
 

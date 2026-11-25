@@ -496,6 +496,8 @@ Completion is sent once per page, so a lesson may have both a `final` widget and
 | Attribute | Meaning                                                                                                  |
 | --------- | -------------------------------------------------------------------------------------------------------- |
 | `drill`   | Optional. Drill id: a file in the subject's `drills/` (no extension), or `review`. Defaults to the page's id on a drill page, else `review`. |
+| `items`   | Optional. Space-separated item ids to run instead of a drill file, e.g. `items="letter-k letter-m"`. Takes them whether or not they are unlocked. |
+| `count`, `format`, `name`, `time-limit` | Optional, with `items`: how many to draw (default: each item once), the drill format (default `item`), the name in the bar (default "Practice") and seconds per item. |
 | `payload` | Optional. JSON object of fixed payload fields, over the drill's, e.g. `payload='{"wpm":20}'`.            |
 | `close`   | Optional. Address for an "End session" link (`.tome-close`, ×) at the start of the bar, e.g. `close="/"`. |
 
@@ -505,18 +507,28 @@ Completion is sent once per page, so a lesson may have both a `final` widget and
 
 Runs a drill as a sequence of the item widgets, one item at a time. `review` is the built-in "review everything due".
 
-- **Selection.** `select.from: "due"` takes the items the schedule says are due, most overdue first. `"unlocked"` takes every unretired item with no `unlockedBy` or whose lesson is completed, shuffled. With `select.tags`, an item needs at least one of them. `count` caps the run; an unlocked pool smaller than `count` is drawn again in fresh shuffled rounds, so each item comes up about equally (12 sounds from 3 letters). Due items never repeat. Routine items are left out.
+A page can also name the items itself, with no drill file. This is how a lesson checks what it has just taught:
+
+```html
+<tome-drill items="letter-k letter-m" count="4" format="multiple-choice" name="Tell them apart" payload='{"wpm":20}'></tome-drill>
+```
+
+The items are drawn in shuffled rounds like an `unlocked` drill, and take the subject's `drillPayload` under the `payload` attribute.
+
+`tome validate` reports a lesson that shows three or more item widgets in a row, or the same item in more than one widget, and names the `<tome-drill items="…">` to write instead. The app still serves such a lesson.
+
+- **Selection.** `select.from: "due"` takes the items the schedule says are due, most overdue first. `"unlocked"` takes every unretired item with no `unlockedBy` or whose lesson is completed, shuffled. With `select.tags`, an item needs at least one of them. `count` caps the run; an unlocked pool smaller than `count` is drawn again in fresh shuffled rounds, so each item comes up about equally (12 sounds from 3 letters). Due items never repeat. Routine items are left out. On a lesson page, the items that lesson unlocks count as unlocked, so a lesson can run the drill on what it has just taught, before Done.
 - **Format.** Each item is shown in its own widget (`flashcard` → `<tome-flashcard>`, `multiple-choice` → `<tome-choice>`, `typed-answer` → `<tome-typed>`, `timed-audio` → `<tome-audio>`). In a `multiple-choice` drill, timed-audio items get the run's distinct answers as `choices` (K M R); in other formats they are typed. A format an item can't take falls back to its own type.
 - **Payload.** Each item widget gets as its `payload` the subject's `drillPayload`, then the drill file's `payload`, then the `payload` attribute, merged field by field. The built-in review and the daily quiz have no file, so they take `drillPayload` alone.
 - **Time limits.** `timeLimits.perItemSeconds` is each widget's `time-limit`. `timeLimits.totalSeconds` starts at the learner's first tap or key press in the drill; when it runs out the run ends and the item on screen posts nothing.
-- **Attempts and session.** Each answer posts one attempt on its item, through the item widget, so every attempt updates that item's schedule. The session is the page's: on a drill page (`tome-page-kind` `drill`, `tome-drill` the drill id) its ref is `drill:<id>`. Finishing the run posts `session.end`; "Run again" selects afresh and starts a new session.
-- **Pace.** After an answer the drill moves on by itself (0.9 s when right, 1.6 s otherwise), or at once with Next. From the second item on, audio items play by themselves.
+- **Attempts and session.** Each answer posts one attempt on its item, through the item widget, so every attempt updates that item's schedule. The session is the page's: on a drill page (`tome-page-kind` `drill`, `tome-drill` the drill id) its ref is `drill:<id>`. Finishing the run posts `session.end`; "Run again" selects afresh and starts a new session. On a lesson page the session is the lesson's: the drill's attempts go into it and finishing the run leaves it open, so the lesson stays one session.
+- **Pace.** After an answer the drill moves on by itself (0.9 s when right, 1.6 s otherwise), or at once with Next. A missed `<tome-audio>` item plays its sound again first, and the drill moves on after 2.4 s. From the second item on, audio items play by themselves.
 - **End.** The summary shows the score, right out of answered, median answer time, how many were skipped or out of time, and the missed items. A selection with nothing in it shows an empty state instead.
-- **Hosting.** When the run ends, after `session.end`, the drill dispatches `tome-drill-done` (bubbles, cancelable) with `detail` `{ drill, planned, timeUp, results, session }`: `results` holds one `{ ref, outcome, grade, duration }` per answer, `planned` is how many items the run had, and `session` is what `tome.end()` returned. A host that calls `preventDefault()` shows its own summary; the drill then keeps only its bar and progress. The dashboard's runner does this.
+- **Hosting.** When the run ends, after `session.end`, the drill dispatches `tome-drill-done` (bubbles, cancelable) with `detail` `{ drill, planned, timeUp, results, session }`: `results` holds one `{ ref, outcome, grade, duration }` per answer, `planned` is how many items the run had, and `session` is what `tome.end()` returned (`undefined` on a lesson page, where the session stays open). A host that calls `preventDefault()` shows its own summary; the drill then keeps only its bar and progress. The dashboard's runner does this.
 
 A failed save keeps the item on screen with its notice (inside the item widget) and "Save again"; the drill waits for it.
 
-Keyboard: focus moves into each new item (the play button, the first choice, the answer field or "Show answer"), so the item's own keys work; after answering, focus is on Next, so Enter moves on; at the end, focus is on "Run again". Touch: tap.
+Keyboard: focus moves into each new item (the play button, the first choice, the answer field or "Show answer"), so the item's own keys work; after answering, focus is on Next, so Enter moves on; at the end, focus is on "Run again". A drill that loads off screen, as in a lesson, takes focus only once the learner has answered in it. While the drill is on screen and nothing on the page has focus, a key press still reaches the current item: Space or Enter presses its first control, Enter moves on after an answer, and any other key goes to the item. Touch: tap.
 
 ### Markup
 

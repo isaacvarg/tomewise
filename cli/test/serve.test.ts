@@ -109,6 +109,16 @@ describe("tome serve", () => {
     expect(server.stderr()).toMatch(/tomewise\.json/);
   });
 
+  it("serves a home whose only problem is a lesson that stacks item widgets", async () => {
+    const root = await copyExample("morse");
+    await writeFile(join(root, "subjects/morse-code/lessons/0001-k-and-m.html"), `<h1>K and M</h1>\n${'<tome-audio ref="item:letter-k" choices="K M"></tome-audio>\n'.repeat(3)}<tome-done></tome-done>`);
+    const server = await serve(["--port", "0"], root);
+
+    expect(urlIn(server.first)).toMatch(/^http:/);
+    server.stop();
+    expect(await server.exit).toBe(0);
+  });
+
   it("runs as a real process and stops on SIGTERM", async () => {
     const root = await copyExample("morse");
     const main = new URL("../src/main.ts", import.meta.url).pathname;

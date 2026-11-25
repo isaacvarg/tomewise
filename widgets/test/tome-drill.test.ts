@@ -326,6 +326,92 @@ document.addEventListener("tome-drill-done", (event) => {
     expect(events[1]).toMatchObject({ sessionId: events[0]!.id, ref: "drill:review" });
   });
 
+  it("runs inside a lesson on that lesson's own items, by keyboard, in the lesson's session", async () => {
+    const app = await startWidgetApp({
+      prepare: async (root) => {
+        await rm(join(root, MORSE, "events"), { recursive: true, force: true });
+        const file = join(root, MORSE, "drills", "listen-kmrsu.json");
+        await writeFile(file, JSON.stringify({ ...JSON.parse(await readFile(file, "utf8")), count: 2 }));
+        await writeFile(
+          join(root, MORSE, "lessons", "0001-k-and-m.html"),
+          `<!doctype html><title>K and M</title><tome-drill drill="listen-kmrsu" payload='{"wpm":20}'></tome-drill><tome-done></tome-done>`,
+        );
+      },
+    });
+    const page = await app.open("/s/morse-code/lessons/0001-k-and-m.html");
+    const root = page.locator("tome-drill");
+    await waitForItem(root, 1, 2);
+    await expect.poll(() => page.evaluate(() => document.activeElement?.className)).toBe("tome-play");
+    await page.evaluate(() => (document.activeElement as HTMLElement).blur());
+    await page.keyboard.press("Space");
+
+    const refs: string[] = [];
+    for (let i = 0; i < 2; i++) {
+      await waitForItem(root, i + 1, 2);
+      const ref = (await currentRef(root))!;
+      refs.push(ref);
+      const button = root.locator(`.tome-answer[data-choice="${letterOf(ref)}"]`);
+      await expect.poll(() => button.isEnabled(), { timeout: 5000 }).toBe(true);
+      await page.keyboard.press(letterOf(ref).toLowerCase());
+    }
+    await expect.poll(() => root.locator(".tome-drill").getAttribute("data-state"), { timeout: 5000 }).toBe("done");
+    expect([...refs].sort()).toEqual(["item:letter-k", "item:letter-m"]);
+    expect(await root.locator(".tome-score").textContent()).toBe("100%");
+
+    await page.locator(".tome-done-button").click();
+    const events = await app.eventsUntil("morse-code", (events) => events.some((event) => event.kind === "session.end"));
+    expect(kinds(events)).toEqual(["session.start", "attempt", "attempt", "lesson.completed", "session.end"]);
+    expect(events[0]!.ref).toBe("lesson:0001-k-and-m");
+    expect(new Set(events.map((event) => event.sessionId)).size).toBe(1);
+  }, 20_000);
+
+  it("runs the items a lesson names inline, with its own count, format and name", async () => {
+    const app = await startWidgetApp({
+      prepare: async (root) => {
+        await rm(join(root, SPANISH, "events"), { recursive: true, force: true });
+        await writeFile(
+          join(root, SPANISH, "lessons", "0001-greetings.html"),
+          `<!doctype html><title>Greetings</title><tome-drill items="hola item:adios" count="3" name="Hello and goodbye"></tome-drill><tome-drill items="nope"></tome-drill>`,
+        );
+      },
+    });
+    const page = await app.open("/s/spanish/lessons/0001-greetings.html");
+    const [root, unknown] = [page.locator("tome-drill").first(), page.locator("tome-drill").last()];
+    await waitForItem(root, 1, 3);
+    expect(await root.locator(".tome-drill-name").textContent()).toBe("Hello and goodbye");
+    expect(await unknown.locator(".tome-notice").textContent()).toBe('No item "nope" in Spanish.');
+
+    const refs: string[] = [];
+    for (let i = 0; i < 3; i++) {
+      await waitForItem(root, i + 1, 3);
+      refs.push((await currentRef(root))!);
+      await root.locator(".tome-reveal").click();
+      await root.locator('.tome-grade[data-grade="3"]').click();
+      await root.locator(".tome-next").click();
+    }
+    await expect.poll(() => root.locator(".tome-drill").getAttribute("data-state")).toBe("done");
+    expect([...new Set(refs)].sort()).toEqual(["item:adios", "item:hola"]);
+
+    const events = await app.eventsUntil("spanish", (events) => attempts(events).length === 3);
+    expect(kinds(events)).toEqual(["session.start", "attempt", "attempt", "attempt"]);
+    expect(events[0]!.ref).toBe("lesson:0001-greetings");
+  }, 20_000);
+
+  it("plays a missed sound again before moving on", async () => {
+    const { root } = await morse({ drillFile: (current) => ({ ...current, count: 2 }) });
+    const audio = root.locator("tome-audio");
+    await expect.poll(() => audio.locator(".tome-play").count()).toBe(1);
+    const ref = (await currentRef(root))!;
+    await audio.locator(".tome-play").click();
+    const wrong = audio.locator(`.tome-answer:not([data-choice="${letterOf(ref)}"])`).first();
+    await expect.poll(() => wrong.isEnabled(), { timeout: 5000 }).toBe(true);
+    await wrong.click();
+
+    await expect.poll(() => audio.locator(".tome-play[data-playing]").count()).toBe(1);
+    expect(await root.locator(".tome-count").textContent()).toBe("1 / 2");
+    await expect.poll(() => root.locator(".tome-count").textContent(), { timeout: 5000 }).toBe("2 / 2");
+  }, 20_000);
+
   it("names an unknown drill", async () => {
     const { root } = await spanish({ drill: "nope", widget: `<tome-drill drill="nope"></tome-drill>` });
     expect(await root.locator(".tome-notice").textContent()).toBe('No drill "nope" in Spanish. Drills: review.');

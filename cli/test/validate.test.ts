@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
+import { copyExample } from "../../core/test/helpers.ts";
 import { run } from "../src/main.ts";
 
 async function home(config: unknown): Promise<string> {
@@ -43,6 +44,17 @@ describe("tome validate", () => {
     expect(result.code).toBe(1);
     expect(result.stderr).toMatch(/^tomewise\.json: timezone: Unknown timezone "Mars\/Olympus_Mons"/m);
     expect(result.stderr).toMatch(/^tomewise\.json: weekStart: .*monday/m);
+  });
+
+  it("fails a lesson that stacks item widgets, with the line and the drill to write", async () => {
+    const root = await copyExample("morse");
+    await writeFile(join(root, "subjects/morse-code/lessons/0001-k-and-m.html"), `<h1>K and M</h1>\n${'<tome-audio ref="item:letter-k" choices="K M"></tome-audio>\n'.repeat(3)}<tome-done></tome-done>`);
+
+    const result = await tome(["validate"], root);
+
+    expect(result.code).toBe(1);
+    expect(result.stderr).toMatch(/^subjects\/morse-code\/lessons\/0001-k-and-m\.html:2: 3 item widgets in a row; .*<tome-drill items="letter-k">/m);
+    expect(result.stderr).toMatch(/^1 problem in /m);
   });
 
   it("accepts a vault block", async () => {
