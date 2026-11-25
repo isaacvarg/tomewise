@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import type { AddressInfo } from "node:net";
 import { createAdaptorServer } from "@hono/node-server";
 import { Hono } from "hono";
-import type { LearningHome } from "@tomewise/core";
+import { type LearningHome, type Update, UPDATE_CHECK_MS } from "@tomewise/core";
 import { changeBus, changeRoutes, type Changes } from "./changes.ts";
 import { copyCurricula, copyCurriculaOnChange } from "./curriculum-copy.ts";
 import { eventRoutes } from "./events.ts";
@@ -25,11 +25,12 @@ export interface AppOptions {
   clock?: Clock;
   changes?: Changes;
   reload?: () => Promise<void>;
+  update?: () => Update | null;
 }
 
 export function createApp(
   view: () => HomeView,
-  { spa, tool = BUILT_IN, warn = console.warn, sync = syncOff, clock = systemClock, changes = changeBus(), reload = async () => {} }: AppOptions = {},
+  { spa, tool = BUILT_IN, warn = console.warn, sync = syncOff, clock = systemClock, changes = changeBus(), reload = async () => {}, update = () => null }: AppOptions = {},
 ): Hono {
   const app = new Hono();
   const home = () => view().home;
@@ -37,6 +38,7 @@ export function createApp(
   app.route("/api/events", eventRoutes(home, sync, changes, warn));
   app.route("/api/changes", changeRoutes(changes));
   app.route("/api/sync", syncRoutes(sync));
+  app.get("/api/update", (c) => c.json({ update: update() }));
   app.route("/api/settings", settingsRoutes(home, { tool, sync, warn, reload }));
   app.route("/api", readRoutes(view, () => clock.now()));
   app.route("/s", pageRoutes(home, resolveTheme));
@@ -47,11 +49,12 @@ export function createApp(
   return app;
 }
 
-export interface ListenOptions extends Omit<AppOptions, "sync" | "clock" | "changes" | "reload"> {
+export interface ListenOptions extends Omit<AppOptions, "sync" | "clock" | "changes" | "reload" | "update"> {
   host: string;
   port: number;
   watch?: WatchOptions;
   clock?: Clock;
+  updates?: () => Promise<Update | null>;
 }
 
 export interface RunningServer {
@@ -59,7 +62,7 @@ export interface RunningServer {
   close: () => Promise<void>;
 }
 
-export async function startServer(home: LearningHome, { host, port, watch, clock, ...options }: ListenOptions): Promise<RunningServer> {
+export async function startServer(home: LearningHome, { host, port, watch, clock = systemClock, updates, ...options }: ListenOptions): Promise<RunningServer> {
   const onError = watch?.onError ?? ((error: unknown) => console.error(`Reloading ${home.root} failed:`, error));
   const warn = options.warn ?? console.warn;
   const watched = await watchLearningHome(home, { ...watch, onError });
@@ -74,7 +77,15 @@ export async function startServer(home: LearningHome, { host, port, watch, clock
   await trackRuleChanges(watched, sync.exclusive, onError);
   watched.onReload(() => changes.announce({ kind: "content" }));
   await copyCurriculaOnChange(watched, warn);
-  const server = createAdaptorServer({ fetch: createApp(watched.current, { ...options, sync, clock, changes, reload: watched.reload }).fetch });
+  let update: Update | null = null;
+  const checkUpdates = async () => {
+    update = (await updates?.().catch(() => null)) ?? update;
+  };
+  const stopUpdates = updates ? clock.every(UPDATE_CHECK_MS, checkUpdates) : () => {};
+  if (updates) void checkUpdates();
+  const server = createAdaptorServer({
+    fetch: createApp(watched.current, { ...options, sync, clock, changes, reload: watched.reload, update: () => update }).fetch,
+  });
   try {
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
@@ -84,6 +95,7 @@ export async function startServer(home: LearningHome, { host, port, watch, clock
       });
     });
   } catch (error) {
+    stopUpdates();
     changes.close();
     await sync.close();
     await watched.close();
@@ -94,6 +106,7 @@ export async function startServer(home: LearningHome, { host, port, watch, clock
   return {
     url: `http://${urlHost}:${address.port}`,
     async close() {
+      stopUpdates();
       changes.close();
       await sync.close();
       await watched.close();

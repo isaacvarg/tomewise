@@ -26,7 +26,7 @@ It prints `Listening on http://127.0.0.1:4777`. The learning home is found the u
 | Host    | `--host` | `TOMEWISE_HOST` | `127.0.0.1` |
 | Port    | `--port` | `TOMEWISE_PORT` | `4777`      |
 
-Flags win over env vars. To serve your tailnet, pass the Tailscale address, e.g. `npx tomewise serve --host 100.101.102.103`.
+Flags win over env vars. The app checks the npm registry for a newer release when it starts and once a day after, and shows a notice on the dashboard's home when there is one. Set `TOMEWISE_NO_UPDATE_CHECK=1` to turn that off. To serve your tailnet, pass the Tailscale address, e.g. `npx tomewise serve --host 100.101.102.103`.
 
 The app refuses to start against a learning home it can't read or that fails `tome validate`, and says why.
 

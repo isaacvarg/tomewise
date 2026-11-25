@@ -75,6 +75,13 @@
     margin-left: auto; padding: .3rem .75rem; border: 1px solid var(--t-rule); border-radius: var(--t-radius);
     background: transparent; color: var(--t-ink); font: 600 .78rem var(--t-ui); cursor: pointer;
   }
+  .tome-update {
+    display: flex; flex-direction: column; gap: .2rem; padding: .6rem .8rem; font-size: .85rem;
+    border: 1px solid var(--t-accent); border-radius: var(--t-radius); background: var(--t-surface); color: var(--t-ink);
+  }
+  .tome-update p { margin: 0; }
+  .tome-update-command { font-family: var(--t-mono); font-size: .8rem; overflow-wrap: anywhere; }
+
   .tome-sync-now:disabled { cursor: default; opacity: .6; }
   .tome-sync-now:focus-visible { outline: 2px solid var(--t-accent); outline-offset: 2px; }
 
@@ -361,6 +368,10 @@
       grid-template-areas: "header header" "activity activity" "subjects subjects" "due streak" "start streak" "sync sync";
       padding: 2rem max(2.5rem, calc((100% - 62rem) / 2));
     }
+    .tome-app:has(> .tome-update) {
+      grid-template-areas: "header header" "update update" "activity activity" "subjects subjects" "due streak" "start streak" "sync sync";
+    }
+    .tome-update { grid-area: update; }
     .tome-header { grid-area: header; }
     .tome-activity { grid-area: activity; }
     .tome-subjects { grid-area: subjects; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .8rem; }

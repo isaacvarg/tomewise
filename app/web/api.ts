@@ -15,8 +15,10 @@ import type {
   ScheduledItem,
   StartMode,
   Subject,
+  Update,
 } from "@tomewise/core";
 
+export type { Update };
 export type { Activity, Drill, AgentPrompt, AssessmentOverrides, AssessmentSettings, ChartSeries, DueItem, Explanation, MilestoneStatus, QuizFrequency, QuizSlot, ScheduledItem, StartMode, Subject };
 
 export interface Progress {
@@ -85,6 +87,7 @@ export const api = {
   allPrompts: () =>
     getJson<{ subjects: { subject: string; prompts: AgentPrompt[] }[] }>("/api/prompts").then((body) => body.subjects),
   sync: () => getJson<SyncStatus>("/api/sync"),
+  update: () => getJson<{ update: Update | null }>("/api/update").then((body) => body.update),
   syncNow: () => getJson<SyncStatus>("/api/sync", { method: "POST" }),
   settings: () => getJson<Settings>("/api/settings"),
   saveSetting: (key: AppSetting, value: unknown) =>

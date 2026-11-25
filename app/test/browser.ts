@@ -1,5 +1,6 @@
 import { cp } from "node:fs/promises";
 import { afterAll, onTestFinished } from "vitest";
+import type { Update } from "@tomewise/core";
 import { type Browser, chromium, type Page } from "playwright";
 import { tempDir } from "../../core/test/helpers.ts";
 import { buildWidgets } from "../../widgets/scripts/build.ts";
@@ -49,9 +50,10 @@ export interface DashboardOptions {
   width?: Width;
   built?: boolean;
   touch?: boolean;
+  updates?: () => Promise<Update | null>;
 }
 
-export async function startDashboard({ prepare, width = "phone", built = true, touch = false }: DashboardOptions = {}) {
+export async function startDashboard({ prepare, width = "phone", built = true, touch = false, updates }: DashboardOptions = {}) {
   const { spa, widgets } = await builtApp();
   const app = await startTestApp(
     async (root) => {
@@ -59,7 +61,7 @@ export async function startDashboard({ prepare, width = "phone", built = true, t
       await prepare?.(root);
     },
     { widgets, themes: BUILT_IN.themes },
-    { spa: built ? spa : undefined, clock: { now: () => TODAY, every: () => () => {} } },
+    { spa: built ? spa : undefined, clock: { now: () => TODAY, every: () => () => {} }, updates },
   );
   browser ??= launch();
   const session = await (await browser).newContext({ viewport: WIDTHS[width], reducedMotion: "reduce", ...(touch && { hasTouch: true, isMobile: true }) });

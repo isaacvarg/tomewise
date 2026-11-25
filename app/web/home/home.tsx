@@ -6,6 +6,7 @@ import { Failed, Screen } from "../screen.tsx";
 import { loadToday } from "../today.ts";
 import { DueQuiz } from "../due-quiz.tsx";
 import { Sync } from "./sync.tsx";
+import { UpdateNotice } from "./update.tsx";
 import { bySubjectsPractised, count, type DueToday, dueMeta, heatmapCells, longDate, type WeekStart } from "./model.ts";
 
 async function loadHome() {
@@ -39,6 +40,7 @@ export function Home() {
   const weekStart: WeekStart = subjects[0]?.settings.weekStart ?? "monday";
   return (
     <Screen kicker={longDate(activity.today)} title="Today" aside={settingsLink}>
+      <UpdateNotice />
       <Heatmap cells={heatmapCells(activity, weekStart, bySubjectsPractised(subjects.length))} weekStart={weekStart} label="Activity heatmap" />
       <Subjects subjects={subjects} asks={asks} />
       <Due due={due} />

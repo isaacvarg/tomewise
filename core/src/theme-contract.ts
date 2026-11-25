@@ -63,7 +63,7 @@ export const appClasses: readonly string[] = [
   "tome-settings-cancel", "tome-settings-link", "tome-settings-save", "tome-side", "tome-stage", "tome-start", "tome-stats", "tome-status",
   "tome-streak", "tome-streak-num", "tome-streak-text", "tome-subject", "tome-subject-ask", "tome-subject-name", "tome-subject-settings",
   "tome-subjects", "tome-summary-head", "tome-sync", "tome-sync-now", "tome-tab", "tome-tabs", "tome-term", "tome-term-when", "tome-term-word",
-  "tome-terms", "tome-title", "tome-totals", "tome-unit", "tome-view",
+  "tome-terms", "tome-title", "tome-totals", "tome-unit", "tome-update", "tome-update-command", "tome-view",
 ];
 
 export const requiredTokenNames = (kind?: TokenKind): string[] =>

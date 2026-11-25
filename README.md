@@ -61,7 +61,7 @@ To try it without installing anything, `npx tomewise <command>` runs any command
 
 ## Updating
 
-Nothing updates on its own.
+Nothing updates on its own. Once a day `tome` asks the npm registry for the latest release. When there's a newer one, the CLI prints a line after a command and the dashboard shows a notice on home, with the command to run: `npm install -g tomewise@latest`, or `docker pull` for the Docker image. Set `TOMEWISE_NO_UPDATE_CHECK=1` to turn the check off. It's also off in CI, under `npx`, and for `--json` output.
 
 - **CLI.** Run `npm install -g tomewise@latest`. `npx tomewise` fetches the latest version by itself.
 - **Background service.** The service runs the installed `tome`, so restart it after upgrading the CLI: `systemctl --user restart tomewise` on Linux, `launchctl kickstart -k gui/$(id -u)/tomewise` on macOS. If Node moved to a new path, run `tome service install` again instead.
