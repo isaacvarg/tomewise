@@ -924,7 +924,10 @@ describe("tome init handoffs", () => {
     expect(result.code).toBe(0);
     expect(result.stdout).toContain(`-v '${result.root}':/learning-home`);
     expect(result.stdout).toContain("-p 127.0.0.1:4800:4777");
-    expect(result.stdout).toContain("docker build -t tomewise .");
+    const { version } = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+    const minor = version.split(".").slice(0, 2).join(".");
+    expect(result.stdout).toContain(`/learning-home ghcr.io/isaacvarg/tomewise:${minor}`);
+    expect(result.stdout).not.toContain("docker build");
     expect(await exists(unitFile(result.HOME))).toBe(false);
   });
 

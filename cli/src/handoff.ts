@@ -2,6 +2,7 @@ import { DEFAULT_APP_URL } from "@tomewise/core";
 import type { Io } from "./main.ts";
 import { listenOptions, serveHome, type Listen } from "./serve.ts";
 import { installService, serviceHost } from "./service.ts";
+import cli from "../package.json" with { type: "json" };
 
 export const APP_CHOICES = ["now", "service", "docker", "none"] as const;
 export type AppChoice = (typeof APP_CHOICES)[number];
@@ -15,6 +16,7 @@ const REPO = "isaacvarg/tomewise";
 const MARKETPLACE = "tomewise";
 const PLUGIN = "tomewise";
 const TEACH_COMMAND = `/${PLUGIN}:teach`;
+const IMAGE = `ghcr.io/${REPO}:${cli.version.split(".").slice(0, 2).join(".")}`;
 
 export function listenFor(io: Io, appUrl: string | undefined): Listen | string {
   const { port } = new URL(appUrl ?? DEFAULT_APP_URL);
@@ -42,11 +44,9 @@ function printFirstSubject(io: Io, root: string, subject: string | undefined): v
 
 function printDocker(io: Io, root: string, listen: Listen): void {
   io.stdout("");
-  io.stdout("To run the app in a container, build the image from a checkout of the tomewise repository:");
-  io.stdout("  docker build -t tomewise .");
-  io.stdout("Then run it with the learning home mounted:");
+  io.stdout("To run the app in a container, with the learning home mounted:");
   io.stdout(
-    `  docker run -d --name tomewise -p ${listen.host}:${listen.port}:${CONTAINER_PORT} -v ${shellQuote(root)}:/learning-home tomewise`,
+    `  docker run -d --name tomewise -p ${listen.host}:${listen.port}:${CONTAINER_PORT} -v ${shellQuote(root)}:/learning-home ${IMAGE}`,
   );
 }
 
