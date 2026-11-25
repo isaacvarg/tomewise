@@ -1,5 +1,9 @@
 # Tomewise
 
+[![npm](https://img.shields.io/npm/v/tomewise)](https://www.npmjs.com/package/tomewise)
+[![ghcr.io](https://img.shields.io/github/v/tag/isaacvarg/tomewise?sort=semver&label=ghcr.io)](https://github.com/isaacvarg/tomewise/pkgs/container/tomewise)
+[![license](https://img.shields.io/github/license/isaacvarg/tomewise)](./LICENSE)
+
 A self-hosted learning system grown out of Matt Pocock's `teach` skill. An AI agent writes your course as plain files. An always-on app serves the lessons, records every answer, schedules your reviews and tracks your streak. At the next session the agent reads that history and plans the next lesson from it.
 
 Everything lives in a **learning home**: a folder (usually its own git repo) that holds your subjects, lessons and history. Nothing is stored anywhere else.
@@ -54,6 +58,22 @@ Needs Node 24 or later.
 5. Open the app at `http://127.0.0.1:4777` and take the lesson. After that, each `/tomewise:teach next lesson` builds on your history.
 
 To try it without installing anything, `npx tomewise <command>` runs any command below.
+
+## Updating
+
+Nothing updates on its own.
+
+- **CLI.** Run `npm install -g tomewise@latest`. `npx tomewise` fetches the latest version by itself.
+- **Background service.** The service runs the installed `tome`, so restart it after upgrading the CLI: `systemctl --user restart tomewise` on Linux, `launchctl kickstart -k gui/$(id -u)/tomewise` on macOS. If Node moved to a new path, run `tome service install` again instead.
+- **Docker.** `init` pins the image to a minor version such as `:0.1`. For a patch release, `docker pull` that tag, then remove and recreate the container. For a minor release, switch to the new tag, or use `:latest`.
+- **Plugin.** Third-party marketplaces don't auto-update by default. Refresh the marketplace, then update the plugin and restart Claude Code:
+
+  ```sh
+  claude plugin marketplace update tomewise
+  claude plugin update tomewise@tomewise
+  ```
+
+  Inside a session, `/plugin` does the same. If you installed with `npx skills add`, run it again.
 
 ## Running the app
 
